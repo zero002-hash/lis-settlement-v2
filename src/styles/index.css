@@ -1,0 +1,10 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+@import './globals.css';
+
+/* 통합장부 테이블 셀 폰트 강제 적용 */
+[data-name="통합장부표"] [data-table-row] *,
+[data-name="통합장부표"] [data-table-row] {
+  font-family: 'Pretendard GOV', sans-serif !important;
+}
