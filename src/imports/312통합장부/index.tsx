@@ -25,8 +25,8 @@ interface DateFilterCtxType { dateType: string; rangeStart: Date|null; rangeEnd:
 const DateFilterCtx = createContext<DateFilterCtxType>({ dateType:'상차일', rangeStart:null, rangeEnd:null, periodRange:'오늘', setDateType:()=>{}, setRangeStart:()=>{}, setRangeEnd:()=>{}, setPeriodRange:()=>{} });
 
 const SEARCH_TYPE_OPTIONS_312 = ['차량번호', '기사명', '사업자명', '화주사 별칭', '요청협력사 별칭', '화주주문번호', '오더ID'] as const;
-interface SearchCtxType312 { searchType: string; searchText: string; appliedSearch: { type: string; text: string } | null; setSearchType: (t: string) => void; setSearchText: (t: string) => void; runSearch: () => void; }
-const SearchCtx312 = createContext<SearchCtxType312>({ searchType: '차량번호', searchText: '', appliedSearch: null, setSearchType: () => {}, setSearchText: () => {}, runSearch: () => {} });
+interface SearchCtxType312 { searchType: string; searchText: string; appliedSearch: { type: string; text: string } | null; setSearchType: (t: string) => void; setSearchText: (t: string) => void; runSearch: () => void; clearSearch: () => void; }
+const SearchCtx312 = createContext<SearchCtxType312>({ searchType: '차량번호', searchText: '', appliedSearch: null, setSearchType: () => {}, setSearchText: () => {}, runSearch: () => {}, clearSearch: () => {} });
 
 
 const PageCtx312 = createContext<{ currentPage: number; setCurrentPage: (n: number) => void; filteredTotal: number; setFilteredTotal: (n: number) => void }>({ currentPage: 1, setCurrentPage: () => {}, filteredTotal: 300, setFilteredTotal: () => {} });
@@ -45,8 +45,8 @@ const BubbleCtx = createContext<BubbleCtxType>({
   dispatchSelected: new Set(), setDispatchSelected: () => {},
 });
 
-const DynamicCountCtx = createContext<{ saleCounts: number[]; purchaseCounts: number[]; saleTotalAmount: number; purchaseTotalAmount: number }>({
-  saleCounts: [], purchaseCounts: [], saleTotalAmount: 10_000_000, purchaseTotalAmount: 5_000_000,
+const DynamicCountCtx = createContext<{ saleCounts: number[]; purchaseCounts: number[]; saleTotalAmount: number; purchaseTotalAmount: number; selfInsuranceSum: number }>({
+  saleCounts: [], purchaseCounts: [], saleTotalAmount: 10_000_000, purchaseTotalAmount: 5_000_000, selfInsuranceSum: 100_000,
 });
 
 // Per-row amounts derived from SALE_STATUS_DATA and PURCHASE_STATUS_DATA original counts
@@ -540,7 +540,6 @@ function SwitchModule({ rangeStart, rangeEnd, setRangeStart, setRangeEnd, onManu
   const [selecting, setSelecting] = useState(false);
   const [viewYear, setViewYear] = useState(2026);
   const [viewMonth, setViewMonth] = useState(5);
-  const [timeIncluded, setTimeIncluded] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -688,12 +687,6 @@ function SwitchModule({ rangeStart, rangeEnd, setRangeStart, setRangeEnd, onManu
                 </div>
               </div>
             ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 0 0 4px', height: 34 }}>
-              <span style={{ fontFamily: F, fontSize: 13, fontWeight: 600, color: '#5C6370', letterSpacing: '-0.02em', lineHeight: '19px' }}>시간 포함</span>
-              <div onClick={() => setTimeIncluded(v => !v)} style={{ width: 32, height: 18, borderRadius: 45, background: timeIncluded ? '#005FFF' : '#E4E5E9', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}>
-                <div style={{ position: 'absolute', width: 16, height: 16, borderRadius: '50%', background: '#FFFFFF', top: 1, left: timeIncluded ? 15 : 1, transition: 'left 0.2s' }} />
-              </div>
-            </div>
           </div>
         </div>,
         document.body
@@ -711,7 +704,7 @@ function Calender() {
     const t = clr(today);
     switch (opt) {
       case '오늘':    setRangeStart(t); setRangeEnd(null); break;
-      case '이번달':  setRangeStart(new Date(t.getFullYear(), t.getMonth(), 1)); setRangeEnd(t); break;
+      case '이번달':  setRangeStart(new Date(t.getFullYear(), t.getMonth(), 1)); setRangeEnd(new Date(t.getFullYear(), t.getMonth() + 1, 0)); break;
       case '저번달': { const s = new Date(t.getFullYear(), t.getMonth()-1, 1); const e = new Date(t.getFullYear(), t.getMonth(), 0); setRangeStart(s); setRangeEnd(e); break; }
       case '1분기':   setRangeStart(new Date(t.getFullYear(), 0, 1)); setRangeEnd(new Date(t.getFullYear(), 2, 31)); break;
       case '2분기':   setRangeStart(new Date(t.getFullYear(), 3, 1)); setRangeEnd(new Date(t.getFullYear(), 5, 30)); break;
@@ -1229,6 +1222,9 @@ function Component14() {
 function Frame831() {
   const { setShipperSelected, setPartnerSelected, setDispatchSelected } = useContext(BubbleCtx);
   const { setDateType, setPeriodRange, setRangeStart, setRangeEnd } = useContext(DateFilterCtx);
+  const { setSelected: setSaleSelected } = useContext(SaleFilterCtx);
+  const { setSelected: setPurchaseSelected } = useContext(PurchaseFilterCtx);
+  const { clearSearch } = useContext(SearchCtx312);
   const resetAll = () => {
     setShipperSelected(new Set());
     setPartnerSelected(new Set());
@@ -1237,6 +1233,9 @@ function Frame831() {
     setPeriodRange('오늘');
     setRangeStart(new Date(2026, 5, 29));
     setRangeEnd(null);
+    setSaleSelected(new Set([0]));
+    setPurchaseSelected(new Set([0]));
+    clearSearch();
   };
   return (
     <div className="content-stretch flex gap-[4px] items-center relative shrink-0">
@@ -1399,15 +1398,12 @@ function Frame874() {
       return sum + statusTotal;
     }, 0));
   }, [selected, saleTotalAmount, saleCounts]);
-  const totalCount = selected.has(0)
-    ? (saleCounts[0] ?? 5000).toLocaleString() + "건"
-    : ([...selected].reduce((sum, i) => sum + (i === 0 ? (saleCounts[0] ?? 0) : (saleCounts[i] ?? 0)), 0).toLocaleString() + "건");
   return (
     <div style={{width:616, height:160, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'flex-start', padding:4, gap:8, background:'#F6F7F8', borderRadius:8, flexShrink:0, boxSizing:'border-box'}}>
       {/* 행1: 상태 필터 카드 */}
       <StatusCardRow data={SALE_STATUS_DATA} type="sale" />
       {/* 행2: 합계 */}
-      <SummaryFooterRow label={`총 매출 (${totalCount.replace("건", "")})`} value={`+${formatKorean(totalAmount)}`} />
+      <SummaryFooterRow label="총 매출" value={`+${formatKorean(totalAmount)}`} />
     </div>
   );
 }
@@ -1526,15 +1522,12 @@ function Frame876() {
       return sum + statusTotal;
     }, 0));
   }, [selected, purchaseTotalAmount, purchaseCounts]);
-  const totalCount = selected.has(0)
-    ? (purchaseCounts[0] ?? 5000).toLocaleString() + "건"
-    : ([...selected].reduce((sum, i) => sum + (i === 0 ? (purchaseCounts[0] ?? 0) : (purchaseCounts[i] ?? 0)), 0).toLocaleString() + "건");
   return (
     <div style={{width:616, height:160, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'flex-start', padding:4, gap:8, background:'#F6F7F8', borderRadius:8, flexShrink:0, boxSizing:'border-box'}}>
       {/* 행1: 상태 필터 카드 */}
       <StatusCardRow data={PURCHASE_STATUS_DATA} type="purchase" />
       {/* 행2: 합계 */}
-      <SummaryFooterRow label={`총 매입 (${totalCount.replace("건", "")})`} value={`-${formatKorean(totalAmount)}`} />
+      <SummaryFooterRow label="총 매입" value={`-${formatKorean(totalAmount)}`} />
     </div>
   );
 }
@@ -1871,8 +1864,7 @@ function getRowData(rowIdx: number) {
   const TON_TYPES = ['1톤','2.5톤','3.5톤','5톤','8톤'];
   const CARGO_TYPES = ['카고','윙바디','탑차','리프트'];
   const CARGO_FEATURES = ['상온','냉장','냉동'];
-  const BILLING_METHODS = ['후불','선불','월정산'];
-  const SETTLEMENT_TYPES = ['별도정산','통합정산'];
+  const BILLING_METHODS = ['후불','선착불'];
 
   const driverName = pick(DRIVER_NAMES, 7);
   const plate = pick(PLATES, 8);
@@ -1881,7 +1873,7 @@ function getRowData(rowIdx: number) {
   const cargoType = pick(CARGO_TYPES, 11);
   const cargoFeature = pick(CARGO_FEATURES, 84);
   const billingMethod = pick(BILLING_METHODS, 14);
-  const settlementType = pick(SETTLEMENT_TYPES, 15);
+  const settlementType = billingMethod === '후불' ? pick(['별도정산', '예치금', '한도'], 15) : '현장결제';
   const dispatchMethod = DISPATCH_ROW_DATA[rowIdx % DISPATCH_ROW_DATA.length];
   const contractPartner = pick(PARTNER_ROW_DATA, 22);
 
@@ -1895,7 +1887,6 @@ function getRowData(rowIdx: number) {
   const saleTaxDate = saleBaseDate;
   const saleDeadline = fmtDate312(new Date(loadDate.getTime() + 30*86400000));
   const salePayDate = saleStatus === '수금완료' ? fmtDate312(new Date(loadDate.getTime() + 25*86400000)) : '';
-  const saleInvoiceMethod: '전자' | '수기' = rnd(50) < 0.5 ? '전자' : '수기';
   const purchaseBaseDate = fmtDate312(new Date(unloadDate.getTime() + 1*86400000));
   const purchaseTaxDate = purchaseBaseDate;
   const purchaseDeadline = fmtDate312(new Date(loadDate.getTime() + 30*86400000));
@@ -1919,7 +1910,7 @@ function getRowData(rowIdx: number) {
     billingMethod, settlementType,
     billingAmt, dispatchAmt, profit,
     totalInsurance, selfInsurance,
-    saleBaseDate, saleTaxDate, saleDeadline, salePayDate, saleInvoiceMethod,
+    saleBaseDate, saleTaxDate, saleDeadline, salePayDate,
     purchaseBaseDate, purchaseTaxDate, purchaseDeadline, purchasePayDate,
     shipperOrderNum,
   };
@@ -2042,14 +2033,28 @@ function ButtonDataCell({ rowIdx }: { rowIdx: number }) {
     <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells" data-table-row={rowIdx}>
       <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
         <div className="content-stretch flex gap-[6px] items-center justify-center px-[8px] py-[10px] relative size-full">
-          <div className="bg-white border border-[#e3e5e9] border-solid cursor-pointer flex h-[28px] items-center justify-center px-[10px] rounded-[4px] shrink-0">
-            <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] not-italic relative shrink-0 text-[#2e3238] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-              <p className="leading-[19px]">보기</p>
+          <div className="bg-white h-[26px] relative rounded-[2px] shrink-0 cursor-pointer" data-name="Button">
+            <div className="content-stretch flex gap-[4px] items-center justify-center overflow-clip px-[8px] relative rounded-[inherit] size-full">
+              <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#2e3238] text-[14px] tracking-[-0.28px] whitespace-nowrap">
+                <p className="leading-[20px]">보기</p>
+              </div>
             </div>
+            <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-[2px]" />
           </div>
         </div>
       </div>
       <ColBorder />
+    </div>
+  );
+}
+
+function CheckboxDataCell312({ rowIdx }: { rowIdx: number }) {
+  return (
+    <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells" data-table-row={rowIdx} data-cb-row={rowIdx}>
+      <ColBorder />
+      <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
+        <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
+      </div>
     </div>
   );
 }
@@ -2100,44 +2105,9 @@ function TaxInvoiceModal({ type, rowIdx, onClose }: { type: 'sale' | 'purchase';
   );
 }
 
-function PayDateCancelConfirmModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
-  return createPortal(
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100000 }}
-      onClick={onClose}
-    >
-      <div
-        style={{ width: 360, background: '#FFFFFF', borderRadius: 12, padding: 24, boxSizing: 'border-box' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[16px] leading-[24px] tracking-[-0.32px]" style={{ marginBottom: 8 }}>수금을 취소하시겠어요?</p>
-        <p className="font-['Pretendard_GOV:Regular'] text-[#5c6370] text-[14px] leading-[20px] tracking-[-0.28px]" style={{ marginBottom: 20 }}>수기 계산서로 등록된 건입니다. 수금취소 후에는 거래명세서 상세에서 다시 처리해야 합니다.</p>
-        <div className="flex flex-row gap-[8px]">
-          <div
-            className="flex items-center justify-center cursor-pointer"
-            style={{ flex: 1, height: 40, border: '1px solid #E4E5E9', borderRadius: 4 }}
-            onClick={onClose}
-          >
-            <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[15px] leading-[22px]">닫기</p>
-          </div>
-          <div
-            className="flex items-center justify-center cursor-pointer"
-            style={{ flex: 1, height: 40, background: '#005FFF', borderRadius: 4 }}
-            onClick={onConfirm}
-          >
-            <p className="font-['Pretendard_GOV:SemiBold'] text-white text-[15px] leading-[22px]">수금취소</p>
-          </div>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
 type RowHandlers = {
   onOrderClick: (id: string, idx: number) => void;
   onTaxInvoiceClick: (type: 'sale' | 'purchase', rowIdx: number) => void;
-  onPayDateClick: (rowIdx: number) => void;
 };
 
 type ColDef = {
@@ -2181,9 +2151,7 @@ const TABLE_COLS: ColDef[] = [
   { label: '매출 명세서 기준일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.saleBaseDate} rowIdx={i} /> },
   { label: '매출 계산서 작성일', width: 140, render: (d, i, h) => <LinkDataCell key={i} text={d.saleTaxDate} rowIdx={i} onClick={() => h.onTaxInvoiceClick('sale', i)} /> },
   { label: '수금기한', width: 140, render: (d, i) => <TextDataCell key={i} text={d.saleDeadline} rowIdx={i} /> },
-  { label: '수금일', width: 140, render: (d, i, h) => d.salePayDate
-    ? <LinkDataCell key={i} text={d.salePayDate} rowIdx={i} onClick={() => h.onPayDateClick(i)} />
-    : <TextDataCell key={i} text="-" rowIdx={i} /> },
+  { label: '수금일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.salePayDate || '-'} rowIdx={i} /> },
   { label: '매입 명세서 기준일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.purchaseBaseDate} rowIdx={i} /> },
   { label: '매입 계산서 작성일', width: 140, render: (d, i, h) => <LinkDataCell key={i} text={d.purchaseTaxDate} rowIdx={i} onClick={() => h.onTaxInvoiceClick('purchase', i)} /> },
   { label: '지급기한', width: 140, render: (d, i) => <TextDataCell key={i} text={d.purchaseDeadline} rowIdx={i} /> },
@@ -2198,6 +2166,18 @@ function DynamicTable312({ pageRows, handlers }: {
 }) {
   return (
     <>
+      <div className="relative shrink-0">
+        <div className="content-stretch flex flex-col items-center overflow-clip relative rounded-[inherit] w-full">
+          <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center p-[8px] relative shrink-0 w-[34px] sticky top-0 z-[1] border-r border-[#E4E5E9]" data-name="Table_Header Cells" data-cb-row="header">
+            <ColBorder />
+            <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
+              <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
+            </div>
+          </div>
+          {pageRows.map((rowIdx) => <CheckboxDataCell312 key={rowIdx} rowIdx={rowIdx} />)}
+        </div>
+        <div aria-hidden className="absolute border-[#e3e5e9] border-l border-r border-solid inset-0 pointer-events-none" />
+      </div>
       {TABLE_COLS.map((col) => (
         <div
           key={col.label}
@@ -2259,8 +2239,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   const CARGO_TYPES_MODAL = ['카고','윙바디','탑차','리프트'];
   const CARGO_FEATURES    = ['상온','냉장','냉동'];
   const TON_TYPES = ['1톤','2.5톤','3.5톤','5톤','8톤'];
-  const BILLING_METHODS = ['후불','선불','월정산'];
-  const SETTLEMENT_TYPES = ['별도정산','통합정산'];
+  const BILLING_METHODS = ['후불','선착불'];
   const GROUPS = ['기본그룹','A그룹','B그룹','판교팀','수원팀'];
 
   const shipperPerson = pick(SHIPPER_PERSONS, 1);
@@ -2275,7 +2254,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   const cargoFeature     = pick(CARGO_FEATURES, 84);
   const assignGroup = pick(GROUPS, 13);
   const billingMethod = pick(BILLING_METHODS, 14);
-  const settlementType = pick(SETTLEMENT_TYPES, 15);
+  const settlementType = billingMethod === '후불' ? pick(['별도정산', '예치금', '한도'], 15) : '현장결제';
 
   // Generate unload date (loadingDate + 1-3 days)
   const parseDate = (s: string) => { const [yy,mm,dd]=s.split('.').map(Number); return new Date(2000+yy,mm-1,dd); };
@@ -2430,7 +2409,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   // 기본운임 청구·배차금액 존재 여부 상태 목록
   const SALE_BILLING_STATUSES     = ['정산대기','수금대기','수금완료','정산보류'];
   const PURCHASE_DISPATCH_STATUSES = ['정산대기','지급대기','지급완료','정산보류'];
-  // 금액확정 초기값: 청구금액/배차금액 존재 여부로 결정
+  // 금액확인여부 초기값: 청구금액/배차금액 존재 여부로 결정
   const _initIsSaleMagam     = saleStatus === '마감필요';
   const _initIsPurchaseMagam = purchaseStatus === '마감필요';
   const _initShowHwachae     = _initIsSaleMagam || _initIsPurchaseMagam;
@@ -2461,7 +2440,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
     }
   }, [cancelCloseState]);
 
-  // 취소된 오더에서 청구금액확정 or 배차금액확정 체크 시 → 정산대기 전달
+  // 취소된 오더에서 청구금액확인 or 배차금액확인 체크 시 → 정산대기 전달
   useEffect(() => {
     if (isCancelledInStore && closeSale) {
       onStatusChange?.('정산대기_sale');
@@ -2651,8 +2630,8 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
             <div style={row}>
               <span style={lbl}>정산방법</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1 }}>
-                <select defaultValue={billingMethod} style={{ width:140, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>{['후불','선불','현금','월정산'].map(o=><option key={o}>{o}</option>)}</select>
-                <select defaultValue={settlementType} style={{ width:140, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>{['별도정산','통합정산'].map(o=><option key={o}>{o}</option>)}</select>
+                <select defaultValue={billingMethod} style={{ width:140, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>{['후불','선착불'].map(o=><option key={o}>{o}</option>)}</select>
+                <select defaultValue={settlementType} style={{ width:140, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>{['별도정산','예치금','한도','현장결제'].map(o=><option key={o}>{o}</option>)}</select>
                 <span style={{ fontSize:13, color:'#666', flexShrink:0 }}>인수증</span>
                 <Sel options={['필요 없음','필요','완료']} width={140} bg="#E8F3FE" />
                 <div style={{ flex:1 }} />
@@ -2930,13 +2909,13 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
               </div>
             </div>
 
-            {/* 금액확정 */}
+            {/* 금액확인여부 */}
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ fontSize:13, fontWeight:700, color:'#666', letterSpacing:'-0.01em', flexShrink:0, whiteSpace:'nowrap' }}>금액확정</span>
+              <span style={{ fontSize:13, fontWeight:700, color:'#666', letterSpacing:'-0.01em', flexShrink:0, whiteSpace:'nowrap' }}>금액확인여부</span>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <Chk checked={closeSale} label="청구금액확정" onChange={() => setCloseSale(p=>!p)} />
+                <Chk checked={closeSale} label="청구금액확인" onChange={() => setCloseSale(p=>!p)} />
                 <span style={{ color:'#CCC', fontSize:15 }}>|</span>
-                <Chk checked={closePurchase} label="배차금액확정" onChange={() => setClosePurchase(p=>!p)} />
+                <Chk checked={closePurchase} label="배차금액확인" onChange={() => setClosePurchase(p=>!p)} />
               </div>
             </div>
           </div>
@@ -2988,11 +2967,15 @@ function Con() {
     const text = searchText.trim();
     setAppliedSearch(text ? { type: searchType, text } : null);
   };
+  const clearSearch = () => {
+    setSearchType('차량번호');
+    setSearchText('');
+    setAppliedSearch(null);
+  };
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [orderDetailId, setOrderDetailId] = useState<string | null>(null);
   const [orderDetailRowIdx, setOrderDetailRowIdx] = useState<number>(0);
   const [taxInvoiceModal, setTaxInvoiceModal] = useState<{ type: 'sale' | 'purchase'; rowIdx: number } | null>(null);
-  const [payDateCancelRowIdx, setPayDateCancelRowIdx] = useState<number | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const [cancelledTopRows, setCancelledTopRows] = useState<CancelledOrderEntry[]>(getCancelledOrders());
   useEffect(() => subscribeCancelledOrders(() => setCancelledTopRows(getCancelledOrders())), []);
@@ -3074,6 +3057,14 @@ function Con() {
     return hidden;
   }, [saleSelected, purchaseSelected, shipperSelected, partnerSelected, dispatchSelected, dateType, dateRangeStart, dateRangeEnd, appliedSearch]);
 
+  const filteredSelfInsuranceSum = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i < TOTAL_ROWS; i++) {
+      if (!hiddenRows.has(i)) sum += getRowData(i).selfInsurance;
+    }
+    return sum;
+  }, [hiddenRows]);
+
   const dynamicCounts = useMemo(() => {
     const saleCounts = new Array(SALE_STATUS_DATA.length).fill(0);
     const purchaseCounts = new Array(PURCHASE_STATUS_DATA.length).fill(0);
@@ -3129,12 +3120,15 @@ function Con() {
       .sort((a, b) => {
         const da = parseLD(getLoadingDate312(a)), db = parseLD(getLoadingDate312(b));
         if (da !== db) return da - db;
-        const pa = SALE_PRIORITY[SALE_ROW_STATUSES[a % SALE_ROW_STATUSES.length]] ?? 99;
-        const pb = SALE_PRIORITY[SALE_ROW_STATUSES[b % SALE_ROW_STATUSES.length]] ?? 99;
-        if (pa !== pb) return pa - pb;
-        const qa = PURCHASE_PRIORITY[PURCHASE_ROW_STATUSES[a % PURCHASE_ROW_STATUSES.length]] ?? 99;
-        const qb = PURCHASE_PRIORITY[PURCHASE_ROW_STATUSES[b % PURCHASE_ROW_STATUSES.length]] ?? 99;
-        return qa - qb;
+        // 매출/매입 상태 중 더 급한(작은) 우선순위가 먼저, 동률이면 나머지 한쪽이 작은 순으로 정렬
+        const saleA = SALE_PRIORITY[SALE_ROW_STATUSES[a % SALE_ROW_STATUSES.length]] ?? 99;
+        const purchaseA = PURCHASE_PRIORITY[PURCHASE_ROW_STATUSES[a % PURCHASE_ROW_STATUSES.length]] ?? 99;
+        const saleB = SALE_PRIORITY[SALE_ROW_STATUSES[b % SALE_ROW_STATUSES.length]] ?? 99;
+        const purchaseB = PURCHASE_PRIORITY[PURCHASE_ROW_STATUSES[b % PURCHASE_ROW_STATUSES.length]] ?? 99;
+        const minA = Math.min(saleA, purchaseA), maxA = Math.max(saleA, purchaseA);
+        const minB = Math.min(saleB, purchaseB), maxB = Math.max(saleB, purchaseB);
+        if (minA !== minB) return minA - minB;
+        return maxA - maxB;
       });
     const cancelledVisible = cancelledTopRows.map(o => o.rowIdx).filter(i => !hiddenRows.has(i));
     const allVisible = [...cancelledVisible, ...baseSorted];
@@ -3247,28 +3241,23 @@ function Con() {
   const rowHandlers: RowHandlers = {
     onOrderClick: handleOrderClick,
     onTaxInvoiceClick: (type, rowIdx) => setTaxInvoiceModal({ type, rowIdx }),
-    onPayDateClick: (rowIdx) => {
-      const d = getRowData(rowIdx);
-      if (d.saleInvoiceMethod === '수기') setPayDateCancelRowIdx(rowIdx);
-      // 전자 세금계산서는 동작 없음 (수금취소는 거래명세서 상세에서 처리)
-    },
   };
 
   return (
     <>
     <DateFilterCtx.Provider value={{ dateType, rangeStart: dateRangeStart, rangeEnd: dateRangeEnd, periodRange, setDateType, setRangeStart: setDateRangeStart, setRangeEnd: setDateRangeEnd, setPeriodRange }}>
-    <SearchCtx312.Provider value={{ searchType, searchText, appliedSearch, setSearchType, setSearchText, runSearch }}>
-    <DynamicCountCtx.Provider value={dynamicCounts}>
+    <SearchCtx312.Provider value={{ searchType, searchText, appliedSearch, setSearchType, setSearchText, runSearch, clearSearch }}>
+    <DynamicCountCtx.Provider value={{ ...dynamicCounts, selfInsuranceSum: filteredSelfInsuranceSum }}>
     <BubbleCtx.Provider value={{ shipperSelected, setShipperSelected, partnerSelected, setPartnerSelected, dispatchSelected, setDispatchSelected }}>
     <SaleFilterCtx.Provider value={{ selected: saleSelected, setSelected: setSaleSelected }}>
       <PurchaseFilterCtx.Provider value={{ selected: purchaseSelected, setSelected: setPurchaseSelected }}>
       <TableCtrlCtx.Provider value={{ filteredTotal: TOTAL_ROWS - hiddenRows.size, selectedCount: selectedRows.size }}>
     <div className="flex-[1_0_0] min-h-px relative w-full" data-name="con">
-      <div className="content-stretch flex flex-col items-start pt-[8px] px-[32px] relative size-full">
+      <div className="content-stretch flex flex-col items-start pt-[4px] px-[32px] relative size-full">
         <FilterSorterModule />
         <Frame891 />
         <TableControlModule />
-        <div className="content-stretch flex items-start relative shrink-0 w-[1648px] h-[840px] overflow-auto pb-[120px]" data-name="통합장부표" ref={tableRef}>
+        <div className="content-stretch flex items-start relative shrink-0 w-[1648px] h-[840px] overflow-auto pb-[40px]" data-name="통합장부표" ref={tableRef}>
           <DynamicTable312 pageRows={pageRows} handlers={rowHandlers} />
         </div>
       </div>
@@ -3298,10 +3287,6 @@ function Con() {
       type={taxInvoiceModal.type}
       rowIdx={taxInvoiceModal.rowIdx}
       onClose={() => setTaxInvoiceModal(null)}
-    />}
-    {payDateCancelRowIdx !== null && <PayDateCancelConfirmModal
-      onClose={() => setPayDateCancelRowIdx(null)}
-      onConfirm={() => setPayDateCancelRowIdx(null)}
     />}
     </>
   );

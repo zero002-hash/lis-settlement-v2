@@ -9,8 +9,50 @@ import { getCancelledOrders, subscribeCancelledOrders, CancelledOrderEntry } fro
 import { modalSvg, emptySvg } from "./svg-modal";
 import { OrderDetailModal } from "../312통합장부/index";
 
-const ROW_STATUSES_313 = ["마감필요","정산대기","정산대기","정산대기","정산대기","정산대기","수금대기","수금대기","수금완료","수금완료","정산보류"];
 const STATUS_PRIORITY_313: Record<string, number> = { '마감필요': 0, '정산대기': 1, '수금대기': 2, '수금완료': 3, '정산보류': 4, '정산제외': 5 };
+
+// ── 매출 상태 전환 조건 ────────────────────────────────────────────────────
+// 마감필요: 화주사+화주사 업무그룹 정보 미입력 또는 청구금액 미확인
+// 정산대기: 화주사+화주사 업무그룹 정보 입력 그리고 청구금액 확인
+// 수금대기: 수기계산서 등록 또는 매출 거래명세서 페이지에서 수기계산서 또는 전자 세금계산서 발행
+// 수금완료: 수금완료 처리 또는 매출 거래명세서 페이지에서 수금완료 처리
+// 정산보류: 상위 거래처가 매입장부에서 정산보류 처리한 경우 매출장부에 정산보류로 보여짐
+interface RowOverrides313S {
+  manualInvoiceRegistered: Set<number>;
+  invoiceGenerated: Set<number>;
+  collectionCompleted: Set<number>;
+}
+const EMPTY_OVERRIDES_313S: RowOverrides313S = { manualInvoiceRegistered: new Set(), invoiceGenerated: new Set(), collectionCompleted: new Set() };
+
+function getRowFlags313S(rowIdx: number) {
+  const hasShipperInfo = rnd313S(rowIdx, 101) > 0.08;
+  const billingConfirmed = hasShipperInfo && rnd313S(rowIdx, 102) > 0.35;
+  const onHold = rnd313S(rowIdx, 103) < 0.05;
+  const eligibleForInvoice = hasShipperInfo && billingConfirmed;
+  const manualInvoiceRegistered = eligibleForInvoice && rnd313S(rowIdx, 104) < 0.35;
+  const invoiceGenerated = eligibleForInvoice && !manualInvoiceRegistered && rnd313S(rowIdx, 105) < 0.35;
+  const taxInvoiceIssuedForStatement = invoiceGenerated && rnd313S(rowIdx, 106) < 0.6;
+  const reachedCollectWaiting = manualInvoiceRegistered || taxInvoiceIssuedForStatement;
+  const collectionCompleted = reachedCollectWaiting && rnd313S(rowIdx, 107) < 0.5;
+  return { hasShipperInfo, billingConfirmed, onHold, manualInvoiceRegistered, invoiceGenerated, taxInvoiceIssuedForStatement, collectionCompleted };
+}
+
+function getEffectiveFlags313S(rowIdx: number, overrides: RowOverrides313S) {
+  const base = getRowFlags313S(rowIdx);
+  const manualInvoiceRegistered = base.manualInvoiceRegistered || overrides.manualInvoiceRegistered.has(rowIdx);
+  const invoiceGenerated = base.invoiceGenerated || overrides.invoiceGenerated.has(rowIdx);
+  const collectionCompleted = base.collectionCompleted || overrides.collectionCompleted.has(rowIdx);
+  return { ...base, manualInvoiceRegistered, invoiceGenerated, collectionCompleted };
+}
+
+function deriveStatus313S(flags: ReturnType<typeof getEffectiveFlags313S>, isCancelled: boolean): string {
+  if (isCancelled) return '마감필요';
+  if (flags.onHold) return '정산보류';
+  if (flags.collectionCompleted) return '수금완료';
+  if (flags.manualInvoiceRegistered || flags.taxInvoiceIssuedForStatement) return '수금대기';
+  if (flags.hasShipperInfo && flags.billingConfirmed) return '정산대기';
+  return '마감필요';
+}
 
 const LOADING_DATES_313 = [
   '26.05.04','26.05.07','26.05.11','26.05.14','26.05.18','26.05.21','26.05.25','26.05.28',
@@ -18,6 +60,9 @@ const LOADING_DATES_313 = [
 ];
 const getLoadingDateIdx313 = (i: number) => { let h = i ^ (i >>> 13); h = Math.imul(h, 0x9e3779b9 | 0); h ^= h >>> 11; return ((h >>> 0) % LOADING_DATES_313.length + LOADING_DATES_313.length) % LOADING_DATES_313.length; };
 const getLoadingDate313 = (i: number) => LOADING_DATES_313[getLoadingDateIdx313(i)];
+const parseYMD313 = (s: string) => { const [yy, mm, dd] = s.split('.').map(Number); return new Date(2000 + yy, mm - 1, dd); };
+const fmtYMD313 = (d: Date) => { const yy = String(d.getFullYear()).slice(2); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0'); return `${yy}.${mm}.${dd}`; };
+const addDays313 = (s: string, n: number) => fmtYMD313(new Date(parseYMD313(s).getTime() + n * 86400000));
 
 // ── 화주사 bubble filter ──────────────────────────────────────────────────────
 const BUBBLE_SHIPPERS = ['(주)글로벌로지스', '(주)케이로지스틱스', '(주)판교물류솔루션', '(주)수원익스프레스', '(주)동탄스마트물류'];
@@ -51,11 +96,14 @@ const REQUEST_PARTNER_ROW_DATA_313 = [
   '(주)티몬물류', '(주)위메프물류', '(주)11번가물류', '(주)SSG닷컴로지스', '(주)오아시스물류',
 ];
 
-interface DateFilterCtxType313 { rangeStart: Date|null; rangeEnd: Date|null; setRangeStart: (d: Date|null) => void; setRangeEnd: (d: Date|null) => void; }
-const DateFilterCtx313 = createContext<DateFilterCtxType313>({ rangeStart: null, rangeEnd: null, setRangeStart: () => {}, setRangeEnd: () => {} });
+interface DateFilterCtxType313 { rangeStart: Date|null; rangeEnd: Date|null; setRangeStart: (d: Date|null) => void; setRangeEnd: (d: Date|null) => void; dateType: string; setDateType: (t: string) => void; }
+const DateFilterCtx313 = createContext<DateFilterCtxType313>({ rangeStart: null, rangeEnd: null, setRangeStart: () => {}, setRangeEnd: () => {}, dateType: '상차일', setDateType: () => {} });
 
-interface BubbleCtxType313 { shipperSelected: Set<number>; setShipperSelected: (s: Set<number>) => void; partnerSelected: Set<number>; setPartnerSelected: (s: Set<number>) => void; }
-const BubbleCtx313 = createContext<BubbleCtxType313>({ shipperSelected: new Set(), setShipperSelected: () => {}, partnerSelected: new Set(), setPartnerSelected: () => {} });
+interface BubbleCtxType313 { shipperSelected: Set<number>; setShipperSelected: (s: Set<number>) => void; partnerSelected: Set<number>; setPartnerSelected: (s: Set<number>) => void; groupSelected: Set<number>; setGroupSelected: (s: Set<number>) => void; }
+const BubbleCtx313 = createContext<BubbleCtxType313>({ shipperSelected: new Set(), setShipperSelected: () => {}, partnerSelected: new Set(), setPartnerSelected: () => {}, groupSelected: new Set(), setGroupSelected: () => {} });
+
+interface SearchCtxType313 { searchType: string; searchText: string; setSearchType: (t: string) => void; setSearchText: (t: string) => void; runSearch: () => void; }
+const SearchCtx313 = createContext<SearchCtxType313>({ searchType: '오더 ID', searchText: '', setSearchType: () => {}, setSearchText: () => {}, runSearch: () => {} });
 
 const DynamicCountCtx313 = createContext<{ saleCounts: number[]; saleTotalAmount: number }>({ saleCounts: [], saleTotalAmount: 0 });
 
@@ -70,7 +118,17 @@ const PER_ROW_SALE_AMOUNT_313: Record<string, number> = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PageCtx313 = createContext<{ currentPage: number; setCurrentPage: (n: number) => void; filteredTotal: number; setFilteredTotal: (n: number) => void }>({ currentPage: 1, setCurrentPage: () => {}, filteredTotal: 300, setFilteredTotal: () => {} });
-const ModalCtx313 = createContext<{ openModal: (indices: number[]) => void; selectedRows: Set<number> }>({ openModal: () => {}, selectedRows: new Set() });
+const ModalCtx313 = createContext<{
+  openModal: (indices: number[]) => void;
+  selectedRows: Set<number>;
+  getRow: (i: number) => RowData313S;
+  registerManualInvoice: (indices: number[]) => void;
+  requestCollectionComplete: (indices: number[]) => { ok: boolean; message?: string };
+}>({
+  openModal: () => {}, selectedRows: new Set(),
+  getRow: (i) => getRowData313S(i),
+  registerManualInvoice: () => {}, requestCollectionComplete: () => ({ ok: false }),
+});
 const FilterCtx313 = createContext<{ selected: Set<number>; setSelected: (s: Set<number>) => void }>({ selected: new Set([0]), setSelected: () => {} });
 
 function DashboardCard({ label, amount, active, onClick }: { label: string; amount: string; active: boolean; onClick?: () => void }) {
@@ -247,10 +305,10 @@ function Frame3() {
   );
 }
 
-const PERIOD_OPTIONS_313 = ['상차일', '하차일', '매출 명세서 기준일', '매입 명세서 기준일'] as const;
+const PERIOD_OPTIONS_313 = ['상차일', '하차일', '매출 명세서 기준일'] as const;
 
 function TypeStatusDisabled() {
-  const [selected, setSelected] = useState<string>('상차일');
+  const { dateType: selected, setDateType: setSelected } = useContext(DateFilterCtx313);
   const [open, setOpen] = useState(false);
   const [focusedOpt, setFocusedOpt] = useState<string | null>(null);
   const btnRef = useRef<HTMLDivElement>(null);
@@ -677,6 +735,113 @@ function Calender() {
   );
 }
 
+function ShipperGroupBubbleFilter313({ hidden }: { hidden: boolean }) {
+  const { groupSelected, setGroupSelected } = useContext(BubbleCtx313);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const btnRef = useRef<HTMLDivElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (!btnRef.current?.contains(e.target as Node) && !dropRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const bg = open ? '#eef3ff' : groupSelected.size > 0 ? '#f5f9ff' : '#f6f7f8';
+  const textColor = (open || groupSelected.size > 0) ? '#005fff' : '#2e3238';
+  const labelOf = (idx: number) => `${SHIPPER_GROUP_OPTIONS_313[idx].shipper} · ${SHIPPER_GROUP_OPTIONS_313[idx].group}`;
+  const options = SHIPPER_GROUP_OPTIONS_313.map((o, idx) => ({ idx, label: labelOf(idx) }));
+  const visibleOptions = options.filter(({ label, idx }) => (search && label.includes(search)) || groupSelected.has(idx));
+
+  return (
+    <div ref={btnRef} style={{ position: 'relative', display: hidden ? 'none' : undefined }}>
+      <div
+        className="content-stretch flex gap-[8px] h-[32px] items-center justify-center pl-[12px] pr-[10px] py-[6px] relative rounded-[30px] shrink-0 cursor-pointer select-none"
+        style={{ background: bg, border: open || groupSelected.size > 0 ? '1px solid transparent' : '1px solid transparent' }}
+        data-name="Input / Dropdown_Filter"
+        onClick={() => {
+          if (!open) { const rect = btnRef.current!.getBoundingClientRect(); setDropdownPos({ top: rect.bottom + 2, left: rect.left }); }
+          setOpen(o => !o);
+        }}
+      >
+        <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[14px] text-center tracking-[-0.28px] whitespace-nowrap" style={{ color: textColor }}>
+          <p className="leading-[20px]">화주사 업무그룹</p>
+        </div>
+        {groupSelected.size > 0 && !open ? (
+          <div className="bg-[#ccdfff] content-stretch flex flex-col items-center justify-center relative rounded-[100px] shrink-0">
+            <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 size-[16px] text-[#005fff] text-[11px] text-center tracking-[-0.22px]">
+              <p className="leading-[18px]">{groupSelected.size}</p>
+            </div>
+          </div>
+        ) : (
+          <div style={{ transform: open ? 'rotate(180deg)' : undefined }} className="relative shrink-0 size-[12px]" data-name="Icon_12/arrow_down">
+            <div className="-translate-y-1/2 absolute flex h-[3px] items-center justify-center left-[2.5px] top-1/2 w-[7px]">
+              <div className="-scale-y-100 flex-none">
+                <div className="h-[3px] relative w-[7px]">
+                  <div className="absolute inset-[-21.67%_-9.29%]">
+                    <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 8.30002 4.30001">
+                      <path d="M1 3.30002L4.15001 0.650024L7.30002 3.30002" stroke={open ? '#005fff' : '#9197A1'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      {open && dropdownPos && createPortal(
+        <div ref={dropRef} style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: 200, background: '#FFFFFF', border: '1px solid #E4E5E9', boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius: 8, display: 'flex', flexDirection: 'column', zIndex: 9999, boxSizing: 'border-box' }}>
+          <div style={{ padding: '8px 8px 2px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, border: '1px solid #E4E5E9', borderRadius: 4, padding: '6px 10px', height: 36, boxSizing: 'border-box' }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                <circle cx="6.57" cy="6.57" r="5.07" stroke="#9197A1" strokeWidth="1.3"/>
+                <line x1="10.91" y1="10.91" x2="14.5" y2="14.5" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="업무그룹 검색" style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#767D8A', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px', background: 'transparent' }} />
+            </div>
+          </div>
+          <div style={{ maxHeight: 162, overflowY: 'auto', padding: 8, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+            {visibleOptions.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 146, gap: 4 }}>
+                <span style={{ fontSize: 15, color: '#5C6370', textAlign: 'center', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px' }}>검색 결과가 없습니다.</span>
+              </div>
+            ) : visibleOptions.map(({ idx, label }) => (
+              <div
+                key={idx}
+                onMouseEnter={() => setHoveredIdx(idx)}
+                onMouseLeave={() => setHoveredIdx(null)}
+                onClick={() => { const next = new Set(groupSelected); next.has(idx) ? next.delete(idx) : next.add(idx); setGroupSelected(next); }}
+                style={{ display: 'flex', alignItems: 'center', padding: '9px 8px 9px 4px', gap: 8, height: 40, borderRadius: 4, cursor: 'pointer', boxSizing: 'border-box', background: hoveredIdx === idx ? '#F6F7F8' : '#FFFFFF' }}
+              >
+                <div style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 16, height: 16, border: groupSelected.has(idx) ? '1.3px solid #005FFF' : '1.3px solid #ADB1B9', borderRadius: 3, background: groupSelected.has(idx) ? '#005FFF' : '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
+                    {groupSelected.has(idx) && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                <span style={{ fontSize: 15, color: '#2E3238', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ height: 28, padding: '0 8px', borderTop: '1px solid #E4E5E9', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexShrink: 0, boxSizing: 'border-box' }}>
+            <span onClick={e => { e.stopPropagation(); setGroupSelected(new Set()); setSearch(''); }} style={{ fontSize: 12, color: '#9197A1', cursor: 'pointer', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '18px' }}>필터 초기화</span>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 function BubbleFilter313() {
   const { activeTab } = useContext(SubTabCtx);
   const isPartnerTab = activeTab === '협력사';
@@ -853,6 +1018,9 @@ function BubbleFilter313() {
           document.body
         )}
       </div>
+
+      {/* 화주사 업무그룹 bubble filter - 화주사 탭에서만 표시 */}
+      <ShipperGroupBubbleFilter313 hidden={isPartnerTab || isDriverTab} />
 
       {/* 협력사 bubble filter - 협력사 탭에서만 표시 */}
       <div ref={partnerBtnRef} style={{ position: 'relative', display: (isPartnerTab || isDriverTab) ? undefined : 'none' }}>
@@ -1616,18 +1784,38 @@ function InvoiceToast({ onClose }: { onClose: () => void }) {
   );
 }
 
-function InvoiceErrorToast({ onClose }: { onClose: () => void }) {
+function InvoiceErrorToast({ onClose, message }: { onClose: () => void; message?: string }) {
   useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, [onClose]);
   return createPortal(
     <>
       <style>{TOAST_ANIMATION}</style>
       <div style={{ ...TOAST_STYLE, background: "#E13838" }}>
         <span style={{ color: "#fff", fontFamily: "'Pretendard GOV', sans-serif", fontSize: 15, fontWeight: 400, letterSpacing: "-0.3px", lineHeight: "22px" }}>
-          정산대기 상태의 오더만 거래명세서 생성이 가능합니다.
+          {message ?? '정산대기 상태의 오더만 거래명세서 생성이 가능합니다.'}
         </span>
         <ToastCloseBtn onClose={onClose} />
       </div>
     </>,
+    document.body
+  );
+}
+
+function CollectCompleteConfirmModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100000 }} onClick={onClose}>
+      <div style={{ width: 360, background: '#FFFFFF', borderRadius: 12, padding: 24, boxSizing: 'border-box' }} onClick={e => e.stopPropagation()}>
+        <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[16px] leading-[24px] tracking-[-0.32px]" style={{ marginBottom: 8 }}>수금을 완료 처리하시겠어요?</p>
+        <p className="font-['Pretendard_GOV:Regular'] text-[#5c6370] text-[14px] leading-[20px] tracking-[-0.28px]" style={{ marginBottom: 20 }}>수금완료 처리 후에는 매출 상태가 수금완료로 변경됩니다.</p>
+        <div className="flex flex-row gap-[8px]">
+          <div className="flex items-center justify-center cursor-pointer" style={{ flex: 1, height: 40, border: '1px solid #E4E5E9', borderRadius: 4 }} onClick={onClose}>
+            <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[15px] leading-[22px]">취소</p>
+          </div>
+          <div className="flex items-center justify-center cursor-pointer" style={{ flex: 1, height: 40, background: '#005FFF', borderRadius: 4 }} onClick={onConfirm}>
+            <p className="font-['Pretendard_GOV:SemiBold'] text-white text-[15px] leading-[22px]">수금완료</p>
+          </div>
+        </div>
+      </div>
+    </div>,
     document.body
   );
 }
@@ -2380,13 +2568,14 @@ function ManualInvoiceModal({ onClose, onSuccess, selectedIndices }: { onClose: 
     return getGroupForIndex(i, shipper);
   }))];
   const groupsText = selectedGroups.length > 0 ? selectedGroups.join(', ') : '-';
-  const [dateValues, setDateValues] = useState({ 기준일: todayYYMMDD(), 발행일: todayYYMMDD(), 수금일: '26.07.27' });
+  const firstLoadDate = selectedIndices.length > 0 ? getRowData313S(selectedIndices[0]).loadDate : todayYYMMDD();
+  const [dateValues, setDateValues] = useState({ 작성일자: firstLoadDate, 확인일자: todayYYMMDD(), 수금기한: addDays313(firstLoadDate, 60) });
   const [openCal, setOpenCal] = useState<string | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const DATE_ROWS: { label: string; key: keyof typeof dateValues }[] = [
-    { label: '매출 명세서 기준일', key: '기준일' },
-    { label: '세금계산서 발행일', key: '발행일' },
-    { label: '수금 예정일', key: '수금일' },
+    { label: '계산서 작성일자', key: '작성일자' },
+    { label: '계산서 확인일자', key: '확인일자' },
+    { label: '수금기한', key: '수금기한' },
   ];
   return <>{createPortal(
     <div style={{
@@ -2677,11 +2866,11 @@ function ManualInvoiceDetailModal({ onClose }: { onClose: () => void }) {
 
 function Frame599() {
   const { activeTab } = useContext(SubTabCtx);
-  const { openModal, selectedRows } = useContext(ModalCtx313);
+  const { openModal, selectedRows, getRow, registerManualInvoice, requestCollectionComplete } = useContext(ModalCtx313);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualErrorToast, setManualErrorToast] = useState(false);
   const [manualSuccessToast, setManualSuccessToast] = useState(false);
-  const [statusErrorToast, setStatusErrorToast] = useState(false);
+  const [statusErrorToast, setStatusErrorToast] = useState<string | false>(false);
   const [detailOpen, setDetailOpen] = useState(false);
   useEffect(() => {
     if (!manualErrorToast) return;
@@ -2705,7 +2894,7 @@ function Frame599() {
   }, []);
   return (
     <>
-      {manualOpen && <ManualInvoiceModal onClose={() => setManualOpen(false)} onSuccess={() => setManualSuccessToast(true)} selectedIndices={[...selectedRows]} />}
+      {manualOpen && <ManualInvoiceModal onClose={() => setManualOpen(false)} onSuccess={() => { setManualSuccessToast(true); registerManualInvoice([...selectedRows]); }} selectedIndices={[...selectedRows]} />}
       {manualSuccessToast && createPortal(
         <>
           <style>{TOAST_ANIMATION}</style>
@@ -2735,7 +2924,7 @@ function Frame599() {
           <style>{TOAST_ANIMATION}</style>
           <div style={{ ...TOAST_STYLE, background: '#E13838' }}>
             <span style={{ color: '#fff', fontFamily: "'Pretendard GOV', sans-serif", fontSize: 15, fontWeight: 400, letterSpacing: '-0.3px', lineHeight: '22px' }}>
-              정산대기 상태의 오더를 선택해 주세요.
+              {statusErrorToast}
             </span>
             <ToastCloseBtn onClose={() => setStatusErrorToast(false)} />
           </div>
@@ -2754,7 +2943,15 @@ function Frame599() {
         <div
           className={`${activeTab === '기사' ? 'bg-[#005fff]' : 'bg-white'} h-[36px] relative rounded-[4px] shrink-0`}
           data-name="Button"
-          onClick={() => { if (selectedRows.size === 0) { setManualErrorToast(true); return; } const indices = [...selectedRows]; const hasNonJeongsan = indices.some(i => ROW_STATUSES_313[i % ROW_STATUSES_313.length] !== '정산대기'); if (hasNonJeongsan) { setStatusErrorToast(true); return; } setManualOpen(true); }}
+          onClick={() => {
+            if (selectedRows.size === 0) { setManualErrorToast(true); return; }
+            const indices = [...selectedRows];
+            const rows = indices.map(getRow);
+            if (rows.some(r => r.status !== '정산대기')) { setStatusErrorToast('정산대기 상태의 오더를 선택해 주세요.'); return; }
+            if (rows.some(r => r.statementId)) { setStatusErrorToast('이미 매출 거래명세서로 생성된 오더는 매출 거래명세서 메뉴에서 처리해야 합니다.'); return; }
+            if (new Set(rows.map(r => r.shipper)).size > 1) { setStatusErrorToast('서로 다른 화주사(사업자정보)가 섞여 있어 수기계산서를 등록할 수 없습니다.'); return; }
+            setManualOpen(true);
+          }}
           style={{ cursor:'pointer' }}
         >
           <div className="content-stretch flex gap-[4px] items-center justify-center overflow-clip px-[12px] relative rounded-[inherit] size-full">
@@ -2764,7 +2961,15 @@ function Frame599() {
           </div>
           {activeTab !== '기사' && <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-[4px]" />}
         </div>
-        <div className="bg-white h-[36px] relative rounded-[4px] shrink-0" data-name="Button">
+        <div
+          className="bg-white h-[36px] relative rounded-[4px] shrink-0 cursor-pointer"
+          data-name="Button"
+          onClick={() => {
+            if (selectedRows.size === 0) { setManualErrorToast(true); return; }
+            const result = requestCollectionComplete([...selectedRows]);
+            if (!result.ok) setStatusErrorToast(result.message ?? '수금완료 처리가 불가능한 오더가 포함되어 있습니다.');
+          }}
+        >
           <div className="content-stretch flex gap-[4px] items-center justify-center overflow-clip px-[12px] relative rounded-[inherit] size-full">
             <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#2e3238] text-[15px] tracking-[-0.3px] whitespace-nowrap">
               <p className="leading-[22px]">수금 완료</p>
@@ -2809,6 +3014,7 @@ function TypeStatusDisabled2() {
 
 function TypeStatusDisabled3({ searchType }: { searchType?: string }) {
   const { activeTab } = useContext(SubTabCtx);
+  const { searchText, setSearchText, runSearch } = useContext(SearchCtx313);
   const label = searchType || (activeTab === '기사' ? '차량번호' : '오더 ID');
   const placeholder = `${label}를 입력하세요.`;
   return (
@@ -2816,9 +3022,14 @@ function TypeStatusDisabled3({ searchType }: { searchType?: string }) {
       <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-br-[4px] rounded-tr-[4px]" />
       <div className="flex flex-row items-center size-full">
         <div className="content-stretch flex gap-[4px] items-center px-[10px] py-[6px] relative size-full">
-          <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] h-[26px] justify-center leading-[0] min-w-px not-italic relative text-[#767d8a] text-[15px] tracking-[-0.3px]">
-            <p className="leading-[22px]">{placeholder}</p>
-          </div>
+          <input
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') runSearch(); }}
+            placeholder={placeholder}
+            className="[word-break:break-word] flex-[1_0_0] font-['Pretendard_GOV:Regular'] h-[26px] not-italic text-[#2e3238] text-[15px] tracking-[-0.3px] leading-[22px]"
+            style={{ border: 'none', outline: 'none', background: 'transparent', minWidth: 0 }}
+          />
         </div>
       </div>
     </div>
@@ -2921,15 +3132,12 @@ function Component11({ searchType, setSearchType }: { searchType: string; setSea
 }
 
 function Component10() {
-  const { activeTab } = useContext(SubTabCtx);
-  const getDefault = (tab: string) => tab === '기사' ? '차량번호' : '오더 ID';
-  const [searchType, setSearchType] = useState(() => getDefault(activeTab));
-  useEffect(() => { setSearchType(getDefault(activeTab)); }, [activeTab]);
+  const { searchType, setSearchType, runSearch } = useContext(SearchCtx313);
 
   return (
     <div className="content-stretch flex gap-[8px] items-center relative shrink-0" data-name="텍스트검색">
       <Component11 searchType={searchType} setSearchType={setSearchType} />
-      <div className="bg-white h-[36px] relative rounded-[4px] shrink-0" data-name="Button">
+      <div className="bg-white h-[36px] relative rounded-[4px] shrink-0 cursor-pointer" data-name="Button" onClick={runSearch}>
         <div className="content-stretch flex gap-[4px] items-center justify-center overflow-clip px-[12px] relative rounded-[inherit] size-full">
           <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#2e3238] text-[15px] tracking-[-0.3px] whitespace-nowrap">
             <p className="leading-[22px]">검색</p>
@@ -3009,14 +3217,19 @@ function seed313S(n: number) { let h = n ^ (n >>> 13); h = Math.imul(h, 0x9e3779
 function rnd313S(rowIdx: number, salt: number) { return seed313S(rowIdx * 97 + salt); }
 function pick313S<T>(arr: T[], rowIdx: number, salt: number): T { return arr[Math.floor(rnd313S(rowIdx, salt) * arr.length)]; }
 
-function getRowData313S(rowIdx: number) {
-  const status = ROW_STATUSES_313[rowIdx % ROW_STATUSES_313.length];
-  const shipper = SHIPPER_ROW_DATA_313[rowIdx % SHIPPER_ROW_DATA_313.length];
-  const shipperGroup = getGroupForIndex(rowIdx, shipper);
+function getRowData313S(rowIdx: number, overrides: RowOverrides313S = EMPTY_OVERRIDES_313S, isCancelled: boolean = false) {
+  const flags = getEffectiveFlags313S(rowIdx, overrides);
+  const status = deriveStatus313S(flags, isCancelled);
+  const shipperRaw = SHIPPER_ROW_DATA_313[rowIdx % SHIPPER_ROW_DATA_313.length];
+  const shipperGroupRaw = getGroupForIndex(rowIdx, shipperRaw);
+  const shipper = flags.hasShipperInfo ? shipperRaw : '';
+  const shipperGroup = flags.hasShipperInfo ? shipperGroupRaw : '';
   const shipperOrderNum = `CC${String(rowIdx % 100).padStart(3, '0')}C${String(rowIdx % 10).padStart(2, '0')}`;
-  const specDate = getLoadingDate313(rowIdx);
-  const loadDate = DATES[(rowIdx + 1) % DATES.length];
-  const unloadDate = DATES[(rowIdx + 2) % DATES.length];
+  const bizName = `${shipperRaw} 사업자`;
+  const bizNumber = `${100 + rowIdx % 900}-${10 + rowIdx % 90}-${10000 + rowIdx % 90000}`;
+  const loadDate = getLoadingDate313(rowIdx);
+  const unloadDate = addDays313(loadDate, 1 + (rowIdx % 3));
+  const specDate = addDays313(loadDate, 2);
   const loadLoc = LOAD_PLACES[rowIdx % LOAD_PLACES.length];
   const loadAddr = LOAD_ADDRS[rowIdx % LOAD_ADDRS.length];
   const unloadLoc = UNLOAD_PLACES[rowIdx % UNLOAD_PLACES.length];
@@ -3029,22 +3242,25 @@ function getRowData313S(rowIdx: number) {
   const vehicleOption = pick313S(VEHICLE_OPTIONS_313S, rowIdx, 16);
   const vehicleNum = `${pick313S(PLATE_REGIONS_313S, rowIdx, 17)}${String(Math.floor(rnd313S(rowIdx, 18) * 9000) + 1000)}`;
   const driver = pick313S(DRIVER_NAMES_313S, rowIdx, 19);
-  const charge = getRowChargeAmount(rowIdx);
-  const tax = getRowTaxAmount(rowIdx);
+  const charge = flags.hasShipperInfo ? getRowChargeAmount(rowIdx) : 0;
+  const tax = Math.round(charge * 0.1);
   const total = charge + tax;
-  const statementId = ORDER_IDS[rowIdx].slice(-6);
-  const invoiceDate = specDate;
-  const collectDeadline = specDate;
-  const collectDate = specDate;
+  const invoiceTriggered = flags.manualInvoiceRegistered || flags.taxInvoiceIssuedForStatement;
+  const statementId = flags.invoiceGenerated ? ORDER_IDS[rowIdx].slice(-6) : '';
+  const invoiceDate = invoiceTriggered ? specDate : '';
+  const invoiceIssueDate = invoiceTriggered ? addDays313(specDate, 1) : '';
+  const collectDeadline = invoiceTriggered ? specDate : '';
+  const collectDate = flags.collectionCompleted ? specDate : '';
   return {
     orderId: ORDER_IDS[rowIdx],
-    status, shipper, shipperGroup, shipperOrderNum,
+    status, flags,
+    shipper, shipperGroup, shipperOrderNum, bizName, bizNumber,
     specDate, loadDate, unloadDate,
     loadLoc, loadAddr, unloadLoc, unloadAddr,
     via, exclusive, roundTrip,
     ton, vehicleType, vehicleOption, vehicleNum, driver,
     charge, tax, total, statementId,
-    invoiceDate, collectDeadline, collectDate,
+    invoiceDate, invoiceIssueDate, collectDeadline, collectDate,
   };
 }
 
@@ -3091,14 +3307,18 @@ function BadgeDataCell313S({ status, rowIdx }: { status: string; rowIdx: number 
   );
 }
 
-function TextDataCell313S({ text, rowIdx, underline }: { text: string; rowIdx: number; underline?: boolean }) {
+function TextDataCell313S({ text, rowIdx, underline, onClick }: { text: string; rowIdx: number; underline?: boolean; onClick?: () => void }) {
   return (
     <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells" data-table-row={rowIdx}>
       <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
         <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
           <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
             <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-              <p className={underline ? "[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline" : "leading-[22px] overflow-hidden text-[15px] text-ellipsis"}>{text}</p>
+              <p
+                onClick={onClick}
+                style={onClick ? { cursor: 'pointer' } : undefined}
+                className={underline ? "[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline" : "leading-[22px] overflow-hidden text-[15px] text-ellipsis"}
+              >{text}</p>
             </div>
           </div>
         </div>
@@ -3135,7 +3355,7 @@ function ButtonDataCell313S({ rowIdx, text }: { rowIdx: number; text: string }) 
 
 function CheckboxDataCell313S({ rowIdx }: { rowIdx: number }) {
   return (
-    <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells" data-table-row={rowIdx}>
+    <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells" data-table-row={rowIdx} data-cb-row={rowIdx}>
       <ColBorder313S />
       <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
         <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
@@ -3144,17 +3364,22 @@ function CheckboxDataCell313S({ rowIdx }: { rowIdx: number }) {
   );
 }
 
+type RowHandlers313S = {
+  onOrderClick: (orderId: string, rowIdx: number) => void;
+  onInvoiceDetailClick: () => void;
+};
+
 type ColDef313S = {
   label: string;
   width: number;
-  render: (d: RowData313S, rowIdx: number) => React.ReactNode;
+  render: (d: RowData313S, rowIdx: number, h: RowHandlers313S) => React.ReactNode;
 };
 
 const TABLE_COLS_313S: ColDef313S[] = [
   { label: '매출 상태', width: 100, render: (d, i) => <BadgeDataCell313S key={i} status={d.status} rowIdx={i} /> },
-  { label: '오더ID', width: 120, render: (d, i) => <TextDataCell313S key={i} text={d.orderId} rowIdx={i} underline /> },
-  { label: '화주사', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.shipper} rowIdx={i} /> },
-  { label: '화주사 업무그룹', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.shipperGroup} rowIdx={i} /> },
+  { label: '오더ID', width: 120, render: (d, i, h) => <TextDataCell313S key={i} text={d.orderId} rowIdx={i} underline onClick={() => h.onOrderClick(d.orderId, i)} /> },
+  { label: '화주사', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.shipper || '-'} rowIdx={i} /> },
+  { label: '화주사 업무그룹', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.shipperGroup || '-'} rowIdx={i} /> },
   { label: '화주사 주문번호', width: 120, render: (d, i) => <TextDataCell313S key={i} text={d.shipperOrderNum} rowIdx={i} /> },
   { label: '매출 명세서 기준일', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.specDate} rowIdx={i} /> },
   { label: '상차일', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.loadDate} rowIdx={i} /> },
@@ -3174,26 +3399,35 @@ const TABLE_COLS_313S: ColDef313S[] = [
   { label: '청구금액', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.charge.toLocaleString()} rowIdx={i} /> },
   { label: '세액', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.tax.toLocaleString()} rowIdx={i} /> },
   { label: '합계 금액', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.total.toLocaleString()} rowIdx={i} /> },
-  { label: '매출 거래명세서ID', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.statementId} rowIdx={i} /> },
-  { label: '계산서 작성일자', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.invoiceDate} rowIdx={i} /> },
-  { label: '수금기한', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.collectDeadline} rowIdx={i} /> },
-  { label: '수금일', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.collectDate} rowIdx={i} /> },
+  { label: '매출 거래명세서ID', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.statementId || '-'} rowIdx={i} /> },
+  { label: '계산서 작성일자', width: 140, render: (d, i, h) => d.invoiceDate
+    ? <TextDataCell313S key={i} text={d.invoiceDate} rowIdx={i} underline onClick={h.onInvoiceDetailClick} />
+    : <TextDataCell313S key={i} text="-" rowIdx={i} /> },
+  { label: '계산서 발행일자', width: 140, render: (d, i, h) => d.invoiceIssueDate
+    ? <TextDataCell313S key={i} text={d.invoiceIssueDate} rowIdx={i} underline onClick={h.onInvoiceDetailClick} />
+    : <TextDataCell313S key={i} text="-" rowIdx={i} /> },
+  { label: '수금기한', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.collectDeadline || '-'} rowIdx={i} /> },
+  { label: '수금일', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.collectDate || '-'} rowIdx={i} /> },
   { label: '증빙서류', width: 100, render: (_d, i) => <ButtonDataCell313S key={i} rowIdx={i} text="1장" /> },
 ];
 
-function DynamicTable313S() {
-  const rows = Array.from({ length: 20 }, (_, i) => i);
+function DynamicTable313S({ pageRows, overrides, cancelledIdxSet, handlers }: {
+  pageRows: number[];
+  overrides: RowOverrides313S;
+  cancelledIdxSet: Set<number>;
+  handlers: RowHandlers313S;
+}) {
   return (
     <>
       <div className="relative shrink-0">
         <div className="content-stretch flex flex-col items-center overflow-clip relative rounded-[inherit] w-full">
-          <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center p-[8px] relative shrink-0 w-[34px] sticky top-0 z-[1] border-r border-[#E4E5E9]" data-name="Table_Header Cells">
+          <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center p-[8px] relative shrink-0 w-[34px] sticky top-0 z-[1] border-r border-[#E4E5E9]" data-name="Table_Header Cells" data-cb-row="header">
             <ColBorder313S />
             <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
               <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
             </div>
           </div>
-          {rows.map((rowIdx) => <CheckboxDataCell313S key={rowIdx} rowIdx={rowIdx} />)}
+          {pageRows.map((rowIdx) => <CheckboxDataCell313S key={rowIdx} rowIdx={rowIdx} />)}
         </div>
         <div aria-hidden className="absolute border-[#e3e5e9] border-l border-r border-solid inset-0 pointer-events-none" />
       </div>
@@ -3201,7 +3435,7 @@ function DynamicTable313S() {
         <div key={col.label} className="relative shrink-0" style={{ width: col.width }}>
           <div className="content-stretch flex flex-col items-center overflow-clip relative rounded-[inherit] w-full">
             <HeaderCell313S label={col.label} />
-            {rows.map((rowIdx) => col.render(getRowData313S(rowIdx), rowIdx))}
+            {pageRows.map((rowIdx) => col.render(getRowData313S(rowIdx, overrides, cancelledIdxSet.has(rowIdx)), rowIdx, handlers))}
           </div>
           <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
         </div>
@@ -3222,26 +3456,16 @@ function formatKorean(n: number): string {
   return parts.join(" ") + "원";
 }
 
-const ITEMS_313_RAW = [
-  { label: "마감필요 (27건)",   amountRaw: 0 },
-  { label: "정산대기 (136건)", amountRaw: 312_000_000 },
-  { label: "수금대기 (55건)",   amountRaw: 548_700_000 },
-  { label: "수금완료 (55건)",   amountRaw: 1_240_500_000 },
-  { label: "정산보류 (27건)",   amountRaw: 87_300_000 },
+const SALE_STATUS_LABELS_313 = ['마감필요', '정산대기', '수금대기', '수금완료', '정산보류'];
+const ITEMS_313: { label: string; amount: string }[] = [
+  { label: '전체', amount: '' },
+  ...SALE_STATUS_LABELS_313.map(label => ({ label, amount: '' })),
 ];
-const ITEMS_313_TOTAL = ITEMS_313_RAW.reduce((s, x) => s + x.amountRaw, 0);
-const ITEMS_313 = [
-  { label: "전체 (300건)", amount: formatKorean(ITEMS_313_TOTAL) },
-  ...ITEMS_313_RAW.map(x => ({ label: x.label, amount: formatKorean(x.amountRaw) })),
-];
-const ITEMS_313_MID = [
-  { label: "전체 (5,000건)",      amount: formatKorean(ITEMS_313_TOTAL) },
-  { label: "세금계산서 (1,834건)", amount: formatKorean(831_200_000) },
-  { label: "계산서 (1,211건)",    amount: formatKorean(520_800_000) },
-  { label: "무증빙 (982건)",      amount: formatKorean(412_500_000) },
-  { label: "전자세금 (614건)",    amount: formatKorean(290_100_000) },
-  { label: "기타 (359건)",        amount: formatKorean(133_000_000) },
-];
+
+// 화주사 업무그룹 필터용 (화주사·업무그룹 쌍 목록)
+const SHIPPER_GROUP_OPTIONS_313: { shipper: string; group: string }[] = SHIPPER_ROW_DATA_313.flatMap(
+  shipper => (GROUPS_BY_SHIPPER[shipper] ?? ['기본 그룹']).map(group => ({ shipper, group }))
+);
 
 function Con() {
   const { activeTab } = useContext(SubTabCtx);
@@ -3250,15 +3474,26 @@ function Con() {
   const [selected, setSelected] = useState<Set<number>>(new Set([0]));
   const [shipperSelected, setShipperSelected] = useState<Set<number>>(new Set());
   const [partnerSelected, setPartnerSelected] = useState<Set<number>>(new Set());
+  const [groupSelected, setGroupSelected] = useState<Set<number>>(new Set());
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [preSelectedIndices, setPreSelectedIndices] = useState<number[]>([]);
   const [showToast, setShowToast] = useState(false);
   const [showErrorToast, setShowErrorToast] = useState(false);
+  const [invoiceErrorMessage, setInvoiceErrorMessage] = useState<string | undefined>(undefined);
   const [dateRangeStart, setDateRangeStart] = useState<Date|null>(() => { const t = new Date(2026,5,29); t.setMonth(t.getMonth()-2); t.setHours(0,0,0,0); return t; });
   const [dateRangeEnd, setDateRangeEnd] = useState<Date|null>(new Date(2026,5,29));
+  const [dateType, setDateType] = useState<string>('상차일');
   const [orderDetailId, setOrderDetailId] = useState<string|null>(null);
   const [orderDetailRowIdx, setOrderDetailRowIdx] = useState<number>(0);
+  const [searchType, setSearchType] = useState('오더 ID');
+  const [searchText, setSearchText] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState<{ type: string; text: string } | null>(null);
+  const [manualInvoiceRegistered, setManualInvoiceRegistered] = useState<Set<number>>(new Set());
+  const [invoiceGenerated, setInvoiceGenerated] = useState<Set<number>>(new Set());
+  const [collectionCompleted, setCollectionCompleted] = useState<Set<number>>(new Set());
+  const [collectConfirmRows, setCollectConfirmRows] = useState<number[] | null>(null);
+  const overrides: RowOverrides313S = { manualInvoiceRegistered, invoiceGenerated, collectionCompleted };
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -3270,271 +3505,145 @@ function Con() {
     return () => window.removeEventListener('openOrderDetail', handler);
   }, []);
 
-  const openModal = (indices: number[]) => {
-    if (indices.length > 0) {
-      const hasInvalid = indices.some(i => ROW_STATUSES_313[i % ROW_STATUSES_313.length] !== "정산대기");
-      if (hasInvalid) { setShowErrorToast(true); return; }
-    }
-    setPreSelectedIndices(indices);
-    setModalOpen(true);
-  };
   const tableRef = useRef<HTMLDivElement>(null);
   const [cancelledTopRows313, setCancelledTopRows313] = useState<CancelledOrderEntry[]>(getCancelledOrders());
   useEffect(() => subscribeCancelledOrders(() => setCancelledTopRows313(getCancelledOrders())), []);
+  const cancelledIdxSet313 = useMemo(() => new Set(cancelledTopRows313.map(o => o.rowIdx)), [cancelledTopRows313]);
   const { currentPage, setCurrentPage, setFilteredTotal } = useContext(PageCtx313);
   const currentPageRef = useRef(currentPage);
   useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
 
   const TOTAL_ROWS = 300;
 
+  const getRow = (i: number) => getRowData313S(i, overrides, cancelledIdxSet313.has(i));
+
+  const openModal = (indices: number[]) => {
+    if (indices.length > 0) {
+      const rows = indices.map(getRow);
+      const hasInvalid = rows.some(r => r.status !== '정산대기');
+      if (hasInvalid) { setInvoiceErrorMessage('정산대기 상태의 오더만 거래명세서 생성이 가능합니다.'); setShowErrorToast(true); return; }
+      const hasGenerated = rows.some(r => r.statementId);
+      if (hasGenerated) { setInvoiceErrorMessage('이미 매출 거래명세서로 생성된 오더입니다.'); setShowErrorToast(true); return; }
+      const distinctShippers = new Set(rows.map(r => r.shipper));
+      if (distinctShippers.size > 1) { setInvoiceErrorMessage('서로 다른 화주사가 섞여 있어 거래명세서를 생성할 수 없습니다.'); setShowErrorToast(true); return; }
+    }
+    setInvoiceErrorMessage(undefined);
+    setPreSelectedIndices(indices);
+    setModalOpen(true);
+  };
+
+  const registerManualInvoice = (indices: number[]) => {
+    setManualInvoiceRegistered(prev => new Set([...prev, ...indices]));
+  };
+
+  // 수금대기 + 수기계산서 등록 경로(거래명세서 경로 제외)만 오더 단위 수금완료 가능
+  const requestCollectionComplete = (indices: number[]): { ok: boolean; message?: string } => {
+    const rows = indices.map(getRow);
+    if (rows.some(r => r.status !== '수금대기')) return { ok: false, message: '수금대기 상태의 오더만 수금완료 처리가 가능합니다.' };
+    if (rows.some(r => r.statementId)) return { ok: false, message: '매출 거래명세서로 생성된 오더는 매출 거래명세서 메뉴에서 처리해야 합니다.' };
+    setCollectConfirmRows(indices);
+    return { ok: true };
+  };
+
+  const getRowDateForType313 = (i: number, type: string) => {
+    const load = getLoadingDate313(i);
+    if (type === '하차일') return addDays313(load, 1 + (i % 3));
+    if (type === '매출 명세서 기준일') return addDays313(load, 2);
+    return load;
+  };
+
+  const matchesSearch313 = (i: number) => {
+    if (!appliedSearch) return true;
+    const r = getRow(i);
+    const FIELD_MAP: Record<string, string> = {
+      '오더 ID': r.orderId,
+      '화주사 별칭': r.shipper,
+      '화주사 주문번호': r.shipperOrderNum,
+      '사업자명': r.bizName,
+      '사업자번호': r.bizNumber,
+      '상차지': r.loadLoc,
+      '하차지': r.unloadLoc,
+      '매출 거래명세서ID': r.statementId,
+    };
+    const field = FIELD_MAP[appliedSearch.type] ?? '';
+    return field.toLowerCase().includes(appliedSearch.text.toLowerCase());
+  };
+
+  const groupMatches313 = (i: number, rowShipper: string) => {
+    if (groupSelected.size === 0) return true;
+    const rowGroup = getGroupForIndex(i, rowShipper);
+    return [...groupSelected].some(idx => {
+      const opt = SHIPPER_GROUP_OPTIONS_313[idx];
+      return opt && opt.shipper === rowShipper && opt.group === rowGroup;
+    });
+  };
+
   const hiddenRows = useMemo(() => {
     const hidden = new Set<number>();
-    const filterStatuses = selected.has(0) ? null : new Set([...selected].map(i => ITEMS_313[i].label.split(" (")[0]));
-    const parseYYMMDD313 = (s: string) => { const [yy,mm,dd]=s.split('.').map(Number); return new Date(2000+yy,mm-1,dd).getTime(); };
+    const filterStatuses = selected.has(0) ? null : new Set([...selected].map(i => ITEMS_313[i].label));
     const lo313 = dateRangeStart ? dateRangeStart.getTime() : null;
     const hi313 = dateRangeEnd ? dateRangeEnd.getTime() + 86399999 : (lo313 !== null ? lo313 + 86399999 : null);
     for (let i = 0; i < TOTAL_ROWS; i++) {
       const rowShipper = SHIPPER_ROW_DATA_313[i % SHIPPER_ROW_DATA_313.length];
       const shipperMatch = shipperSelected.size === 0 || [...shipperSelected].some(idx => BUBBLE_SHIPPERS[idx] === rowShipper);
-      const statusMatch = filterStatuses === null || filterStatuses.has(ROW_STATUSES_313[i % ROW_STATUSES_313.length]);
-      const rowPartner = PARTNER_ROW_DATA_313[i % PARTNER_ROW_DATA_313.length];
-      const partnerMatch = partnerSelected.size === 0 ||
-        [...partnerSelected].some(idx => PARTNERS_313[idx] === rowPartner);
-      if (!statusMatch || !shipperMatch || !partnerMatch) { hidden.add(i); continue; }
+      const status = getRow(i).status;
+      const statusMatch = filterStatuses === null || filterStatuses.has(status);
+      if (!statusMatch || !shipperMatch || !groupMatches313(i, rowShipper) || !matchesSearch313(i)) { hidden.add(i); continue; }
       if (lo313 !== null) {
-        const rowT = parseYYMMDD313(getLoadingDate313(i));
+        const rowT = parseYMD313(getRowDateForType313(i, dateType)).getTime();
         if (rowT < lo313 || rowT > hi313!) hidden.add(i);
       }
     }
     return hidden;
-  }, [selected, shipperSelected, partnerSelected, dateRangeStart, dateRangeEnd]);
+  }, [selected, shipperSelected, groupSelected, dateRangeStart, dateRangeEnd, dateType, appliedSearch, manualInvoiceRegistered, invoiceGenerated, collectionCompleted, cancelledIdxSet313]);
 
   const dynamicCounts = useMemo(() => {
     const counts = new Array(ITEMS_313.length).fill(0);
-    let totalAmount = 0;
-    const parseYYMMDD313dc = (s: string) => { const [yy,mm,dd]=s.split('.').map(Number); return new Date(2000+yy,mm-1,dd).getTime(); };
+    const amounts = new Array(ITEMS_313.length).fill(0);
     const lo313dc = dateRangeStart ? dateRangeStart.getTime() : null;
     const hi313dc = dateRangeEnd ? dateRangeEnd.getTime() + 86399999 : (lo313dc !== null ? lo313dc + 86399999 : null);
     for (let i = 0; i < TOTAL_ROWS; i++) {
       const rowShipper = SHIPPER_ROW_DATA_313[i % SHIPPER_ROW_DATA_313.length];
       const shipperMatch = shipperSelected.size === 0 || [...shipperSelected].some(idx => BUBBLE_SHIPPERS[idx] === rowShipper);
-      if (!shipperMatch) continue;
-      const rowPartner = PARTNER_ROW_DATA_313[i % PARTNER_ROW_DATA_313.length];
-      const partnerMatch = partnerSelected.size === 0 || [...partnerSelected].some(idx => PARTNERS_313[idx] === rowPartner);
-      if (!partnerMatch) continue;
+      if (!shipperMatch || !groupMatches313(i, rowShipper) || !matchesSearch313(i)) continue;
       if (lo313dc !== null) {
-        const rowT = parseYYMMDD313dc(getLoadingDate313(i));
+        const rowT = parseYMD313(getRowDateForType313(i, dateType)).getTime();
         if (rowT < lo313dc || rowT > hi313dc!) continue;
       }
-      const status = ROW_STATUSES_313[i % ROW_STATUSES_313.length];
-      counts[0]++;
-      totalAmount += PER_ROW_SALE_AMOUNT_313[status] ?? 0;
-      for (let si = 1; si < ITEMS_313.length; si++) {
-        if (ITEMS_313[si].label.split(' (')[0] === status) counts[si]++;
-      }
+      const d = getRow(i);
+      counts[0]++; amounts[0] += d.charge;
+      const si = SALE_STATUS_LABELS_313.indexOf(d.status);
+      if (si >= 0) { counts[si + 1]++; amounts[si + 1] += d.charge; }
     }
-    if (isPartnerTab) return { saleCounts: counts, saleTotalAmount: Math.round(totalAmount * 0.62) };
-    if (isDriverTab) return { saleCounts: counts, saleTotalAmount: Math.round(totalAmount * 0.41) };
-    return { saleCounts: counts, saleTotalAmount: totalAmount };
-  }, [shipperSelected, partnerSelected, dateRangeStart, dateRangeEnd, isPartnerTab, isDriverTab]);
+    return { saleCounts: counts, saleAmounts: amounts, saleTotalAmount: amounts[0] };
+  }, [shipperSelected, groupSelected, dateRangeStart, dateRangeEnd, dateType, appliedSearch, manualInvoiceRegistered, invoiceGenerated, collectionCompleted, cancelledIdxSet313]);
 
-  useEffect(() => {
-    if (!tableRef.current) return;
-    tableRef.current.querySelectorAll(':scope > *').forEach((col) => {
-      const cells = Array.from(col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"]'));
-      if (!cells.length) return;
-      const parent = cells[0].parentElement!;
-      const SRC: Record<string, number> = { '마감필요': 0, '정산대기': 6, '수금대기': 9, '수금완료': 11, '정산보류': 13 };
-      const headerText = col.querySelector('[data-name="Table_Header Cells"]')?.textContent?.trim();
-      const isOrderIdCol = headerText === '오더ID';
-      const isShipperCol = isPartnerTab ? false : headerText === '화주사';
-      const isPartnerCol = isPartnerTab ? (headerText === '화주사') : (headerText === '협력사' || headerText === '요청협력사');
-      const isGroupCol = headerText === '화주사 업무그룹';
-      const isInvoiceDateCol = headerText === '계산서 작성일자';
-      const isLoadingDateCol = headerText === '상차일';
-      cells.forEach((c) => parent.removeChild(c));
-      const parseLD313 = (s: string) => { const [yy,mm,dd]=s.split('.').map(Number); return new Date(2000+yy,mm-1,dd).getTime(); };
-      const cancelled313 = getCancelledOrders();
-      const cancelledIdxSet313 = new Set(cancelled313.map(o => o.rowIdx));
-      const baseSorted313 = Array.from({ length: TOTAL_ROWS }, (_, i) => i).filter(i => !cancelledIdxSet313.has(i)).sort((a, b) => {
-        const da = parseLD313(getLoadingDate313(a)), db = parseLD313(getLoadingDate313(b));
-        if (da !== db) return da - db;
-        const sa = STATUS_PRIORITY_313[ROW_STATUSES_313[a % ROW_STATUSES_313.length]] ?? 99;
-        const sb = STATUS_PRIORITY_313[ROW_STATUSES_313[b % ROW_STATUSES_313.length]] ?? 99;
-        return sa !== sb ? sa - sb : a - b;
+  const pageRows = useMemo(() => {
+    const PAGE_SIZE_LOCAL = 200;
+    const cancelledVisible = cancelledTopRows313.map(o => o.rowIdx).filter(i => !hiddenRows.has(i));
+    const baseSorted = Array.from({ length: TOTAL_ROWS }, (_, i) => i)
+      .filter(i => !cancelledIdxSet313.has(i) && !hiddenRows.has(i))
+      .sort((a, b) => {
+        // 1차: 매출상태 우선순위, 2차: 선택된 기간구분 기준 날짜 오름차순
+        const pa = STATUS_PRIORITY_313[getRow(a).status] ?? 99;
+        const pb = STATUS_PRIORITY_313[getRow(b).status] ?? 99;
+        if (pa !== pb) return pa - pb;
+        const da = parseYMD313(getRowDateForType313(a, dateType)).getTime();
+        const db = parseYMD313(getRowDateForType313(b, dateType)).getTime();
+        return da - db;
       });
-      const sortedIndices = [...cancelled313.map(o => o.rowIdx), ...baseSorted313];
-      for (const origIdx of sortedIndices) {
-        const s = cancelledIdxSet313.has(origIdx) ? '마감필요' : ROW_STATUSES_313[origIdx % ROW_STATUSES_313.length];
-        const cell = (cells[SRC[s] ?? (origIdx % cells.length)].cloneNode(true)) as HTMLElement;
-        cell.dataset.tableRow = String(origIdx);
-        if (isOrderIdCol) {
-          const p = cell.querySelector('p');
-          if (p) {
-            // 협력사 탭: 오더ID를 다른 시리즈로 표시 (KMP 접두사)
-            const baseId = ORDER_IDS[origIdx];
-            p.textContent = isPartnerTab ? baseId.replace(/^[A-Z]+/, 'KMP') : baseId;
-            p.style.cursor = 'pointer';
-            p.style.textDecoration = 'underline';
-            const _idx = origIdx;
-            p.addEventListener('click', () => {
-              window.dispatchEvent(new CustomEvent('openOrderDetail', { detail: { orderId: ORDER_IDS[_idx], rowIdx: _idx } }));
-            });
-          }
-        }
-        if (isShipperCol) {
-          const p = cell.querySelector('p') || cell;
-          p.textContent = SHIPPER_ROW_DATA_313[origIdx % SHIPPER_ROW_DATA_313.length];
-        }
-        if (isPartnerCol) {
-          const p = cell.querySelector('p') || cell;
-          p.textContent = PARTNER_ROW_DATA_313[origIdx % PARTNER_ROW_DATA_313.length];
-        }
-        if (isGroupCol) {
-          const p = cell.querySelector('p') || cell;
-          if (isPartnerTab) {
-            p.textContent = PARTNER_ROW_DATA_313[origIdx % PARTNER_ROW_DATA_313.length] + ' 그룹';
-          } else {
-            const shipper = SHIPPER_ROW_DATA_313[origIdx % SHIPPER_ROW_DATA_313.length];
-            p.textContent = getGroupForIndex(origIdx, shipper);
-          }
-        }
-        if (isLoadingDateCol) {
-          const p = cell.querySelector('p') || cell;
-          p.textContent = getLoadingDate313(origIdx);
-        }
-        if (isInvoiceDateCol) {
-          cell.style.cursor = 'pointer';
-          cell.addEventListener('click', () => {
-            window.dispatchEvent(new CustomEvent('openManualInvoiceDetail'));
-          });
-        }
-        parent.appendChild(cell);
-      }
-    });
-    // Annotate checkboxes with row index
-    Array.from(tableRef.current.querySelectorAll<HTMLElement>('[data-table-row]')).forEach((cell) => {
-      const row = Number(cell.dataset.tableRow);
-      const cb = cell.querySelector<HTMLElement>('[data-name="Selection Controls"]');
-      if (cb) { cb.dataset.cbRow = String(row); cb.style.cursor = 'pointer'; }
-    });
-    // Annotate header checkboxes
-    Array.from(tableRef.current.querySelectorAll<HTMLElement>('[data-name="Table_Header Cells"]')).forEach((header) => {
-      const cb = header.querySelector<HTMLElement>('[data-name="Selection Controls"]');
-      if (cb) { cb.dataset.cbRow = 'header'; cb.style.cursor = 'pointer'; }
-    });
-    // 협력사 탭: 헤더 텍스트 교체
-    if (isPartnerTab) {
-      tableRef.current.querySelectorAll<HTMLElement>('[data-name="Table_Header Cells"]').forEach(header => {
-        const p = header.querySelector('p');
-        if (!p) return;
-        if (p.textContent?.trim() === '화주사') p.textContent = '협력사';
-        if (p.textContent?.trim() === '화주사 업무그룹') p.textContent = '협력사 업무그룹';
-      });
-    }
-    // Remove static Figma checkmarks to prevent double SVG on selection
-    tableRef.current.querySelectorAll('[data-name="Selection Controls"] [data-name="Vector"]').forEach((el) => (el as HTMLElement).remove());
+    const allVisible = [...cancelledVisible, ...baseSorted];
+    const start = (currentPage - 1) * PAGE_SIZE_LOCAL;
+    return allVisible.slice(start, start + PAGE_SIZE_LOCAL);
+  }, [hiddenRows, currentPage, cancelledTopRows313, cancelledIdxSet313, dateType, manualInvoiceRegistered, invoiceGenerated, collectionCompleted]);
 
-    // 협력사 탭: 기사명 컬럼 우측에 정산 유형 컬럼 추가
-    if (isPartnerTab) {
-      const SETTLEMENT_TYPES = ['후불', '선착불', '후불', '후불', '선착불', '후불', '선착불', '후불', '후불', '선착불'];
-      const existingSettlementCol = tableRef.current.querySelector('[data-name="settlement-type-col"]');
-      if (!existingSettlementCol) {
-        // 기사명 컬럼 찾기
-        let driverCol: Element | null = null;
-        tableRef.current.querySelectorAll(':scope > *').forEach(col => {
-          const h = col.querySelector('[data-name="Table_Header Cells"] p');
-          if (h?.textContent?.trim() === '기사명') driverCol = col;
-        });
-        if (driverCol) {
-          // 기사명 컬럼 복제해서 정산 유형 컬럼 생성
-          const newCol = (driverCol as HTMLElement).cloneNode(true) as HTMLElement;
-          newCol.setAttribute('data-name', 'settlement-type-col');
-          // 헤더 교체
-          const headerP = newCol.querySelector('[data-name="Table_Header Cells"] p');
-          if (headerP) headerP.textContent = '정산 유형';
-          // 데이터 셀 교체
-          newCol.querySelectorAll<HTMLElement>('[data-table-row]').forEach(cell => {
-            const rowIdx = Number(cell.dataset.tableRow);
-            const p = cell.querySelector('p') || cell;
-            p.textContent = SETTLEMENT_TYPES[rowIdx % SETTLEMENT_TYPES.length];
-            cell.style.fontFamily = "'Pretendard GOV'";
-            cell.style.fontWeight = '400';
-          });
-          (driverCol as HTMLElement).insertAdjacentElement('afterend', newCol);
-        }
-      }
-    } else {
-      // 화주사/기사 탭: 정산 유형 컬럼 제거
-      tableRef.current.querySelector('[data-name="settlement-type-col"]')?.remove();
-    }
+  const pageRowsRef = useRef(pageRows);
+  useEffect(() => { pageRowsRef.current = pageRows; }, [pageRows]);
 
-    // 기사 탭: 화주사 업무그룹 우측에 요청협력사·요청협력사 업무그룹, 맨 끝에 화주사주문번호 추가
-    if (isDriverTab) {
-      const addColAfter = (afterName: string, colDataName: string, header: string, getValue: (rowIdx: number) => string) => {
-        if (tableRef.current!.querySelector(`[data-name="${colDataName}"]`)) return;
-        let targetCol: Element | null = null;
-        tableRef.current!.querySelectorAll(':scope > *').forEach(col => {
-          const h = col.querySelector('[data-name="Table_Header Cells"] p');
-          if (h?.textContent?.trim() === afterName) targetCol = col;
-        });
-        if (!targetCol) return;
-        const newCol = (targetCol as HTMLElement).cloneNode(true) as HTMLElement;
-        newCol.setAttribute('data-name', colDataName);
-        const headerP = newCol.querySelector('[data-name="Table_Header Cells"] p');
-        if (headerP) headerP.textContent = header;
-        newCol.querySelectorAll<HTMLElement>('[data-table-row]').forEach(cell => {
-          const p = cell.querySelector('p') || cell;
-          p.textContent = getValue(Number(cell.dataset.tableRow));
-          cell.style.fontFamily = "'Pretendard GOV'";
-          cell.style.fontWeight = '400';
-        });
-        (targetCol as HTMLElement).insertAdjacentElement('afterend', newCol);
-      };
-
-      const appendColAtEnd = (colDataName: string, header: string, getValue: (rowIdx: number) => string) => {
-        if (tableRef.current!.querySelector(`[data-name="${colDataName}"]`)) return;
-        const cols = Array.from(tableRef.current!.querySelectorAll(':scope > *'));
-        const lastCol = cols[cols.length - 1] as HTMLElement;
-        if (!lastCol) return;
-        const newCol = lastCol.cloneNode(true) as HTMLElement;
-        newCol.setAttribute('data-name', colDataName);
-        const headerP = newCol.querySelector('[data-name="Table_Header Cells"] p');
-        if (headerP) headerP.textContent = header;
-        newCol.querySelectorAll<HTMLElement>('[data-table-row]').forEach(cell => {
-          const p = cell.querySelector('p') || cell;
-          p.textContent = getValue(Number(cell.dataset.tableRow));
-          cell.style.fontFamily = "'Pretendard GOV'";
-          cell.style.fontWeight = '400';
-        });
-        tableRef.current!.appendChild(newCol);
-      };
-
-      addColAfter('화주사 업무그룹', 'driver-partner-col',
-        '요청협력사',
-        (i) => REQUEST_PARTNER_ROW_DATA_313[i % REQUEST_PARTNER_ROW_DATA_313.length]
-      );
-      addColAfter('요청협력사', 'driver-partner-group-col',
-        '요청협력사 업무그룹',
-        (i) => REQUEST_PARTNER_ROW_DATA_313[i % REQUEST_PARTNER_ROW_DATA_313.length] + ' 그룹'
-      );
-      appendColAtEnd('driver-order-no-col',
-        '화주사주문번호',
-        (i) => `ORD-${String(10000 + (i * 7 + 3) % 90000).padStart(5, '0')}`
-      );
-    } else {
-      ['driver-partner-col', 'driver-partner-group-col', 'driver-order-no-col'].forEach(name => {
-        tableRef.current!.querySelector(`[data-name="${name}"]`)?.remove();
-      });
-    }
-  }, [cancelledTopRows313, isPartnerTab, isDriverTab]);
   useEffect(() => {
     if (!tableRef.current) return;
     const CHECKMARK = `<svg viewBox="0 0 10 8" fill="none" style="position:absolute;inset:0;width:100%;height:100%;padding:1px"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    const PAGE_SIZE = 200;
-    const pageStart = (currentPage - 1) * PAGE_SIZE;
-    const pageEnd = Math.min(pageStart + PAGE_SIZE, TOTAL_ROWS);
-    const allPageSelected = pageEnd > pageStart && Array.from({ length: pageEnd - pageStart }, (_, i) => pageStart + i).every((r) => selectedRows.has(r));
+    const allPageSelected = pageRows.length > 0 && pageRows.every((r) => selectedRows.has(r));
     tableRef.current.querySelectorAll<HTMLElement>('[data-cb-row]').forEach((cb) => {
       const inner = cb.querySelector<HTMLElement>('[data-name="2021.11"]');
       if (!inner) return;
@@ -3549,7 +3658,7 @@ function Con() {
         inner.innerHTML = '';
       }
     });
-  }, [selectedRows, currentPage]);
+  }, [selectedRows, pageRows]);
 
   useEffect(() => {
     if (!tableRef.current) return;
@@ -3558,14 +3667,11 @@ function Con() {
       const cb = (e.target as HTMLElement).closest<HTMLElement>('[data-cb-row]');
       if (!cb) return;
       if (cb.dataset.cbRow === 'header') {
-        const PAGE_SIZE = 200;
-        const start = (currentPageRef.current - 1) * PAGE_SIZE;
-        const end = Math.min(start + PAGE_SIZE, TOTAL_ROWS);
-        const pageRows = Array.from({ length: end - start }, (_, i) => start + i);
+        const rows = pageRowsRef.current;
         setSelectedRows((prev) => {
-          const allSelected = pageRows.every((r) => prev.has(r));
+          const allSelected = rows.every((r) => prev.has(r));
           const next = new Set(prev);
-          pageRows.forEach((r) => (allSelected ? next.delete(r) : next.add(r)));
+          rows.forEach((r) => (allSelected ? next.delete(r) : next.add(r)));
           return next;
         });
       } else {
@@ -3623,8 +3729,6 @@ function Con() {
   }, []);
 
 
-  const PAGE_SIZE = 200;
-
   useEffect(() => {
     const total = TOTAL_ROWS - hiddenRows.size;
     setFilteredTotal(total);
@@ -3632,30 +3736,27 @@ function Con() {
   }, [hiddenRows]);
 
   useEffect(() => {
-    if (!tableRef.current) return;
-    const cancelledIdxSetPage313 = new Set(getCancelledOrders().map(o => o.rowIdx));
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    tableRef.current.querySelectorAll<HTMLElement>('[data-table-row]').forEach((cell) => {
-      const row = Number(cell.dataset.tableRow);
-      const isCancelled = cancelledIdxSetPage313.has(row);
-      cell.style.display = (isCancelled ? currentPage === 1 : (!hiddenRows.has(row) && row >= start && row < end)) ? '' : 'none';
-    });
-  }, [hiddenRows, currentPage, cancelledTopRows313]);
-
-  useEffect(() => {
     if (tableRef.current) tableRef.current.scrollTop = 0;
   }, [currentPage]);
 
   return (
     <>
-    <DateFilterCtx313.Provider value={{ rangeStart: dateRangeStart, rangeEnd: dateRangeEnd, setRangeStart: setDateRangeStart, setRangeEnd: setDateRangeEnd }}>
+    <DateFilterCtx313.Provider value={{ rangeStart: dateRangeStart, rangeEnd: dateRangeEnd, setRangeStart: setDateRangeStart, setRangeEnd: setDateRangeEnd, dateType, setDateType }}>
     <DynamicCountCtx313.Provider value={dynamicCounts}>
-    <BubbleCtx313.Provider value={{ shipperSelected, setShipperSelected, partnerSelected, setPartnerSelected }}>
-    <ModalCtx313.Provider value={{ openModal: (indices) => openModal(indices.length > 0 ? indices : Array.from(selectedRows)), selectedRows }}>
+    <BubbleCtx313.Provider value={{ shipperSelected, setShipperSelected, partnerSelected, setPartnerSelected, groupSelected, setGroupSelected }}>
+    <ModalCtx313.Provider value={{
+      openModal: (indices) => openModal(indices.length > 0 ? indices : Array.from(selectedRows)),
+      selectedRows, getRow, registerManualInvoice,
+      requestCollectionComplete: (indices) => requestCollectionComplete(indices.length > 0 ? indices : Array.from(selectedRows)),
+    }}>
+    <SearchCtx313.Provider value={{ searchType, searchText, setSearchType, setSearchText, runSearch: () => setAppliedSearch(searchText.trim() ? { type: searchType, text: searchText.trim() } : null) }}>
     {showToast && <InvoiceToast onClose={() => setShowToast(false)} />}
-    {showErrorToast && <InvoiceErrorToast onClose={() => setShowErrorToast(false)} />}
-    {modalOpen && <CreateInvoiceModal preSelectedIndices={preSelectedIndices} onClose={() => setModalOpen(false)} onSuccess={() => setShowToast(true)} />}
+    {showErrorToast && <InvoiceErrorToast onClose={() => setShowErrorToast(false)} message={invoiceErrorMessage} />}
+    {modalOpen && <CreateInvoiceModal preSelectedIndices={preSelectedIndices} onClose={() => setModalOpen(false)} onSuccess={() => { setShowToast(true); if (preSelectedIndices.length > 0) setInvoiceGenerated(prev => new Set([...prev, ...preSelectedIndices])); }} />}
+    {collectConfirmRows && <CollectCompleteConfirmModal
+      onClose={() => setCollectConfirmRows(null)}
+      onConfirm={() => { setCollectionCompleted(prev => new Set([...prev, ...collectConfirmRows])); setCollectConfirmRows(null); }}
+    />}
     <FilterCtx313.Provider value={{ selected, setSelected }}>
     <TableCtrlCtx.Provider value={{ filteredTotal: TOTAL_ROWS - hiddenRows.size, selectedCount: selectedRows.size }}>
     <div className="flex-[1_0_0] min-h-px relative w-full" data-name="con">
@@ -3665,12 +3766,21 @@ function Con() {
         <Frame646 />
         <TableControlModule />
         <div className="content-stretch flex h-[840px] items-start relative shrink-0 overflow-auto w-[1648px] pb-[40px]" data-name="매출장부표_화주사" ref={tableRef}>
-          <DynamicTable313S />
+          <DynamicTable313S
+            pageRows={pageRows}
+            overrides={overrides}
+            cancelledIdxSet={cancelledIdxSet313}
+            handlers={{
+              onOrderClick: (orderId, rowIdx) => window.dispatchEvent(new CustomEvent('openOrderDetail', { detail: { orderId, rowIdx } })),
+              onInvoiceDetailClick: () => window.dispatchEvent(new CustomEvent('openManualInvoiceDetail')),
+            }}
+          />
         </div>
       </div>
     </div>
     </TableCtrlCtx.Provider>
     </FilterCtx313.Provider>
+    </SearchCtx313.Provider>
     </ModalCtx313.Provider>
     </BubbleCtx313.Provider>
     </DynamicCountCtx313.Provider>
