@@ -1,25 +1,20 @@
-import { useState, useEffect, Component, type ReactNode } from "react";
-import BaechaManagement from "@/imports/배차관리/index";
-import TonghapJangbu from "@/imports/312통합장부/index";
-import MaeChulJangbuHwaju from "@/imports/313매출장부화주사/index";
-import MaeChulJangbuHyeop from "@/imports/313매출장부협력사/index";
-import MaeIpJangbu from "@/imports/314매입장부정보망배차/index";
-import MaeChulMyeongse from "@/imports/315매출거래명세서화주사/index";
-import MaeIpMyeongse from "@/imports/316매입거래명세서소속기사/index";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { SubTabCtx, type MaeChulSubTab, MaeIpSubTabCtx, type MaeIpSubTab, MaeChulMyeongseSubTabCtx, type MaeChulMyeongseSubTab, MaeIpMyeongseSubTabCtx, type MaeIpMyeongseSubTab, NavCtx } from "@/imports/shared/subTabCtx";
 
-class ErrorBoundary extends Component<{ children: ReactNode; label: string }, { error: Error | null }> {
-  constructor(props: { children: ReactNode; label: string }) {
-    super(props);
-    this.state = { error: null };
-  }
-  static getDerivedStateFromError(error: Error) { return { error }; }
-  render() {
-    if (this.state.error) {
-      return <div style={{ padding: 32, color: '#DD2222', fontFamily: 'sans-serif' }}><b>{this.props.label} 오류:</b> {this.state.error.message}</div>;
-    }
-    return this.props.children;
-  }
+const BaechaManagement = lazy(() => import("@/imports/배차관리/index"));
+const TonghapJangbu = lazy(() => import("@/imports/312통합장부/index"));
+const MaeChulJangbuHwaju = lazy(() => import("@/imports/313매출장부화주사/index"));
+const MaeChulJangbuHyeop = lazy(() => import("@/imports/313매출장부협력사/index"));
+const MaeIpJangbu = lazy(() => import("@/imports/314매입장부정보망배차/index"));
+const MaeChulMyeongse = lazy(() => import("@/imports/315매출거래명세서화주사/index"));
+const MaeIpMyeongse = lazy(() => import("@/imports/316매입거래명세서소속기사/index"));
+
+function TabFallback() {
+  return (
+    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#ffffff" }}>
+      <div style={{ color: "#888", fontSize: 14 }}>로딩 중...</div>
+    </div>
+  );
 }
 
 function MaeChulJangbu() {
@@ -27,9 +22,11 @@ function MaeChulJangbu() {
   return (
     <SubTabCtx.Provider value={{ activeTab, setActiveTab }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        {activeTab === "화주사" && <MaeChulJangbuHwaju />}
-        {activeTab === "협력사" && <MaeChulJangbuHwaju />}
-        {activeTab === "기사" && <MaeChulJangbuHwaju />}
+        <Suspense fallback={<TabFallback />}>
+          {activeTab === "화주사" && <MaeChulJangbuHwaju />}
+          {activeTab === "협력사" && <MaeChulJangbuHyeop />}
+          {activeTab === "기사" && <MaeChulJangbuHwaju />}
+        </Suspense>
       </div>
     </SubTabCtx.Provider>
   );
@@ -40,7 +37,9 @@ function MaeIpJangbuWrapper() {
   return (
     <MaeIpSubTabCtx.Provider value={{ activeTab, setActiveTab }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <MaeIpJangbu />
+        <Suspense fallback={<TabFallback />}>
+          <MaeIpJangbu />
+        </Suspense>
       </div>
     </MaeIpSubTabCtx.Provider>
   );
@@ -51,7 +50,9 @@ function MaeChulMyeongseWrapper() {
   return (
     <MaeChulMyeongseSubTabCtx.Provider value={{ activeTab, setActiveTab }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <MaeChulMyeongse />
+        <Suspense fallback={<TabFallback />}>
+          <MaeChulMyeongse />
+        </Suspense>
       </div>
     </MaeChulMyeongseSubTabCtx.Provider>
   );
@@ -62,7 +63,9 @@ function MaeIpMyeongseWrapper() {
   return (
     <MaeIpMyeongseSubTabCtx.Provider value={{ activeTab, setActiveTab }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <MaeIpMyeongse />
+        <Suspense fallback={<TabFallback />}>
+          <MaeIpMyeongse />
+        </Suspense>
       </div>
     </MaeIpMyeongseSubTabCtx.Provider>
   );
@@ -106,24 +109,18 @@ const DESIGN_H = 1080;
 
 export default function App() {
   const [activeTab, setActiveTab] = useState(0);
-  const [mountedTabs, setMountedTabs] = useState<Set<number>>(new Set([0]));
-  const navigateTo = (idx: number) => {
-    setMountedTabs(prev => { const next = new Set(prev); next.add(idx); return next; });
-    setActiveTab(idx);
-  };
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(() => window.innerWidth / DESIGN_W);
 
   useEffect(() => {
     function updateScale() {
       setScale(window.innerWidth / DESIGN_W);
     }
-    updateScale();
     window.addEventListener("resize", updateScale);
     return () => window.removeEventListener("resize", updateScale);
   }, []);
 
   return (
-    <NavCtx.Provider value={{ navigateTo }}>
+    <NavCtx.Provider value={{ navigateTo: setActiveTab }}>
     <div style={{ width: "100vw", minHeight: "100vh", background: "#ffffff", overflow: "hidden" }}>
     <div
       style={{
@@ -147,7 +144,11 @@ export default function App() {
             pointerEvents: i === activeTab ? "auto" : "none",
           }}
         >
-          {mountedTabs.has(i) && <ErrorBoundary label={label}><Component /></ErrorBoundary>}
+          {i === activeTab && (
+            <Suspense fallback={<TabFallback />}>
+              <Component />
+            </Suspense>
+          )}
         </div>
       ))}
 
@@ -155,7 +156,7 @@ export default function App() {
       {LNB_SUB_ITEMS.map((item) => (
         <button
           key={item.tabIndex}
-          onClick={() => navigateTo(item.tabIndex)}
+          onClick={() => setActiveTab(item.tabIndex)}
           aria-label={TABS[item.tabIndex].label}
           style={{
             position: "absolute",

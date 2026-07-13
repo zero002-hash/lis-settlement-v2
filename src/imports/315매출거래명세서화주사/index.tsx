@@ -29,13 +29,6 @@ const ROW_STATUSES_315 = ["확정대기","확정대기","확정대기","발행�
 const STATUS_PRIORITY_315: Record<string, number> = { '확정대기': 0, '발행대기': 1, '수금대기': 2, '수금완료': 3 };
 
 const CREATION_DATES_315 = [
-  '26.01.05','26.01.07','26.01.09','26.01.12','26.01.14','26.01.16','26.01.19','26.01.21',
-  '26.01.23','26.01.26','26.01.28','26.01.30','26.02.02','26.02.04','26.02.06','26.02.09',
-  '26.02.11','26.02.13','26.02.16','26.02.18','26.02.20','26.02.23','26.02.25','26.02.27',
-  '26.03.02','26.03.04','26.03.06','26.03.09','26.03.11','26.03.13','26.03.16','26.03.18',
-  '26.03.20','26.03.23','26.03.25','26.03.27','26.03.30','26.04.01','26.04.03','26.04.06',
-  '26.04.08','26.04.10','26.04.13','26.04.15','26.04.17','26.04.20','26.04.22','26.04.24',
-  '26.04.27','26.04.29',
   '26.05.01','26.05.04','26.05.06','26.05.08','26.05.11','26.05.13','26.05.15',
   '26.05.18','26.05.20','26.05.22','26.05.25','26.05.27','26.05.29',
   '26.06.01','26.06.03','26.06.05','26.06.08','26.06.10','26.06.12','26.06.15',
@@ -83,7 +76,7 @@ const INVOICE_IDS_315 = (() => {
 interface DateFilterCtxType315 { rangeStart: Date|null; rangeEnd: Date|null; setRangeStart: (d: Date|null) => void; setRangeEnd: (d: Date|null) => void; }
 const DateFilterCtx315 = createContext<DateFilterCtxType315>({ rangeStart: null, rangeEnd: null, setRangeStart: () => {}, setRangeEnd: () => {} });
 
-const PageCtx315 = createContext<{ currentPage: number; setCurrentPage: (n: number) => void; filteredTotal: number; setFilteredTotal: (n: number) => void }>({ currentPage: 1, setCurrentPage: () => {}, filteredTotal: 5000, setFilteredTotal: () => {} });
+const PageCtx315 = createContext<{ currentPage: number; setCurrentPage: (n: number) => void; filteredTotal: number; setFilteredTotal: (n: number) => void }>({ currentPage: 1, setCurrentPage: () => {}, filteredTotal: 300, setFilteredTotal: () => {} });
 const FilterCtx315 = createContext<{ selected: Set<number>; setSelected: (s: Set<number>) => void }>({ selected: new Set([0]), setSelected: () => {} });
 
 interface BubbleCtxType315 { shipperSelected: Set<number>; setShipperSelected: (s: Set<number>) => void; originSelected: Set<number>; setOriginSelected: (s: Set<number>) => void; }
@@ -91,26 +84,15 @@ const BubbleCtx315 = createContext<BubbleCtxType315>({ shipperSelected: new Set(
 
 const DynamicCountCtx315 = createContext<{ statusCounts: number[]; totalAmount: number }>({ statusCounts: [], totalAmount: 0 });
 
-function DashboardCard({ label, amount, active, onClick, rawAmount }: { label: string; amount: string; active: boolean; onClick?: () => void; rawAmount?: number }) {
-  const [tooltipVisible, setTooltipVisible] = useState(false);
+function DashboardCard({ label, amount, active, onClick }: { label: string; amount: string; active: boolean; onClick?: () => void }) {
   return (
     <div
       onClick={onClick}
       className={`relative rounded-[8px] flex-1 min-w-0 h-[72px] flex flex-col items-start px-[16px] py-[12px] ${active ? "bg-white" : "bg-[#f6f7f8] hover:bg-[#EBEDEF]"} ${onClick ? "cursor-pointer select-none" : ""}`}
     >
       {active && <div aria-hidden className="absolute border border-[#EBEDEF] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-      <p className="font-['Pretendard_GOV:SemiBold'] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: label.startsWith('확정대기') ? '#DD2222' : label.startsWith('발행대기') ? '#18AC42' : label.startsWith('수금대기') ? '#005FFF' : '#5c6370' }}>{label}</p>
-      <div style={{ position: 'relative' }} onMouseEnter={() => setTooltipVisible(true)} onMouseLeave={() => setTooltipVisible(false)}>
-        <p className="font-['Pretendard_GOV:SemiBold'] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: label.startsWith('확정대기') ? '#DD2222' : label.startsWith('발행대기') ? '#18AC42' : label.startsWith('수금대기') ? '#005FFF' : '#2e3238' }}>{amount}</p>
-        {tooltipVisible && rawAmount !== undefined && rawAmount > 0 && (
-          <div style={{ position: 'absolute', left: 'calc(100% + 2px)', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', zIndex: 9999, pointerEvents: 'none', whiteSpace: 'nowrap' }}>
-            <div style={{ width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderRight: '6px solid rgba(0,0,0,0.84)' }} />
-            <div style={{ background: 'rgba(0,0,0,0.84)', borderRadius: 4, padding: '4px' }}>
-              <span style={{ fontFamily: "'Pretendard GOV', sans-serif", fontSize: 12, fontWeight: 400, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: '18px' }}>{rawAmount.toLocaleString()}원</span>
-            </div>
-          </div>
-        )}
-      </div>
+      <p className="font-['Pretendard_GOV:SemiBold'] text-[#5c6370] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis">{label}</p>
+      <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis">{amount}</p>
     </div>
   );
 }
@@ -120,18 +102,14 @@ function StatusCardRowLarge({ items }: { items: { label: string; amount: string 
   const { statusCounts, totalAmount } = useContext(DynamicCountCtx315);
   const nonTotalCount = items.length - 1;
 
-  // Build display items with dynamic counts + 오더 리스트 목록 일치 원칙
-  const isAllSelected315 = selected.has(0);
+  // Build display items with dynamic counts when available
   const displayItems = statusCounts.length > 0
     ? items.map((item, i) => {
         const count = statusCounts[i] ?? 0;
         const baseLabel = item.label.split(' (')[0];
+        if (i === 0) return { label: `전체 (${count.toLocaleString()}건)`, amount: formatKorean(totalAmount) };
         const perRow = PER_ROW_AMOUNT_315[baseLabel] ?? 0;
-        const ownAmount = perRow * count;
-        if (i === 0) {
-          return { label: `전체 (${count.toLocaleString()}건)`, amount: formatKorean(totalAmount), rawAmount: totalAmount };
-        }
-        return { label: `${baseLabel} (${count.toLocaleString()}건)`, amount: formatKorean(ownAmount), rawAmount: ownAmount };
+        return { label: `${baseLabel} (${count.toLocaleString()}건)`, amount: formatKorean(perRow * count) };
       })
     : items;
 
@@ -253,7 +231,6 @@ function Frame370() {
 }
 
 function Frame395() {
-  const [hoveredTab, setHoveredTab] = useState<string|null>(null);
   const { activeTab, setActiveTab } = useContext(MaeChulMyeongseSubTabCtx);
   const tabs: MaeChulMyeongseSubTab[] = ["화주사", "협력사"];
   return (
@@ -264,12 +241,10 @@ function Frame395() {
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'8px 12px', gap:4, height:48, border:'none', borderBottom: isActive ? '2px solid #17191D' : '2px solid transparent', background:'transparent', cursor:'pointer', flexShrink:0, boxSizing:'border-box' }}
+            className={`content-stretch flex gap-[4px] h-[44px] items-center justify-center px-[12px] py-[8px] relative shrink-0 cursor-pointer rounded-[8px] ${isActive ? "bg-[#f6f7f8]" : "hover:bg-[#EBEDEF]"}`}
             data-name="Tab_Atom"
-            onMouseEnter={() => setHoveredTab(t)}
-            onMouseLeave={() => setHoveredTab(null)}
           >
-            <p style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, lineHeight:'24px', letterSpacing:'-0.02em', color: isActive ? '#2E3238' : hoveredTab === t ? '#17191D' : '#5C6370', whiteSpace:'nowrap' }}>{t}</p>
+            <p className={`[word-break:break-word] font-['Pretendard_GOV:SemiBold'] leading-[24px] not-italic relative shrink-0 text-[16px] tracking-[-0.32px] whitespace-nowrap ${isActive ? "text-[#2e3238]" : "text-[#5c6370]"}`}>{t}</p>
           </button>
         );
       })}
@@ -279,7 +254,7 @@ function Frame395() {
 
 function Frame3() {
   return (
-    <div className="content-stretch flex items-center relative shrink-0 w-full">
+    <div className="content-stretch flex items-center py-[6px] relative shrink-0 w-full">
       <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
       <Frame395 />
     </div>
@@ -534,7 +509,7 @@ function DateRangeCalendar315_UNUSED({ anchorRect, rangeStart, rangeEnd, onSelec
         <button onClick={prevMonth} style={{ width: 26, height: 26, border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="5" height="10" viewBox="0 0 5 10" fill="none"><path d="M4.5 1L0.5 5L4.5 9" stroke="#2E3238" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
-        <span style={{ fontSize: 16, fontWeight: 600, color: '#2E3238', fontFamily: "'Pretendard GOV:SemiBold'", letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
+        <span style={{ fontSize: 16, fontWeight: 700, color: '#2E3238', fontFamily: "'Pretendard GOV:Bold'", letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
         <button onClick={nextMonth} style={{ width: 26, height: 26, border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="5" height="10" viewBox="0 0 5 10" fill="none"><path d="M0.5 1L4.5 5L0.5 9" stroke="#2E3238" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
@@ -662,8 +637,12 @@ function SwitchModule() {
 
       {open && wrapRect && createPortal(
         <div ref={panelRef} style={{ position: 'fixed', top: wrapRect.bottom + 4, left: wrapRect.left + wrapRect.width / 2 - 138, width: 276, background: '#FFFFFF', border: '1px solid #E4E5E9', borderRadius: 8, boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', zIndex: 99999, display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 12px 0', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', width: 252, height: 36 }}>
+            <div onClick={() => setTab('current')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: tab === 'current' ? '1px solid #669FFF' : '1px solid #E4E5E9', borderRight: 'none', borderRadius: '4px 0 0 4px', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: tab === 'current' ? 600 : 400, color: tab === 'current' ? '#005FFF' : '#5C6370', letterSpacing: '-0.02em', background: '#FFFFFF' }}>현재 날짜 기준</div>
+            <div onClick={() => setTab('fixed')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: tab === 'fixed' ? '1px solid #669FFF' : '1px solid #E4E5E9', borderRadius: '0 4px 4px 0', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: tab === 'fixed' ? 600 : 400, color: tab === 'fixed' ? '#005FFF' : '#5C6370', letterSpacing: '-0.02em', background: '#FFFFFF' }}>고정 날짜</div>
+          </div>
           <div style={{ width: 252, height: 36, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 4px', boxSizing: 'border-box' }}>
-            <span style={{ fontFamily: "'Pretendard GOV:SemiBold'", fontSize: 18, fontWeight: 600, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
+            <span style={{ fontFamily: "'Pretendard GOV:Bold'", fontSize: 18, fontWeight: 700, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
             <div style={{ display: 'flex', gap: 4 }}>
               {([[-1, 'M4.5 1L0.5 5L4.5 9'], [1, 'M0.5 1L4.5 5L0.5 9']] as [number, string][]).map(([dir, d]) => (
                 <button key={dir} onClick={() => { const dt = new Date(viewYear, viewMonth + dir, 1); setViewYear(dt.getFullYear()); setViewMonth(dt.getMonth()); }} style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -859,7 +838,7 @@ function BubbleFilter315() {
         {shipperOpen && shipperDropPos && createPortal(
           <div ref={shipperDropRef} style={{
             position: 'fixed', top: shipperDropPos.top, left: shipperDropPos.left,
-            width: 176, background: '#FFFFFF',
+            width: 216, background: '#FFFFFF',
             border: '1px solid #E4E5E9',
             boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)',
             borderRadius: 8,
@@ -1256,14 +1235,14 @@ function formatKorean(n: number): string {
 }
 
 const ITEMS_315_RAW = [
-  { label: "확정대기 (1,500건)", amountRaw: 54_200_000 },
-  { label: "발행대기 (1,000건)", amountRaw: 128_500_000 },
-  { label: "수금대기 (1,000건)", amountRaw: 237_800_000 },
-  { label: "수금완료 (1,500건)", amountRaw: 891_450_000 },
+  { label: "확정대기 (90건)", amountRaw: 54_200_000 },
+  { label: "발행대기 (60건)", amountRaw: 128_500_000 },
+  { label: "수금대기 (60건)", amountRaw: 237_800_000 },
+  { label: "수금완료 (90건)", amountRaw: 891_450_000 },
 ];
 const ITEMS_315_TOTAL = ITEMS_315_RAW.reduce((s, x) => s + x.amountRaw, 0);
 const ITEMS_315 = [
-  { label: "전체 (5,000건)", amount: formatKorean(ITEMS_315_TOTAL) },
+  { label: "전체 (300건)", amount: formatKorean(ITEMS_315_TOTAL) },
   ...ITEMS_315_RAW.map(x => ({ label: x.label, amount: formatKorean(x.amountRaw) })),
 ];
 
@@ -1390,7 +1369,7 @@ function ConfirmInvoiceListModal({ onClose, onSuccess, selectedIndices }: { onCl
                       const isRight = isNumeric || col.key === 'orderCount';
                       const display = isNumeric ? (val as number).toLocaleString('ko-KR') + '원' : String(val);
                       return (
-                        <div key={col.label} style={{ width: col.w, minWidth: col.w, padding: '10px 8px', height: 40, display: 'flex', alignItems: 'center', justifyContent: isRight ? 'flex-end' : 'flex-start', boxSizing: 'border-box', flexShrink: 0, borderBottom: '1px solid #E4E5E9', ...(ci < COLS.length - 1 ? { borderRight: '1px solid #E4E5E9' } : {}), backgroundColor: hoveredModalRow === ri ? '#F5F9FF' : '' }}>
+                        <div key={col.label} style={{ width: col.w, minWidth: col.w, padding: '10px 8px', height: 40, display: 'flex', alignItems: 'center', justifyContent: isRight ? 'flex-end' : 'flex-start', boxSizing: 'border-box', flexShrink: 0, borderBottom: '1px solid #E4E5E9', ...(ci < COLS.length - 1 ? { borderRight: '1px solid #E4E5E9' } : {}), backgroundColor: hoveredModalRow === ri ? 'rgba(246, 247, 248, 0.5)' : '' }}>
                           <span style={{ fontSize: 15, color: '#2E3238', lineHeight: '22px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
                         </div>
                       );
@@ -1535,7 +1514,7 @@ function TaxInvoiceListModal({ onClose, onSuccess, selectedIndices }: { onClose:
                       const isRight = isNumeric || col.key === 'orderCount';
                       const display = isNumeric ? (val as number).toLocaleString('ko-KR') + '원' : String(val);
                       return (
-                        <div key={col.label} style={{ width: col.w, minWidth: col.w, padding: '10px 8px', height: 40, display: 'flex', alignItems: 'center', justifyContent: isRight ? 'flex-end' : 'flex-start', boxSizing: 'border-box', flexShrink: 0, borderBottom: '1px solid #E4E5E9', ...(ci < COLS.length - 1 ? { borderRight: '1px solid #E4E5E9' } : {}), backgroundColor: hoveredModalRow === ri ? '#F5F9FF' : '' }}>
+                        <div key={col.label} style={{ width: col.w, minWidth: col.w, padding: '10px 8px', height: 40, display: 'flex', alignItems: 'center', justifyContent: isRight ? 'flex-end' : 'flex-start', boxSizing: 'border-box', flexShrink: 0, borderBottom: '1px solid #E4E5E9', ...(ci < COLS.length - 1 ? { borderRight: '1px solid #E4E5E9' } : {}), backgroundColor: hoveredModalRow === ri ? 'rgba(246, 247, 248, 0.5)' : '' }}>
                           <span style={{ fontSize: 15, color: '#2E3238', lineHeight: '22px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
                         </div>
                       );
@@ -1671,7 +1650,7 @@ function CalendarDropdown315({ anchorRect, value, onChange, onClose }: {
       <div style={{ width: 252, display: 'flex', flexDirection: 'column', gap: 4 }}>
         {/* Month/year header */}
         <div style={{ height: 36, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 4px' }}>
-          <span style={{ fontFamily: "'Pretendard GOV:SemiBold'", fontSize: 18, fontWeight: 600, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
+          <span style={{ fontFamily: "'Pretendard GOV:Bold'", fontSize: 18, fontWeight: 700, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
           <div style={{ display: 'flex', gap: 2 }}>
             <button onClick={() => { const d = new Date(viewYear, viewMonth - 1, 1); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }} style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <svg width="5" height="10" viewBox="0 0 5 10" fill="none"><path d="M4.5 1L0.5 5L4.5 9" stroke="#2E3238" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -2211,7 +2190,7 @@ const TableCtrlCtx = createContext<{
   issuedIndices: Set<number>; addIssuedIndices: (indices: Set<number>) => void;
   paidIndices: Set<number>;
   clearSelectedRows: () => void;
-}>({ filteredTotal: 5000, selectedCount: 0, selectedRows: new Set(), confirmedIndices: new Set(), addConfirmedIndices: () => {}, issuedIndices: new Set(), addIssuedIndices: () => {}, paidIndices: new Set(), clearSelectedRows: () => {} });
+}>({ filteredTotal: 300, selectedCount: 0, selectedRows: new Set(), confirmedIndices: new Set(), addConfirmedIndices: () => {}, issuedIndices: new Set(), addIssuedIndices: () => {}, paidIndices: new Set(), clearSelectedRows: () => {} });
 
 function Frame371() {
   const { filteredTotal, selectedCount } = useContext(TableCtrlCtx);
@@ -2246,149 +2225,16 @@ function Frame373() {
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-            <div className="absolute inset-[37.25%_30.38%]" data-name="Vector">
-              <div className="absolute inset-[-15.68%_-10.19%]">
-                <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 9.44766 6.70098">
-                  <path d={svgPaths.p3893640} id="Vector" stroke="var(--stroke-0, white)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
-                </svg>
-              </div>
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
+            <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
+              <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
             </div>
           </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-            <div className="absolute inset-[37.25%_30.38%]" data-name="Vector">
-              <div className="absolute inset-[-15.68%_-10.19%]">
-                <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 9.44766 6.70098">
-                  <path d={svgPaths.p3893640} id="Vector" stroke="var(--stroke-0, white)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-            <div className="absolute inset-[37.25%_30.38%]" data-name="Vector">
-              <div className="absolute inset-[-15.68%_-10.19%]">
-                <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 9.44766 6.70098">
-                  <path d={svgPaths.p3893640} id="Vector" stroke="var(--stroke-0, white)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
-        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
-            <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
-          </div>
-        </div>
+        ))}
       </div>
-      <div aria-hidden className="absolute border-[#e3e5e9] border-r border-solid inset-0 pointer-events-none" />
+      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-r border-solid inset-0 pointer-events-none" />
     </div>
   );
 }
@@ -2411,6 +2257,20 @@ function Frame4() {
   );
 }
 
+// 배지 컬럼(거래명세서 상태) - 20개 데이터 셀 템플릿을 상태별로 순환 (Con()의 SRC 매핑이 인덱스 0/6/11/13을 클론 소스로 사용)
+const BADGE_STATUS_SEQUENCE_315 = [
+  "확정대기","확정대기","확정대기","확정대기","확정대기","확정대기",
+  "발행대기","발행대기","발행대기","발행대기","발행대기",
+  "수금대기","수금대기",
+  "수금완료","수금완료","수금완료","수금완료","수금완료","수금완료","수금완료",
+];
+const BADGE_STYLE_315: Record<string, { bg: string; text: string }> = {
+  "확정대기": { bg: "#fce9e9", text: "#dd2222" },
+  "발행대기": { bg: "#ebedef", text: "#454b55" },
+  "수금대기": { bg: "#e4fbeb", text: "#18ac42" },
+  "수금완료": { bg: "#e6efff", text: "#005fff" },
+};
+
 function Frame391() {
   return (
     <div className="relative shrink-0 w-[120px]">
@@ -2423,248 +2283,25 @@ function Frame391() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#fce9e9] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#d22] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">확정대기</p>
+        {BADGE_STATUS_SEQUENCE_315.map((status, i) => {
+          const style = BADGE_STYLE_315[status];
+          return (
+            <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+              <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
+              <div className="flex flex-row items-center justify-center size-full">
+                <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
+                  <div className="content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge" style={{ background: style.bg }}>
+                    <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[13px] tracking-[-0.26px] whitespace-nowrap" style={{ color: style.text }}>
+                      <p className="leading-[19px]">{status}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#fce9e9] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#d22] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">확정대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#fce9e9] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#d22] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">확정대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#fce9e9] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#d22] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">확정대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#fce9e9] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#d22] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">확정대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#fce9e9] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#d22] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">확정대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#ebedef] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#454b55] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">발행대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#ebedef] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#454b55] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">발행대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#ebedef] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#454b55] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">발행대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#ebedef] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#454b55] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">발행대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#ebedef] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#454b55] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">발행대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#e4fbeb] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#18ac42] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">수금대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#e4fbeb] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#18ac42] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">수금대기</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#e6efff] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#005fff] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">수금완료</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#e6efff] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#005fff] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">수금완료</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#e6efff] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#005fff] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">수금완료</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#e6efff] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#005fff] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">수금완료</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#e6efff] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#005fff] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">수금완료</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#e6efff] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#005fff] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">수금완료</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex gap-[8px] items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="bg-[#e6efff] content-stretch flex gap-[2px] h-[26px] items-center justify-center overflow-clip px-[6px] relative rounded-[4px] shrink-0" data-name="badge">
-                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#005fff] text-[13px] tracking-[-0.26px] whitespace-nowrap">
-                  <p className="leading-[19px]">수금완료</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
-      
+      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
   );
 }
@@ -2687,201 +2324,21 @@ function Frame5() {
   );
 }
 
-function Frame6() {
+function UnderlineTextDataCell315({ text }: { text: string }) {
   return (
     <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
       <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
+        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{text}</p>
       </div>
     </div>
   );
 }
 
-function Frame7() {
+function PlainTextDataCell315({ text }: { text: string }) {
   return (
     <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame8() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame9() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame10() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame11() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame12() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame13() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame14() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame15() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame16() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame17() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame18() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame19() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame20() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame21() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame22() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame23() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame24() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame25() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
+      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
+        <p className="leading-[22px] overflow-hidden text-ellipsis">{text}</p>
       </div>
     </div>
   );
@@ -2899,166 +2356,16 @@ function Frame392() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame6 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <UnderlineTextDataCell315 text={`25.10.20 `} />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame7 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame8 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame9 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame10 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame11 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame12 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame13 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame14 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame15 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame16 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame17 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame18 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame19 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame20 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame21 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame22 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame23 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame24 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame25 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -3083,202 +2390,34 @@ function Frame26() {
   );
 }
 
-function Frame27() {
+function Frame374() {
   return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-[15px] text-ellipsis underline cursor-pointer">QWE5678</p>
+    <div className="relative shrink-0 w-[120px]">
+      <div className="content-stretch flex flex-col items-center overflow-clip relative rounded-[inherit] w-full">
+        <div className="bg-[#f6f7f8] h-[40px] relative shrink-0 w-full sticky top-0 z-[1] border-r border-[#E4E5E9]" data-name="Table_Header Cells">
+          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
+          <div className="flex flex-row items-center size-full">
+            <div className="content-stretch flex items-center p-[8px] relative size-full">
+              <Frame26 />
+            </div>
+          </div>
+        </div>
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
+                  <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
+                    <p className="leading-[22px] overflow-hidden text-[15px] text-ellipsis underline cursor-pointer">QWE5678</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
+          </div>
+        ))}
       </div>
-    </div>
-  );
-}
-
-function Frame28() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-[15px] text-ellipsis underline cursor-pointer">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame29() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-[15px] text-ellipsis underline cursor-pointer">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame30() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-[15px] text-ellipsis underline cursor-pointer">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame31() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-[15px] text-ellipsis underline cursor-pointer">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame32() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-[15px] text-ellipsis underline cursor-pointer">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame33() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame34() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame35() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame36() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame37() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame38() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame39() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame40() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame41() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame42() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame43() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame44() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame45() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame46() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">QWE5678</p>
-      </div>
+      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
   );
 }
@@ -3319,184 +2458,6 @@ function ColGeneration315() {
   );
 }
 
-function Frame374() {
-  return (
-    <div className="relative shrink-0 w-[120px]">
-      <div className="content-stretch flex flex-col items-center overflow-clip relative rounded-[inherit] w-full">
-        <div className="bg-[#f6f7f8] h-[40px] relative shrink-0 w-full sticky top-0 z-[1] border-r border-[#E4E5E9]" data-name="Table_Header Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center size-full">
-            <div className="content-stretch flex items-center p-[8px] relative size-full">
-              <Frame26 />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame27 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame28 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame29 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame30 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame31 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame32 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame33 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame34 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame35 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame36 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame37 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame38 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame39 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame40 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame41 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame42 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame43 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame44 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame45 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame46 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-      </div>
-      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
-    </div>
-  );
-}
-
 function Title10() {
   return (
     <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative" data-name="title">
@@ -3515,206 +2476,6 @@ function Frame47() {
   );
 }
 
-function Frame48() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame49() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame50() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame51() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame52() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame53() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame54() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame55() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame56() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame57() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame58() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame59() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame60() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame61() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame63() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame64() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame65() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame66() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame67() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame68() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">(주)글로벌로지스</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame375() {
   return (
     <div className="relative shrink-0 w-[120px]">
@@ -3727,166 +2488,16 @@ function Frame375() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame48 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text="(주)글로벌로지스" />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame49 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame50 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame51 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame52 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame53 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame54 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame55 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame56 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame57 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame58 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame59 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame60 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame61 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame63 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame64 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame65 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame66 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame67 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame68 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -3911,206 +2522,6 @@ function Frame69() {
   );
 }
 
-function Frame70() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame71() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame72() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame73() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame74() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame75() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame76() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame77() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame79() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame80() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame81() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame82() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame83() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame84() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame85() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame86() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame87() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame88() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame89() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame90() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">판교본사</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame376() {
   return (
     <div className="relative shrink-0 w-[120px]">
@@ -4123,166 +2534,16 @@ function Frame376() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame70 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text="판교본사" />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame71 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame72 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame73 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame74 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame75 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame76 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame77 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame79 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame80 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame81 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame82 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame83 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame84 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame85 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame86 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame87 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame88 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame89 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame90 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -4307,206 +2568,6 @@ function Frame91() {
   );
 }
 
-function Frame92() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame93() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame94() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame95() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame96() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame97() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame98() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame99() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame100() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame101() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame102() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame103() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame104() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame105() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame106() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame107() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame108() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame109() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame110() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame111() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">26.05.07 ~ 26.05.12</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame380() {
   return (
     <div className="relative shrink-0 w-[160px]">
@@ -4519,166 +2580,16 @@ function Frame380() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame92 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text="26.05.07 ~ 26.05.12" />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame93 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame94 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame95 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame96 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame97 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame98 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame99 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame100 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame101 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame102 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame103 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame104 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame105 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame106 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame107 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame108 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame109 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame110 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame111 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -4703,206 +2614,6 @@ function Frame112() {
   );
 }
 
-function Frame113() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame114() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame115() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame116() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame117() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame118() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame119() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame120() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame121() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame122() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame123() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame124() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame125() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame126() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame127() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame128() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame129() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame130() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame131() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame132() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">2건</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame387() {
   return (
     <div className="relative shrink-0 w-[100px]">
@@ -4915,166 +2626,16 @@ function Frame387() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame113 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text="2건" />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame114 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame115 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame116 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame117 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame118 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame119 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame120 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame121 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame122 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame123 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame124 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame125 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame126 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame127 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame128 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame129 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame130 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame131 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame132 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -5099,206 +2660,6 @@ function Frame133() {
   );
 }
 
-function Frame134() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame135() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame136() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame137() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame138() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame139() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame140() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame141() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame142() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame143() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame144() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame145() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame146() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame147() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame148() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame149() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame150() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame151() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame152() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame153() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame377() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -5311,166 +2672,16 @@ function Frame377() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame134 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text="300,000" />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame135 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame136 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame137 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame138 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame139 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame140 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame141 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame142 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame143 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame144 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame145 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame146 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame147 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame148 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame149 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame150 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame151 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame152 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame153 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -5495,206 +2706,6 @@ function Frame154() {
   );
 }
 
-function Frame155() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame156() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame157() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame158() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame159() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame160() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame161() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame162() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame163() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame164() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame165() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame166() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame167() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame168() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame169() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame170() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame171() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame172() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame173() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame174() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame388() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -5707,166 +2718,16 @@ function Frame388() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame155 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text="300,000" />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame156 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame157 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame158 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame159 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame160 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame161 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame162 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame163 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame164 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame165 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame166 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame167 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame168 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame169 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame170 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame171 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame172 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame173 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame174 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -5891,206 +2752,6 @@ function Frame175() {
   );
 }
 
-function Frame176() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame177() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame178() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame179() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame180() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame181() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame182() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame183() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame184() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame185() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame186() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame187() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame188() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame189() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame190() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame191() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame192() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame193() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame194() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame195() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">300,000</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame389() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -6103,166 +2764,16 @@ function Frame389() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame176 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text="300,000" />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame177 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame178 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame179 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame180 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame181 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame182 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame183 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame184 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame185 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame186 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame187 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame188 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame189 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame190 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame191 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame192 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame193 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame194 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame195 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -6287,206 +2798,6 @@ function Frame196() {
   );
 }
 
-function Frame197() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame198() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame199() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame200() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame201() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame202() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame203() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame204() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame205() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame206() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame207() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame208() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame209() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame210() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame211() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame212() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame213() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame214() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame215() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame216() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">30,000</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame378() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -6499,166 +2810,16 @@ function Frame378() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame197 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text="30,000" />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame198 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame199 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame200 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame201 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame202 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame203 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame204 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame205 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame206 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame207 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame208 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame209 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame210 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame211 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame212 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame213 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame214 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame215 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame216 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -6683,206 +2844,6 @@ function Frame217() {
   );
 }
 
-function Frame218() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame220() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame221() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame222() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame223() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame224() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame225() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame226() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame227() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame228() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame229() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame230() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame231() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame232() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame233() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame234() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame235() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame236() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame237() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame238() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">330,000</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame385() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -6895,166 +2856,16 @@ function Frame385() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame218 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text="330,000" />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame220 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame221 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame222 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame223 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame224 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame225 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame226 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame227 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame228 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame229 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame230 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame231 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame232 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame233 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame234 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame235 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame236 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame237 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame238 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -7079,206 +2890,6 @@ function Frame239() {
   );
 }
 
-function Frame240() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame241() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame242() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame243() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame244() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame245() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame246() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame247() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame248() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame249() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame250() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame251() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame252() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame253() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame254() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame255() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame256() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame257() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame258() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame259() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">1,880</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame379() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -7291,166 +2902,16 @@ function Frame379() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame240 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text="1,880" />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame241 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame242 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame243 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame244 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame245 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame246 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame247 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame248 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame249 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame250 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame251 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame252 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame253 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame254 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame255 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame256 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame257 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame258 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame259 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -7475,206 +2936,7 @@ function Frame260() {
   );
 }
 
-function Frame261() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame262() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame263() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame264() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame265() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame266() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame267() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame268() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame269() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame270() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame271() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame272() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame273() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame274() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame275() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame276() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame277() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame278() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame279() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">328,120</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame281() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">330,000</p>
-      </div>
-    </div>
-  );
-}
-
+// 수금액 컬럼: 19번째 데이터 셀(0-based index 18)만 예외적으로 밑줄 없는 일부수금 값(328,120)
 function Frame386() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -7687,166 +2949,18 @@ function Frame386() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame261 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                {i === 18
+                  ? <PlainTextDataCell315 text="328,120" />
+                  : <UnderlineTextDataCell315 text="330,000" />}
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame262 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame263 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame264 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame265 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame266 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame267 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame268 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame269 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame270 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame271 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame272 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame273 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame274 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame275 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame276 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame277 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame278 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame279 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame281 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -7871,206 +2985,6 @@ function Frame283() {
   );
 }
 
-function Frame284() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame285() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame286() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame287() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame288() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame289() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame290() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame291() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame292() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame293() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame294() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame295() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame296() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame297() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame298() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame299() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame300() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame301() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame302() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame303() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame390() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -8083,166 +2997,16 @@ function Frame390() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame284 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <UnderlineTextDataCell315 text={`25.10.20 `} />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame285 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame286 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame287 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame288 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame289 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame290 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame291 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame292 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame293 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame294 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame295 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame296 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame297 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame298 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame299 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame300 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame301 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame302 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame303 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -8267,206 +3031,6 @@ function Frame304() {
   );
 }
 
-function Frame305() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame306() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame307() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame308() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame309() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame310() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame311() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame312() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame313() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame314() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame315() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame316() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame317() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame318() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame319() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame320() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame321() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame322() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame323() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame324() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame381() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -8479,166 +3043,16 @@ function Frame381() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame305 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text={`25.10.20 `} />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame306 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame307 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame308 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame309 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame310 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame311 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame312 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame313 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame314 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame315 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame316 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame317 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame318 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame319 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame320 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame321 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame322 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame323 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame324 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -8663,206 +3077,6 @@ function Frame325() {
   );
 }
 
-function Frame326() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame327() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame328() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame329() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame330() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame331() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame332() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame333() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame334() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame335() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame336() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame337() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame338() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame339() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame340() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame341() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame342() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame343() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame344() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame345() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame382() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -8875,166 +3089,16 @@ function Frame382() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame326 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <PlainTextDataCell315 text={`25.10.20 `} />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame327 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame328 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame329 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame330 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame331 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame332 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame333 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame334 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame335 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame336 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame337 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame338 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame339 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame340 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame341 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame342 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame343 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame344 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame345 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -9059,206 +3123,6 @@ function Frame346() {
   );
 }
 
-function Frame347() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame348() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame349() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame350() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame351() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame352() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame353() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame354() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame355() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame356() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame357() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame358() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame359() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame360() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame361() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame362() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame363() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame364() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame365() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
-function Frame366() {
-  return (
-    <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-      <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{`25.10.20 `}</p>
-      </div>
-    </div>
-  );
-}
-
 function Frame383() {
   return (
     <div className="relative shrink-0 w-[140px]">
@@ -9271,166 +3135,16 @@ function Frame383() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame347 />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+                <UnderlineTextDataCell315 text={`25.10.20 `} />
+              </div>
             </div>
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame348 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame349 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame350 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame351 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame352 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame353 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame354 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame355 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame356 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame357 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame358 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame359 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame360 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame361 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame362 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame363 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame364 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame365 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
-              <Frame366 />
-            </div>
-          </div>
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -9467,326 +3181,24 @@ function Frame384() {
             </div>
           </div>
         </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+            <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
+            <div className="flex flex-row items-center justify-center size-full">
+              <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
+                <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
+                  <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
+                    <div className="absolute inset-[16.67%]" data-name="Vector">
+                      <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
+                        <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
-          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-center px-[8px] py-[10px] relative size-full">
-              <div className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[36px]" data-name="Button">
-                <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/download">
-                  <div className="absolute inset-[16.67%]" data-name="Vector">
-                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 10.6667 10.6667">
-                      <path d={svgPaths.p30497100} fill="var(--fill-0, #9197A1)" id="Vector" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
       <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
@@ -9840,7 +3252,7 @@ function Con() {
   const currentPageRef = useRef(currentPage);
   useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
 
-  const TOTAL_ROWS = 5000;
+  const TOTAL_ROWS = 300;
 
   const hiddenRows = useMemo(() => {
     const filterStatuses = selected.has(0) ? null : new Set([...selected].map(i => ITEMS_315[i].label.split(" (")[0]));
@@ -9896,22 +3308,8 @@ function Con() {
 
   useEffect(() => {
     if (!tableRef.current) return;
-    const PAGE_SIZE_315 = 200;
-    const baseSorted315 = Array.from({ length: TOTAL_ROWS }, (_, i) => i)
-      .filter(i => !hiddenRows.has(i))
-      .sort((a, b) => {
-        const da = getCreationDateIdx315(a);
-        const db = getCreationDateIdx315(b);
-        if (da !== db) return da - db;
-        const sa = STATUS_PRIORITY_315[getEffectiveStatus(a, confirmedIndices, issuedIndices, paidIndices)] ?? 99;
-        const sb = STATUS_PRIORITY_315[getEffectiveStatus(b, confirmedIndices, issuedIndices, paidIndices)] ?? 99;
-        return sa !== sb ? sa - sb : a - b;
-      });
-    const pageStart315 = (currentPage - 1) * PAGE_SIZE_315;
-    const pageIndices315 = baseSorted315.slice(pageStart315, pageStart315 + PAGE_SIZE_315);
     tableRef.current.querySelectorAll(':scope > *').forEach((col) => {
-      col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"][data-table-row]').forEach(c => c.remove());
-      const cells = Array.from(col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"]:not([data-table-row])'));
+      const cells = Array.from(col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"]'));
       if (!cells.length) return;
       const parent = cells[0].parentElement!;
       const SRC: Record<string, number> = { '확정대기': 0, '발행대기': 6, '수금대기': 11, '수금완료': 13 };
@@ -9926,27 +3324,20 @@ function Con() {
         templateCellsRef.current.set(col, cells.map(c => c.cloneNode(true) as HTMLElement));
       }
       const tmplCells = templateCellsRef.current.get(col)!;
-      cells.forEach((c) => { c.style.display = 'none'; });
-      for (const origIdx of pageIndices315) {
+      cells.forEach((c) => parent.removeChild(c));
+      const sortedIndices = Array.from({ length: TOTAL_ROWS }, (_, i) => i).sort((a, b) => {
+        const da = getCreationDateIdx315(a);
+        const db = getCreationDateIdx315(b);
+        if (da !== db) return da - db;
+        const sa = STATUS_PRIORITY_315[getEffectiveStatus(a, confirmedIndices, issuedIndices, paidIndices)] ?? 99;
+        const sb = STATUS_PRIORITY_315[getEffectiveStatus(b, confirmedIndices, issuedIndices, paidIndices)] ?? 99;
+        return sa !== sb ? sa - sb : a - b;
+      });
+      for (const origIdx of sortedIndices) {
         const s = getEffectiveStatus(origIdx, confirmedIndices, issuedIndices, paidIndices);
         const srcIdx = SRC[s] ?? (origIdx % tmplCells.length);
         const cell = (tmplCells[srcIdx]?.cloneNode(true) ?? tmplCells[0].cloneNode(true)) as HTMLElement;
-        cell.style.display = '';
         cell.dataset.tableRow = String(origIdx);
-        // 뱃지 컬러 동적 적용
-        const BADGE_COLORS_315: Record<string, { bg: string; text: string }> = {
-          '확정대기': { bg: '#FEE7E7', text: '#DD2222' },
-          '발행대기': { bg: '#E6F7EC', text: '#18AC42' },
-          '수금대기': { bg: '#E0EDFF', text: '#005FFF' },
-          '수금완료': { bg: '#F6F7F8', text: '#5C6370' },
-        };
-        const badge315 = cell.querySelector<HTMLElement>('[data-name="badge"]');
-        if (badge315 && BADGE_COLORS_315[s]) {
-          badge315.style.background = BADGE_COLORS_315[s].bg;
-          badge315.querySelectorAll<HTMLElement>('*').forEach(el => { el.style.color = BADGE_COLORS_315[s].text; });
-          const p315 = badge315.querySelector('p');
-          if (p315) p315.textContent = s;
-        }
         if (isShipperCol) {
           const p = cell.querySelector('p') || cell;
           p.textContent = SHIPPER_ROW_DATA_315[origIdx % SHIPPER_ROW_DATA_315.length];
@@ -10020,7 +3411,7 @@ function Con() {
         if (p.textContent?.trim() === '협력사 업무그룹') p.textContent = '화주사 업무그룹';
       });
     }
-  }, [confirmedIndices, issuedIndices, paidIndices, isPartnerTab, currentPage, hiddenRows]);
+  }, [confirmedIndices, issuedIndices, paidIndices, isPartnerTab]);
   useEffect(() => {
     if (!tableRef.current) return;
     const CHECKMARK = `<svg viewBox="0 0 10 8" fill="none" style="position:absolute;inset:0;width:100%;height:100%;padding:1px"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -10040,12 +3431,6 @@ function Con() {
       } else {
         inner.style.cssText = '';
         inner.innerHTML = '';
-      }
-      if (!isHeader) {
-        const rowIdx = Number(cb.dataset.cbRow);
-        tableRef.current!.querySelectorAll<HTMLElement>(`[data-table-row="${rowIdx}"]`).forEach(c => {
-          c.style.backgroundColor = isSelected ? '#CCDFFF' : '';
-        });
       }
     });
   }, [selectedRows, currentPage]);
@@ -10094,10 +3479,10 @@ function Con() {
       const newRow = cell?.dataset.tableRow ?? null;
       if (newRow !== hoveredRow) {
         if (hoveredRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = ''; });
         }
         if (newRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { c.style.backgroundColor = '#F5F9FF'; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = 'rgba(246, 247, 248, 0.5)'; });
         }
         hoveredRow = newRow;
       }
@@ -10111,7 +3496,7 @@ function Con() {
       const relatedTarget = (e as MouseEvent).relatedTarget as HTMLElement | null;
       if (!relatedTarget || !el.contains(relatedTarget)) {
         if (hoveredRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = ''; });
           hoveredRow = null;
         }
       }
@@ -10122,11 +3507,23 @@ function Con() {
   }, []);
 
 
+  const PAGE_SIZE = 200;
+
   useEffect(() => {
     const total = TOTAL_ROWS - hiddenRows.size;
     setFilteredTotal(total);
     setCurrentPage(1);
   }, [hiddenRows]);
+
+  useEffect(() => {
+    if (!tableRef.current) return;
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    tableRef.current.querySelectorAll<HTMLElement>('[data-table-row]').forEach((cell) => {
+      const row = Number(cell.dataset.tableRow);
+      cell.style.display = (!hiddenRows.has(row) && row >= start && row < end) ? '' : 'none';
+    });
+  }, [hiddenRows, currentPage]);
 
   useEffect(() => {
     if (tableRef.current) tableRef.current.scrollTop = 0;
@@ -10302,7 +3699,7 @@ function PaginationList() {
 
 function Frame394() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [filteredTotal, setFilteredTotal] = useState(5000);
+  const [filteredTotal, setFilteredTotal] = useState(300);
   return (
     <PageCtx315.Provider value={{ currentPage, setCurrentPage, filteredTotal, setFilteredTotal }}>
       <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-h-px relative w-full">
