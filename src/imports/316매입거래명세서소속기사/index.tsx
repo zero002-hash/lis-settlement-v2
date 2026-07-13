@@ -77,15 +77,26 @@ const PARTNER_LIST_316 = ['카모로지스틱스', '(주)글로벌로지스', '(
 interface BubbleCtxType316 { originSelected: Set<number>; setOriginSelected: (s: Set<number>) => void; driverSelected: Set<number>; setDriverSelected: (s: Set<number>) => void; partnerSelected316: Set<number>; setPartnerSelected316: (s: Set<number>) => void; }
 const BubbleCtx316 = createContext<BubbleCtxType316>({ originSelected: new Set(), setOriginSelected: () => {}, driverSelected: new Set(), setDriverSelected: () => {}, partnerSelected316: new Set(), setPartnerSelected316: () => {} });
 
-function DashboardCard({ label, amount, active, onClick }: { label: string; amount: string; active: boolean; onClick?: () => void }) {
+function DashboardCard({ label, amount, active, onClick, rawAmount }: { label: string; amount: string; active: boolean; onClick?: () => void; rawAmount?: number }) {
+  const [tooltipVisible, setTooltipVisible] = useState(false);
   return (
     <div
       onClick={onClick}
       className={`relative rounded-[8px] flex-1 min-w-0 h-[72px] flex flex-col items-start px-[16px] py-[12px] ${active ? "bg-white" : "bg-[#f6f7f8] hover:bg-[#EBEDEF]"} ${onClick ? "cursor-pointer select-none" : ""}`}
     >
       {active && <div aria-hidden className="absolute border border-[#EBEDEF] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-      <p className="font-['Pretendard_GOV:SemiBold'] text-[#5c6370] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis">{label}</p>
-      <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis">{amount}</p>
+      <p className="font-['Pretendard_GOV:SemiBold'] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: label.startsWith('확정대기') ? '#DD2222' : label.startsWith('발행대기') ? '#18AC42' : label.startsWith('지급대기') ? '#005FFF' : '#5c6370' }}>{label}</p>
+      <div style={{ position: 'relative' }} onMouseEnter={() => setTooltipVisible(true)} onMouseLeave={() => setTooltipVisible(false)}>
+        <p className="font-['Pretendard_GOV:SemiBold'] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: label.startsWith('확정대기') ? '#DD2222' : label.startsWith('발행대기') ? '#18AC42' : label.startsWith('지급대기') ? '#005FFF' : '#2e3238' }}>{amount}</p>
+        {tooltipVisible && rawAmount !== undefined && rawAmount > 0 && (
+          <div style={{ position: 'absolute', left: 'calc(100% + 2px)', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', zIndex: 9999, pointerEvents: 'none', whiteSpace: 'nowrap' }}>
+            <div style={{ width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderRight: '6px solid rgba(0,0,0,0.84)' }} />
+            <div style={{ background: 'rgba(0,0,0,0.84)', borderRadius: 4, padding: '4px' }}>
+              <span style={{ fontFamily: "'Pretendard GOV', sans-serif", fontSize: 12, fontWeight: 400, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: '18px' }}>{rawAmount.toLocaleString()}원</span>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -113,12 +124,19 @@ function StatusCardRowLarge({ items }: { items: { label: string; amount: string 
     }
   };
 
+  // 오더 리스트 목록 일치 원칙: 선택 상태에 따라 금액 표시
+  const isAllSelected316 = selected.has(0);
+  const displayItems316 = items.map((item, i) => {
+    if (i === 0) return item;
+    return { ...item, rawAmount: ITEMS_316_RAW[i-1]?.amountRaw ?? 0 };
+  });
+
   return (
     <div className="flex items-start py-[12px] relative shrink-0 w-full" style={{height: 104}}>
       <div className="bg-[#f6f7f8] rounded-[8px] flex-1 flex flex-col justify-center items-start p-[4px] gap-[12px]" style={{height: 80}}>
         <div className="flex gap-[4px] w-full" style={{height: 72}}>
-          {items.map((item, i) => (
-            <DashboardCard key={item.label} label={item.label.replace("건)", ")")} amount={item.amount} active={selected.has(i)} onClick={() => handleClick(i)} />
+          {displayItems316.map((item, i) => (
+            <DashboardCard key={item.label} label={item.label.replace("건)", ")")} amount={item.amount} active={selected.has(i)} onClick={() => handleClick(i)} rawAmount={(item as any).rawAmount} />
           ))}
         </div>
       </div>
@@ -212,6 +230,7 @@ function Frame370() {
 }
 
 function Frame395() {
+  const [hoveredTab, setHoveredTab] = useState<string|null>(null);
   const { activeTab, setActiveTab } = useContext(MaeIpMyeongseSubTabCtx);
   const tabs: MaeIpMyeongseSubTab[] = ["소속기사", "협력사"];
   return (
@@ -222,10 +241,12 @@ function Frame395() {
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            className={`content-stretch flex gap-[4px] h-[44px] items-center justify-center px-[12px] py-[8px] relative shrink-0 cursor-pointer rounded-[8px] ${isActive ? "bg-[#f6f7f8]" : "hover:bg-[#EBEDEF]"}`}
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'8px 12px', gap:4, height:48, border:'none', borderBottom: isActive ? '2px solid #17191D' : '2px solid transparent', background:'transparent', cursor:'pointer', flexShrink:0, boxSizing:'border-box' }}
             data-name="Tab_Atom"
+            onMouseEnter={() => setHoveredTab(t)}
+            onMouseLeave={() => setHoveredTab(null)}
           >
-            <p className={`[word-break:break-word] font-['Pretendard_GOV:SemiBold'] leading-[24px] not-italic relative shrink-0 text-[16px] tracking-[-0.32px] whitespace-nowrap ${isActive ? "text-[#2e3238]" : "text-[#5c6370]"}`}>{t}</p>
+            <p style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, lineHeight:'24px', letterSpacing:'-0.02em', color: isActive ? '#2E3238' : hoveredTab === t ? '#17191D' : '#5C6370', whiteSpace:'nowrap' }}>{t}</p>
           </button>
         );
       })}
@@ -235,7 +256,7 @@ function Frame395() {
 
 function Frame3() {
   return (
-    <div className="content-stretch flex items-center py-[6px] relative shrink-0 w-full">
+    <div className="content-stretch flex items-center relative shrink-0 w-full">
       <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
       <Frame395 />
     </div>
@@ -487,7 +508,7 @@ function DateRangeCalendar316_UNUSED({ anchorRect, rangeStart, rangeEnd, onSelec
         <button onClick={prevMonth} style={{ width: 26, height: 26, border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="5" height="10" viewBox="0 0 5 10" fill="none"><path d="M4.5 1L0.5 5L4.5 9" stroke="#2E3238" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
-        <span style={{ fontSize: 16, fontWeight: 700, color: '#2E3238', fontFamily: "'Pretendard GOV:Bold'", letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
+        <span style={{ fontSize: 16, fontWeight: 600, color: '#2E3238', fontFamily: "'Pretendard GOV:SemiBold'", letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
         <button onClick={nextMonth} style={{ width: 26, height: 26, border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="5" height="10" viewBox="0 0 5 10" fill="none"><path d="M0.5 1L4.5 5L0.5 9" stroke="#2E3238" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
@@ -609,12 +630,8 @@ function SwitchModule() {
 
       {open && wrapRect && createPortal(
         <div ref={panelRef} style={{ position: 'fixed', top: wrapRect.bottom + 4, left: wrapRect.left + wrapRect.width / 2 - 138, width: 276, background: '#FFFFFF', border: '1px solid #E4E5E9', borderRadius: 8, boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', zIndex: 99999, display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 12px 0', boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', width: 252, height: 36 }}>
-            <div onClick={() => setTab('current')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: tab === 'current' ? '1px solid #669FFF' : '1px solid #E4E5E9', borderRight: 'none', borderRadius: '4px 0 0 4px', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: tab === 'current' ? 600 : 400, color: tab === 'current' ? '#005FFF' : '#5C6370', letterSpacing: '-0.02em', background: '#FFFFFF' }}>현재 날짜 기준</div>
-            <div onClick={() => setTab('fixed')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: tab === 'fixed' ? '1px solid #669FFF' : '1px solid #E4E5E9', borderRadius: '0 4px 4px 0', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: tab === 'fixed' ? 600 : 400, color: tab === 'fixed' ? '#005FFF' : '#5C6370', letterSpacing: '-0.02em', background: '#FFFFFF' }}>고정 날짜</div>
-          </div>
           <div style={{ width: 252, height: 36, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 4px', boxSizing: 'border-box' }}>
-            <span style={{ fontFamily: "'Pretendard GOV:Bold'", fontSize: 18, fontWeight: 700, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
+            <span style={{ fontFamily: "'Pretendard GOV:SemiBold'", fontSize: 18, fontWeight: 600, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
             <div style={{ display: 'flex', gap: 4 }}>
               {([[-1, 'M4.5 1L0.5 5L4.5 9'], [1, 'M0.5 1L4.5 5L0.5 9']] as [number, string][]).map(([dir, d]) => (
                 <button key={dir} onClick={() => { const dt = new Date(viewYear, viewMonth + dir, 1); setViewYear(dt.getFullYear()); setViewMonth(dt.getMonth()); }} style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -972,7 +989,7 @@ function Frame407() {
           {partnerOpen316 && partnerDropPos316 && createPortal(
             <div ref={partnerDropRef316} style={{
               position: 'fixed', top: partnerDropPos316.top, left: partnerDropPos316.left,
-              width: 257, background: '#FFFFFF',
+              width: 176, background: '#FFFFFF',
               border: '1px solid #E4E5E9',
               boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)',
               borderRadius: 8,
@@ -1764,7 +1781,7 @@ function CalendarDropdown316({ anchorRect, value, onChange, onClose }: {
       <div style={{ width: 252, display: 'flex', flexDirection: 'column', gap: 4 }}>
         {/* Month/year header */}
         <div style={{ height: 36, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 4px' }}>
-          <span style={{ fontFamily: "'Pretendard GOV:Bold'", fontSize: 18, fontWeight: 700, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
+          <span style={{ fontFamily: "'Pretendard GOV:SemiBold'", fontSize: 18, fontWeight: 600, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
           <div style={{ display: 'flex', gap: 2 }}>
             <button onClick={() => { const d = new Date(viewYear, viewMonth - 1, 1); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }} style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <svg width="5" height="10" viewBox="0 0 5 10" fill="none"><path d="M4.5 1L0.5 5L4.5 9" stroke="#2E3238" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -2089,7 +2106,7 @@ function ConfirmInvoiceListModal316({ onClose, onSuccess, selectedIndices }: { o
                       const val = row[col.key];
                       const display = typeof val === 'number' ? val.toLocaleString('ko-KR') + '원' : String(val);
                       return (
-                        <div key={col.label} style={{ width: col.w, minWidth: col.w, padding: '10px 8px', height: 40, display: 'flex', alignItems: 'center', boxSizing: 'border-box', flexShrink: 0, borderBottom: '1px solid #E4E5E9', ...(ci < COLS.length - 1 ? { borderRight: '1px solid #E4E5E9' } : {}), backgroundColor: hoveredModalRow === ri ? 'rgba(246, 247, 248, 0.5)' : '' }}>
+                        <div key={col.label} style={{ width: col.w, minWidth: col.w, padding: '10px 8px', height: 40, display: 'flex', alignItems: 'center', boxSizing: 'border-box', flexShrink: 0, borderBottom: '1px solid #E4E5E9', ...(ci < COLS.length - 1 ? { borderRight: '1px solid #E4E5E9' } : {}), backgroundColor: hoveredModalRow === ri ? '#F5F9FF' : '' }}>
                           <span style={{ fontSize: 15, color: '#2E3238', lineHeight: '22px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
                         </div>
                       );
@@ -2225,7 +2242,7 @@ function TaxInvoiceListModal316({ onClose, onSuccess, selectedIndices }: { onClo
                       const val = row[col.key];
                       const display = typeof val === 'number' ? val.toLocaleString('ko-KR') + '원' : String(val);
                       return (
-                        <div key={col.label} style={{ width: col.w, minWidth: col.w, padding: '10px 8px', height: 40, display: 'flex', alignItems: 'center', boxSizing: 'border-box', flexShrink: 0, borderBottom: '1px solid #E4E5E9', ...(ci < COLS.length - 1 ? { borderRight: '1px solid #E4E5E9' } : {}), backgroundColor: hoveredModalRow === ri ? 'rgba(246, 247, 248, 0.5)' : '' }}>
+                        <div key={col.label} style={{ width: col.w, minWidth: col.w, padding: '10px 8px', height: 40, display: 'flex', alignItems: 'center', boxSizing: 'border-box', flexShrink: 0, borderBottom: '1px solid #E4E5E9', ...(ci < COLS.length - 1 ? { borderRight: '1px solid #E4E5E9' } : {}), backgroundColor: hoveredModalRow === ri ? '#F5F9FF' : '' }}>
                           <span style={{ fontSize: 15, color: '#2E3238', lineHeight: '22px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
                         </div>
                       );
@@ -2316,7 +2333,7 @@ function Frame373() {
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
@@ -2329,7 +2346,7 @@ function Frame373() {
             </div>
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
@@ -2342,7 +2359,7 @@ function Frame373() {
             </div>
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
@@ -2355,110 +2372,110 @@ function Frame373() {
             </div>
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
       </div>
-      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-r border-solid inset-0 pointer-events-none" />
+      <div aria-hidden className="absolute border-[#e3e5e9] border-r border-solid inset-0 pointer-events-none" />
     </div>
   );
 }
@@ -2734,7 +2751,7 @@ function Frame389() {
           </div>
         </div>
       </div>
-      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
+      
     </div>
   );
 }
@@ -9971,21 +9988,10 @@ function Con() {
 
   useEffect(() => {
     if (!tableRef.current) return;
-    tableRef.current.querySelectorAll(':scope > *').forEach((col) => {
-      const cells = Array.from(col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"]'));
-      if (!cells.length) return;
-      const parent = cells[0].parentElement!;
-      const SRC: Record<string, number> = { '확정대기': 0, '발행대기': 6, '지급대기': 11, '지급완료': 13 };
-      const headerText316 = col.querySelector('[data-name="Table_Header Cells"]')?.textContent?.trim();
-      const isInvoiceIdCol = headerText316 === '거래명세서ID';
-      const isCreationDateCol = headerText316 === '거래명세서 생성일자';
-      // 컬럼 Element를 키로 원본 Figma 템플릿 셀 최초 1회 캐싱
-      if (!templateCellsRef316.current.has(col)) {
-        templateCellsRef316.current.set(col, cells.map(c => c.cloneNode(true) as HTMLElement));
-      }
-      const tmplCells316 = templateCellsRef316.current.get(col)!;
-      cells.forEach((c) => parent.removeChild(c));
-      const sortedIndices = Array.from({ length: TOTAL_ROWS }, (_, i) => i).sort((a, b) => {
+    const PAGE_SIZE_316 = 200;
+    const baseSorted316 = Array.from({ length: TOTAL_ROWS }, (_, i) => i)
+      .filter(i => !hiddenRows.has(i))
+      .sort((a, b) => {
         const da = getCreationDateIdx316(a);
         const db = getCreationDateIdx316(b);
         if (da !== db) return da - db;
@@ -9993,11 +9999,38 @@ function Con() {
         const sb = STATUS_PRIORITY_316[getEffectiveStatus316(b)] ?? 99;
         return sa !== sb ? sa - sb : a - b;
       });
-      for (const origIdx of sortedIndices) {
+    const pageStart316 = (currentPage - 1) * PAGE_SIZE_316;
+    const pageIndices316 = baseSorted316.slice(pageStart316, pageStart316 + PAGE_SIZE_316);
+    tableRef.current.querySelectorAll(':scope > *').forEach((col) => {
+      col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"][data-table-row]').forEach(c => c.remove());
+      const cells = Array.from(col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"]:not([data-table-row])'));
+      if (!cells.length) return;
+      const parent = cells[0].parentElement!;
+      const SRC: Record<string, number> = { '확정대기': 0, '발행대기': 6, '지급대기': 11, '지급완료': 13 };
+      const headerText316 = col.querySelector('[data-name="Table_Header Cells"]')?.textContent?.trim();
+      const isInvoiceIdCol = headerText316 === '거래명세서ID';
+      const isCreationDateCol = headerText316 === '거래명세서 생성일자';
+      cells.forEach((c) => { c.style.display = 'none'; });
+      for (const origIdx of pageIndices316) {
         const s = getEffectiveStatus316(origIdx);
-        const srcIdx316 = SRC[s] ?? (origIdx % tmplCells316.length);
-        const cell = (tmplCells316[srcIdx316]?.cloneNode(true) ?? tmplCells316[0].cloneNode(true)) as HTMLElement;
+        const srcIdx316 = SRC[s] ?? (origIdx % cells.length);
+        const cell = (cells[Math.min(srcIdx316, cells.length - 1)].cloneNode(true)) as HTMLElement;
+        cell.style.display = '';
         cell.dataset.tableRow = String(origIdx);
+        // 뱃지 컬러 동적 적용
+        const BADGE_COLORS_316: Record<string, { bg: string; text: string }> = {
+          '확정대기': { bg: '#FEE7E7', text: '#DD2222' },
+          '발행대기': { bg: '#E6F7EC', text: '#18AC42' },
+          '지급대기': { bg: '#E0EDFF', text: '#005FFF' },
+          '지급완료': { bg: '#F6F7F8', text: '#5C6370' },
+        };
+        const badge316 = cell.querySelector<HTMLElement>('[data-name="badge"]');
+        if (badge316 && BADGE_COLORS_316[s]) {
+          badge316.style.background = BADGE_COLORS_316[s].bg;
+          badge316.querySelectorAll<HTMLElement>('*').forEach(el => { el.style.color = BADGE_COLORS_316[s].text; });
+          const p316 = badge316.querySelector('p');
+          if (p316) p316.textContent = s;
+        }
         if (isCreationDateCol) {
           const p = cell.querySelector('p') || cell;
           p.textContent = getCreationDate316(origIdx);
@@ -10042,7 +10075,7 @@ function Con() {
     });
     // Remove static Figma checkmarks to prevent double SVG on selection
     tableRef.current.querySelectorAll('[data-name="Selection Controls"] [data-name="Vector"]').forEach((el) => (el as HTMLElement).remove());
-  }, [confirmedIndices, issuedIndices, paidIndices]);
+  }, [confirmedIndices, issuedIndices, paidIndices, currentPage, hiddenRows]);
   useEffect(() => {
     if (!tableRef.current) return;
     const CHECKMARK = `<svg viewBox="0 0 10 8" fill="none" style="position:absolute;inset:0;width:100%;height:100%;padding:1px"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -10062,6 +10095,12 @@ function Con() {
       } else {
         inner.style.cssText = '';
         inner.innerHTML = '';
+      }
+      if (!isHeader) {
+        const rowIdx = Number(cb.dataset.cbRow);
+        tableRef.current!.querySelectorAll<HTMLElement>(`[data-table-row="${rowIdx}"]`).forEach(c => {
+          c.style.backgroundColor = isSelected ? '#CCDFFF' : '';
+        });
       }
     });
   }, [selectedRows, currentPage]);
@@ -10110,10 +10149,10 @@ function Con() {
       const newRow = cell?.dataset.tableRow ?? null;
       if (newRow !== hoveredRow) {
         if (hoveredRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = ''; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
         }
         if (newRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = 'rgba(246, 247, 248, 0.5)'; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { c.style.backgroundColor = '#F5F9FF'; });
         }
         hoveredRow = newRow;
       }
@@ -10127,7 +10166,7 @@ function Con() {
       const relatedTarget = (e as MouseEvent).relatedTarget as HTMLElement | null;
       if (!relatedTarget || !el.contains(relatedTarget)) {
         if (hoveredRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = ''; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
           hoveredRow = null;
         }
       }
@@ -10170,16 +10209,6 @@ function Con() {
     setFilteredTotal(total);
     setCurrentPage(1);
   }, [hiddenRows]);
-
-  useEffect(() => {
-    if (!tableRef.current) return;
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    tableRef.current.querySelectorAll<HTMLElement>('[data-table-row]').forEach((cell) => {
-      const row = Number(cell.dataset.tableRow);
-      cell.style.display = (!hiddenRows.has(row) && row >= start && row < end) ? '' : 'none';
-    });
-  }, [hiddenRows, currentPage]);
 
   useEffect(() => {
     if (tableRef.current) tableRef.current.scrollTop = 0;

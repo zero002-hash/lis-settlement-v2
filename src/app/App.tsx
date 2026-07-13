@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component, type ReactNode } from "react";
 import BaechaManagement from "@/imports/배차관리/index";
 import TonghapJangbu from "@/imports/312통합장부/index";
 import MaeChulJangbuHwaju from "@/imports/313매출장부화주사/index";
@@ -7,6 +7,20 @@ import MaeIpJangbu from "@/imports/314매입장부정보망배차/index";
 import MaeChulMyeongse from "@/imports/315매출거래명세서화주사/index";
 import MaeIpMyeongse from "@/imports/316매입거래명세서소속기사/index";
 import { SubTabCtx, type MaeChulSubTab, MaeIpSubTabCtx, type MaeIpSubTab, MaeChulMyeongseSubTabCtx, type MaeChulMyeongseSubTab, MaeIpMyeongseSubTabCtx, type MaeIpMyeongseSubTab, NavCtx } from "@/imports/shared/subTabCtx";
+
+class ErrorBoundary extends Component<{ children: ReactNode; label: string }, { error: Error | null }> {
+  constructor(props: { children: ReactNode; label: string }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return <div style={{ padding: 32, color: '#DD2222', fontFamily: 'sans-serif' }}><b>{this.props.label} 오류:</b> {this.state.error.message}</div>;
+    }
+    return this.props.children;
+  }
+}
 
 function MaeChulJangbu() {
   const [activeTab, setActiveTab] = useState<MaeChulSubTab>("화주사");
@@ -92,6 +106,11 @@ const DESIGN_H = 1080;
 
 export default function App() {
   const [activeTab, setActiveTab] = useState(0);
+  const [mountedTabs, setMountedTabs] = useState<Set<number>>(new Set([0]));
+  const navigateTo = (idx: number) => {
+    setMountedTabs(prev => { const next = new Set(prev); next.add(idx); return next; });
+    setActiveTab(idx);
+  };
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
@@ -104,7 +123,7 @@ export default function App() {
   }, []);
 
   return (
-    <NavCtx.Provider value={{ navigateTo: setActiveTab }}>
+    <NavCtx.Provider value={{ navigateTo }}>
     <div style={{ width: "100vw", minHeight: "100vh", background: "#ffffff", overflow: "hidden" }}>
     <div
       style={{
@@ -128,7 +147,7 @@ export default function App() {
             pointerEvents: i === activeTab ? "auto" : "none",
           }}
         >
-          {i === activeTab && <Component />}
+          {mountedTabs.has(i) && <ErrorBoundary label={label}><Component /></ErrorBoundary>}
         </div>
       ))}
 
@@ -136,7 +155,7 @@ export default function App() {
       {LNB_SUB_ITEMS.map((item) => (
         <button
           key={item.tabIndex}
-          onClick={() => setActiveTab(item.tabIndex)}
+          onClick={() => navigateTo(item.tabIndex)}
           aria-label={TABS[item.tabIndex].label}
           style={{
             position: "absolute",

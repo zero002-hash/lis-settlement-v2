@@ -325,7 +325,7 @@ function FilterSorterModule() {
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="#9197A1" strokeWidth="1.4" strokeLinecap="round"/></svg>
             </div>
             {/* Date range */}
-            <div style={{ width:212, height:36, border:'1px solid #E4E5E9', display:'flex', alignItems:'center', justifyContent:'center', background:'#FFFFFF', cursor:'pointer' }}>
+            <div style={{ height:36, border:'1px solid #E4E5E9', display:'flex', alignItems:'center', justifyContent:'center', padding:'0 16px', background:'#FFFFFF', cursor:'pointer' }}>
               <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#2E3238', letterSpacing:'-0.02em' }}>{todayYYMMDD()} ~ {offsetDayYYMMDD(1)}</span>
             </div>
             {/* Next */}
@@ -424,223 +424,198 @@ function FilterSorterModule() {
 
 // ── Table Control Module ──
 // ── 오더 취소 모달 ──
-function OrderCancelModal({ onClose, onConfirm }: { onClose: () => void; onConfirm?: (closeSale: boolean, closePurchase: boolean, hwaBilling: number, hwaDispatch: number, saleCate: '미대상'|'대상', purchaseCate: '미대상'|'대상') => void }) {
-  const [hwachaType, setHwachaType] = useState<'거래 취소'|'오접수'>('거래 취소');
-  const [saleCate, setSaleCate] = useState<'미대상'|'대상'>('대상');
+function OrderCancelModal({ orderId, onClose, onConfirm }: { orderId?: string; onClose: () => void; onConfirm?: (closeSale: boolean, closePurchase: boolean, hwaBilling: number, hwaDispatch: number, saleCate: '미대상'|'대상', purchaseCate: '미대상'|'대상') => void }) {
+  const [hwachaType, setHwachaType] = useState<'거래취소'|'오접수'>('거래취소');
+  const [saleCate, setSaleCate] = useState<'미대상'|'대상'>('미대상');
   const [purchaseCate, setPurchaseCate] = useState<'미대상'|'대상'>('미대상');
   const [hwaSale, setHwaSale] = useState(0);
   const [hwaPurchase, setHwaPurchase] = useState(0);
   const [hwaSaleFocused, setHwaSaleFocused] = useState(false);
   const [hwaPurchaseFocused, setHwaPurchaseFocused] = useState(false);
 
-  const fmt = (n: number) => n.toLocaleString() + '원';
-  const taxSale = saleCate === '대상' ? Math.round(hwaSale * 0.1) : 0;
-  const taxPurchase = purchaseCate === '대상' ? Math.round(hwaPurchase * 0.1) : 0;
-  const totalSale = hwaSale + taxSale;
-  const totalPurchase = hwaPurchase + taxPurchase;
-  const totalProfit = totalSale - totalPurchase;
-  const insurance = totalPurchase > 0 ? Math.max(1, Math.round(totalPurchase * 0.003)) : 0;
-  const driverPay = totalPurchase > 0 ? totalPurchase - insurance : 0;
-  const profitRate = totalSale > 0 ? Math.round((totalProfit / totalSale) * 100) : 0;
-
+  const font = "'Pretendard GOV', sans-serif";
   const SB = "'Pretendard GOV:SemiBold'";
   const RG = "'Pretendard GOV:Regular'";
-  const BD = "'Pretendard GOV:Bold'";
 
-  // 비활성 input (회색 bg, 취소선 옵션)
-  const DisabledField = ({ text, strike, color }: { text: string; strike?: boolean; color?: string }) => (
-    <div className="bg-[#f6f7f8] h-[36px] relative rounded-[4px] w-full" style={{ flexShrink: 1 }}>
-      <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-[4px]" />
-      <div className="flex flex-row items-center size-full">
-        <div className="content-stretch flex gap-[4px] items-center px-[10px] py-[6px] relative size-full">
-          <p style={{ fontFamily: RG, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: color ?? '#2e3238', textDecoration: strike ? 'line-through' : 'none', textAlign: 'right', flex: 1 }}>{text}</p>
-        </div>
+  const Radio = ({ checked, onClick, label }: { checked: boolean; onClick: () => void; label: string }) => (
+    <div onClick={onClick} style={{ display:'flex', alignItems:'center', gap:4, cursor:'pointer', userSelect:'none' as const }}>
+      <div style={{ width:20, height:20, borderRadius:'50%', position:'relative' as const, flexShrink:0 }}>
+        <div style={{ position:'absolute' as const, inset:0, borderRadius:'50%', background:'#FFFFFF', border: checked ? '6px solid #005FFF' : '1.3px solid #ADB1B9' }} />
       </div>
+      <span style={{ fontFamily:RG, fontSize:16, lineHeight:'24px', letterSpacing:'-0.02em', color:'#2E3238' }}>{label}</span>
     </div>
   );
 
-  // 비활성 input (흰색 bg, 값 있음)
-  const WhiteField = ({ text, semibold }: { text: string; semibold?: boolean }) => (
-    <div className="bg-white h-[36px] relative rounded-[4px] shrink-0 w-full">
-      <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-[4px]" />
-      <div className="flex flex-row items-center size-full">
-        <div className="content-stretch flex gap-[4px] items-center px-[10px] py-[6px] relative size-full">
-          <p style={{ fontFamily: semibold ? SB : RG, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#2e3238', textAlign: 'right', flex: 1 }}>{text}</p>
-        </div>
-      </div>
-    </div>
-  );
-
-  // 활성 입력 필드
-  const ActiveInput = ({ value, onChange, focused, setFocused }: { value: number; onChange: (n: number) => void; focused: boolean; setFocused: (b: boolean) => void }) => (
-    <div className="bg-white h-[36px] relative rounded-[4px] w-full" style={{ border: `1px solid ${focused ? '#005FFF' : '#E4E5E9'}`, flexShrink: 1, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', width: '100%', height: '100%', padding: '6px 10px', boxSizing: 'border-box', gap: 4 }}>
-        <input type="text" inputMode="numeric" placeholder="0"
-          value={value === 0 ? '' : value.toLocaleString('ko-KR')}
-          onChange={e => { const v = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10); onChange(isNaN(v) ? 0 : v); }}
-          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-          style={{ flex: 1, minWidth: 0, width: 0, border: 'none', outline: 'none', fontFamily: RG, fontSize: 15, letterSpacing: '-0.02em', textAlign: 'right', color: value === 0 ? '#767D8A' : '#2E3238', background: 'transparent' }}
-        />
-        <span style={{ fontFamily: RG, fontSize: 15, letterSpacing: '-0.02em', color: value === 0 ? '#767D8A' : '#2E3238', flexShrink: 0 }}>원</span>
-      </div>
-    </div>
-  );
-
-  // 조정금액 토글과 동일한 디자인 (선택 쪽 파란 full border, 미선택 쪽 외곽만 border)
-  const Toggle = ({ val, setVal, left, right }: { val: string; setVal: (v: any) => void; left: string; right: string }) => (
-    <div style={{ display: 'flex', flexShrink: 0 }}>
-      {/* 왼쪽 버튼 */}
-      <div className="bg-white h-[36px] relative rounded-bl-[4px] rounded-tl-[4px] shrink-0">
-        <button onClick={() => setVal(left)} className="w-full h-full flex items-center justify-center px-[10px]" style={{ background: 'transparent', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-          <div aria-hidden className={`absolute inset-0 pointer-events-none border ${val === left ? 'border-[#005fff] rounded-[4px]' : 'border-[#e3e5e9] rounded-tl-[4px] rounded-bl-[4px] border-r-0'}`} />
-          <span className={`relative font-['${val === left ? 'Pretendard_GOV:SemiBold' : 'Pretendard_GOV:Regular'}'] text-[14px] tracking-[-0.28px] leading-[20px] ${val === left ? 'text-[#005fff]' : 'text-[#5c6370]'}`}>{left}</span>
-        </button>
-      </div>
-      {/* 오른쪽 버튼 */}
-      <div className="bg-white h-[36px] relative rounded-br-[4px] rounded-tr-[4px] shrink-0">
-        <button onClick={() => setVal(right)} className="flex items-center justify-center size-full px-[10px]" style={{ background: 'transparent', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-          <span className={`relative font-['${val === right ? 'Pretendard_GOV:SemiBold' : 'Pretendard_GOV:Regular'}'] text-[14px] tracking-[-0.28px] leading-[20px] ${val === right ? 'text-[#005fff]' : 'text-[#5c6370]'}`}>{right}</span>
-        </button>
-        <div aria-hidden className={`absolute inset-0 pointer-events-none border ${val === right ? 'border-[#005fff] rounded-[4px]' : 'border-[#e3e5e9] rounded-tr-[4px] rounded-br-[4px] border-l-0'}`} />
-      </div>
-    </div>
-  );
-
-  const colLabel: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 };
-  const colVal: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 0 };
-  const rowH: React.CSSProperties = { height: 36, display: 'flex', alignItems: 'center' };
+  const rowH: React.CSSProperties = { height:36, display:'flex', alignItems:'center' };
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 1000, background: '#FFFFFF', border: '1px solid #E4E5E9', boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+      <style>{`.order-cancel-input::placeholder { color: #767D8A; opacity: 1; }`}</style>
+      <div onClick={e => e.stopPropagation()} style={{ width:800, background:'#FFFFFF', border:'1px solid #E4E5E9', boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius:12, display:'flex', flexDirection:'column', overflow:'hidden', fontFamily:font }}>
 
         {/* Header */}
-        <div style={{ position: 'relative', height: 74, padding: '24px 24px 16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0, boxSizing: 'border-box' }}>
-          <p style={{ fontFamily: BD, fontWeight: 700, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#2E3238' }}>정말 오더를 취소하시겠어요?</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 144, height: 26 }} />
-            <div onClick={onClose} style={{ cursor: 'pointer', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
-              <svg width="16" height="16" viewBox="0 0 17.5 17.5" fill="none"><path d="M0.75 0.75L16.75 16.75" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5"/><path d="M16.75 0.75L0.75 16.75" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5"/></svg>
-            </div>
+        <div style={{ position:'relative', padding:'24px 24px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, boxSizing:'border-box' as const }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <span style={{ fontFamily:SB, fontWeight:700, fontSize:22, lineHeight:'32px', letterSpacing:'-0.02em', color:'#2E3238' }}>오더 취소</span>
+            {orderId && (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'0 6px', height:26, background:'#EBEDEF', borderRadius:4 }}>
+                <span style={{ fontFamily:SB, fontWeight:600, fontSize:13, lineHeight:'19px', letterSpacing:'-0.02em', color:'#454B55' }}>{orderId}</span>
+              </div>
+            )}
           </div>
-          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, background: '#E4E5E9' }}/>
-        </div>
-
-        {/* Warning banner */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 24px', background: '#FEF6F6', flexShrink: 0 }}>
-          <div style={{ position: 'relative', width: 16, height: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ position: 'absolute' }}>
-              <circle cx="8" cy="8" r="6.667" fill="#DD2222" transform="rotate(180 8 8)"/>
-              <path d="M8 7.333L8 10.5" stroke="white" strokeLinecap="round" strokeWidth="1.5"/>
-              <circle cx="8" cy="5.333" r="0.667" fill="white" transform="rotate(180 8 5.333)"/>
-            </svg>
+          <div onClick={onClose} style={{ cursor:'pointer', width:26, height:26, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <svg width="16" height="16" viewBox="0 0 17.5 17.5" fill="none"><path d="M0.75 0.75L16.75 16.75" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5"/><path d="M16.75 0.75L0.75 16.75" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5"/></svg>
           </div>
-          <p style={{ fontFamily: RG, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#DD2222', flex: 1 }}>{`'오더 취소하기' 클릭 시, 아래에 입력된 금액이 매출/매입 장부에 집계됩니다. 금액을 꼭 확인해 주세요.`}</p>
+          <div style={{ position:'absolute' as const, left:0, right:0, bottom:0, height:1, background:'#E4E5E9' }}/>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 20, boxSizing: 'border-box', flex: 1 }}>
+        <div style={{ padding:'24px', display:'flex', flexDirection:'column', gap:20, boxSizing:'border-box' as const }}>
 
-          {/* 회차비 유형 토글 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <p style={{ fontFamily: SB, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#2E3238', whiteSpace: 'nowrap' }}>회차비 유형</p>
-            <Toggle val={hwachaType} setVal={setHwachaType} left="거래 취소" right="오접수" />
+          {/* 회차비 유형 */}
+          <div style={{ display:'flex', alignItems:'center', gap:20 }}>
+            <span style={{ fontFamily:SB, fontWeight:700, fontSize:16, lineHeight:'24px', letterSpacing:'-0.02em', color:'#2E3238', width:80, flexShrink:0 }}>회차비 유형</span>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <Radio checked={hwachaType==='거래취소'} onClick={()=>setHwachaType('거래취소')} label="거래취소" />
+              <Radio checked={hwachaType==='오접수'} onClick={()=>setHwachaType('오접수')} label="오접수" />
+            </div>
           </div>
 
-          {/* 4컬럼 테이블 */}
-          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', width: '100%' }}>
+          {/* Divider */}
+          <div style={{ height:1, background:'#E4E5E9', margin:'0 -0px' }} />
 
-            {/* 항목 라벨 컬럼 */}
-            <div style={colLabel}>
-              <div style={{ ...rowH }}><p style={{ fontFamily: SB, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#2E3238' }}>항목</p></div>
-              <div style={{ ...rowH }}><p style={{ fontFamily: RG, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#5C6370', width: 73 }}>기본 운임</p></div>
-              <div style={{ ...rowH }}><p style={{ fontFamily: RG, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#5C6370', whiteSpace: 'nowrap' }}>회차비 정산</p></div>
-              <div style={{ ...rowH }}><p style={{ fontFamily: RG, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#5C6370', width: 73 }}>공급가액</p></div>
-              <div style={{ ...rowH }}><p style={{ fontFamily: RG, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#5C6370', width: 73 }}>세액</p></div>
-              <div style={{ ...rowH }}><p style={{ fontFamily: RG, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#5C6370', width: 73 }}>합계</p></div>
+          {/* 3-column grid */}
+          <div style={{ display:'flex', gap:20, alignItems:'flex-start' }}>
+
+            {/* 라벨 컬럼 (80px) */}
+            <div style={{ width:80, flexShrink:0, display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ height:24 }} />{/* 컬럼 헤더 높이 맞춤 */}
+              <div style={rowH}><span style={{ fontFamily:SB, fontWeight:700, fontSize:16, lineHeight:'24px', letterSpacing:'-0.02em', color:'#2E3238' }}>정산대상</span></div>
+              <div style={rowH}><span style={{ fontFamily:SB, fontWeight:700, fontSize:16, lineHeight:'24px', letterSpacing:'-0.02em', color:'#2E3238' }}>회차비</span></div>
             </div>
 
-            {/* 청구금액(A) 컬럼 */}
-            <div style={colVal}>
-              <div style={{ ...rowH }}><p style={{ fontFamily: SB, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#2E3238' }}>청구금액(A)</p></div>
-              <DisabledField text="100,000원" strike color="#767D8A" />
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}>
-                <Toggle val={saleCate} setVal={setSaleCate} left="미대상" right="대상" />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {saleCate === '대상'
-                    ? <ActiveInput value={hwaSale} onChange={setHwaSale} focused={hwaSaleFocused} setFocused={setHwaSaleFocused} />
-                    : <DisabledField text="0원" color="#767D8A" />}
+            {/* 청구금액 컬럼 */}
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8, minWidth:0 }}>
+              <span style={{ fontFamily:SB, fontWeight:600, fontSize:16, lineHeight:'24px', letterSpacing:'-0.02em', color:'#5C6370', height:24, display:'flex', alignItems:'center' }}>청구금액</span>
+              {/* 정산대상 라디오 */}
+              <div style={{ ...rowH, gap:8 }}>
+                <Radio checked={saleCate==='미대상'} onClick={()=>{ setSaleCate('미대상'); setHwaSale(0); }} label="미대상" />
+                <Radio checked={saleCate==='대상'} onClick={()=>setSaleCate('대상')} label="대상" />
+              </div>
+              {/* 회차비 입력 */}
+              {saleCate==='대상' ? (
+                <div style={{ background:'#FFFFFF', height:36, borderRadius:4, border:`1px solid ${hwaSaleFocused ? '#005FFF' : '#E4E5E9'}`, display:'flex', alignItems:'center', padding:'0 10px', boxSizing:'border-box' as const }}>
+                  <input type="text" inputMode="numeric" placeholder="0" className="order-cancel-input"
+                    value={hwaSale === 0 ? '' : hwaSale.toLocaleString('ko-KR')}
+                    onChange={e => { const v = parseInt(e.target.value.replace(/[^0-9]/g,''),10); setHwaSale(isNaN(v)?0:v); }}
+                    onFocus={() => setHwaSaleFocused(true)} onBlur={() => setHwaSaleFocused(false)}
+                    style={{ flex:1, border:'none', outline:'none', fontFamily:RG, fontSize:15, letterSpacing:'-0.02em', textAlign:'right' as const, color:'#2E3238', background:'transparent' }}
+                  />
+                  <span style={{ fontFamily:RG, fontSize:15, letterSpacing:'-0.02em', color: hwaSale===0?'#767D8A':'#2E3238' }}>원</span>
+                  {hwaSaleFocused && hwaSale > 0 && (
+                    <button onMouseDown={e => { e.preventDefault(); setHwaSale(0); }} style={{ background:'none', border:'none', cursor:'pointer', padding:0, marginLeft:4, display:'flex', alignItems:'center', flexShrink:0 }}>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#ADB1B9"/><path d="M5.5 5.5L10.5 10.5M10.5 5.5L5.5 10.5" stroke="white" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                    </button>
+                  )}
                 </div>
-              </div>
-              <DisabledField text={saleCate === '대상' ? fmt(hwaSale) : '0원'} color={saleCate === '대상' ? '#2E3238' : '#767D8A'} />
-              <DisabledField text={saleCate === '대상' ? fmt(taxSale) : '0원'} color={saleCate === '대상' ? '#2E3238' : '#767D8A'} />
-              <div style={{ background: '#f6f7f8', height: 36, borderRadius: 4, border: '1px solid #E4E5E9', display: 'flex', alignItems: 'center', padding: '0 10px', boxSizing: 'border-box' }}>
-                <p style={{ fontFamily: SB, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: saleCate === '대상' ? '#2E3238' : '#767D8A', textAlign: 'right', flex: 1 }}>{saleCate === '대상' ? fmt(totalSale) : '0원'}</p>
-              </div>
+              ) : (
+                <div style={{ background:'#F6F7F8', height:36, borderRadius:4, border:'1px solid #E4E5E9', display:'flex', alignItems:'center', padding:'0 10px', boxSizing:'border-box' as const }}>
+                  <span style={{ flex:1, fontFamily:RG, fontSize:15, letterSpacing:'-0.02em', color:'#767D8A', textAlign:'right' as const }}>0원</span>
+                </div>
+              )}
+              {/* 상태 안내 */}
+              {saleCate==='미대상' ? (
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <div style={{ padding:'0 6px', height:26, background:'#EBEDEF', borderRadius:4, display:'flex', alignItems:'center' }}>
+                    <span style={{ fontFamily:SB, fontWeight:600, fontSize:13, lineHeight:'19px', letterSpacing:'-0.02em', color:'#C7CBD1' }}>정산제외</span>
+                  </div>
+                  <span style={{ fontFamily:RG, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#767D8A' }}>상태로 매출장부에 집계됩니다.</span>
+                </div>
+              ) : hwaSale > 0 ? (
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <div style={{ padding:'0 6px', height:26, background:'#E6F7EC', borderRadius:4, display:'flex', alignItems:'center' }}>
+                    <span style={{ fontFamily:SB, fontWeight:600, fontSize:13, lineHeight:'19px', letterSpacing:'-0.02em', color:'#18AC42' }}>정산대기</span>
+                  </div>
+                  <span style={{ fontFamily:RG, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#767D8A' }}>상태로 매출장부에 집계됩니다.</span>
+                </div>
+              ) : (
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <div style={{ padding:'0 6px', height:26, background:'#FEE7E7', borderRadius:4, display:'flex', alignItems:'center' }}>
+                    <span style={{ fontFamily:SB, fontWeight:600, fontSize:13, lineHeight:'19px', letterSpacing:'-0.02em', color:'#DD2222' }}>마감필요</span>
+                  </div>
+                  <span style={{ fontFamily:RG, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#767D8A' }}>상태로 매출장부에 집계됩니다.</span>
+                </div>
+              )}
             </div>
 
-            {/* 배차금액(B) 컬럼 */}
-            <div style={colVal}>
-              <div style={{ ...rowH }}><p style={{ fontFamily: SB, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#2E3238' }}>배차금액(B)</p></div>
-              <DisabledField text="56,000원" strike color="#767D8A" />
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}>
-                <Toggle val={purchaseCate} setVal={setPurchaseCate} left="미대상" right="대상" />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {purchaseCate === '대상'
-                    ? <ActiveInput value={hwaPurchase} onChange={setHwaPurchase} focused={hwaPurchaseFocused} setFocused={setHwaPurchaseFocused} />
-                    : <DisabledField text="0원" color="#767D8A" />}
+            {/* 배차금액 컬럼 */}
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8, minWidth:0 }}>
+              <span style={{ fontFamily:SB, fontWeight:600, fontSize:16, lineHeight:'24px', letterSpacing:'-0.02em', color:'#5C6370', height:24, display:'flex', alignItems:'center' }}>배차금액</span>
+              {/* 정산대상 라디오 */}
+              <div style={{ ...rowH, gap:8 }}>
+                <Radio checked={purchaseCate==='미대상'} onClick={()=>{ setPurchaseCate('미대상'); setHwaPurchase(0); }} label="미대상" />
+                <Radio checked={purchaseCate==='대상'} onClick={()=>setPurchaseCate('대상')} label="대상" />
+              </div>
+              {/* 회차비 입력 */}
+              {purchaseCate==='대상' ? (
+                <div style={{ background:'#FFFFFF', height:36, borderRadius:4, border:`1px solid ${hwaPurchaseFocused ? '#005FFF' : '#E4E5E9'}`, display:'flex', alignItems:'center', padding:'0 10px', boxSizing:'border-box' as const }}>
+                  <input type="text" inputMode="numeric" placeholder="0" className="order-cancel-input"
+                    value={hwaPurchase === 0 ? '' : hwaPurchase.toLocaleString('ko-KR')}
+                    onChange={e => { const v = parseInt(e.target.value.replace(/[^0-9]/g,''),10); setHwaPurchase(isNaN(v)?0:v); }}
+                    onFocus={() => setHwaPurchaseFocused(true)} onBlur={() => setHwaPurchaseFocused(false)}
+                    style={{ flex:1, border:'none', outline:'none', fontFamily:RG, fontSize:15, letterSpacing:'-0.02em', textAlign:'right' as const, color:'#2E3238', background:'transparent' }}
+                  />
+                  <span style={{ fontFamily:RG, fontSize:15, letterSpacing:'-0.02em', color: hwaPurchase===0?'#767D8A':'#2E3238' }}>원</span>
+                  {hwaPurchaseFocused && hwaPurchase > 0 && (
+                    <button onMouseDown={e => { e.preventDefault(); setHwaPurchase(0); }} style={{ background:'none', border:'none', cursor:'pointer', padding:0, marginLeft:4, display:'flex', alignItems:'center', flexShrink:0 }}>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#ADB1B9"/><path d="M5.5 5.5L10.5 10.5M10.5 5.5L5.5 10.5" stroke="white" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                    </button>
+                  )}
                 </div>
-              </div>
-              <DisabledField text={purchaseCate === '대상' ? fmt(hwaPurchase) : '0원'} color={purchaseCate === '대상' ? '#2E3238' : '#767D8A'} />
-              <DisabledField text={purchaseCate === '대상' ? fmt(taxPurchase) : '0원'} color={purchaseCate === '대상' ? '#2E3238' : '#767D8A'} />
-              <div style={{ background: '#f6f7f8', height: 36, borderRadius: 4, border: '1px solid #E4E5E9', display: 'flex', alignItems: 'center', padding: '0 10px', boxSizing: 'border-box' }}>
-                <p style={{ fontFamily: SB, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: purchaseCate === '대상' ? '#2E3238' : '#767D8A', textAlign: 'right', flex: 1 }}>{purchaseCate === '대상' ? fmt(totalPurchase) : '0원'}</p>
-              </div>
-              {/* 기사 산재보험료 / 기사 지급금 */}
-              <div style={{ fontFamily: RG, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 36 }}>
-                  <span style={{ color: '#5C6370' }}>기사 산재보험료</span>
-                  <span style={{ color: '#2E3238' }}>{fmt(insurance)}</span>
+              ) : (
+                <div style={{ background:'#F6F7F8', height:36, borderRadius:4, border:'1px solid #E4E5E9', display:'flex', alignItems:'center', padding:'0 10px', boxSizing:'border-box' as const }}>
+                  <span style={{ flex:1, fontFamily:RG, fontSize:15, letterSpacing:'-0.02em', color:'#767D8A', textAlign:'right' as const }}>0원</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 36 }}>
-                  <span style={{ color: '#5C6370' }}>기사 지급금</span>
-                  <span style={{ color: '#2E3238' }}>{fmt(driverPay)}</span>
+              )}
+              {/* 상태 안내 */}
+              {purchaseCate==='미대상' ? (
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <div style={{ padding:'0 6px', height:26, background:'#EBEDEF', borderRadius:4, display:'flex', alignItems:'center' }}>
+                    <span style={{ fontFamily:SB, fontWeight:600, fontSize:13, lineHeight:'19px', letterSpacing:'-0.02em', color:'#C7CBD1' }}>정산제외</span>
+                  </div>
+                  <span style={{ fontFamily:RG, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#767D8A' }}>상태로 매입장부에 집계됩니다.</span>
                 </div>
-              </div>
-            </div>
-
-            {/* 수익(A-B) 컬럼 */}
-            <div style={colVal}>
-              <div style={{ ...rowH }}><p style={{ fontFamily: SB, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#2E3238' }}>수익(A-B)</p></div>
-              <DisabledField text="44,000원" strike color="#767D8A" />
-              <DisabledField text={fmt(hwaSale - hwaPurchase)} color="#2E3238" />
-              <DisabledField text={fmt(hwaSale - hwaPurchase)} color="#2E3238" />
-              <DisabledField text={fmt(taxSale - taxPurchase)} color="#2E3238" />
-              <div style={{ background: '#f6f7f8', height: 36, borderRadius: 4, border: '1px solid #E4E5E9', display: 'flex', alignItems: 'center', padding: '0 10px', boxSizing: 'border-box' }}>
-                <p style={{ fontFamily: SB, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#2E3238', textAlign: 'right', flex: 1 }}>{fmt(totalProfit)}</p>
-              </div>
-              {/* 수익률 */}
-              <div style={{ fontFamily: RG, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 36 }}>
-                <span style={{ color: '#5C6370' }}>수익률</span>
-                <span style={{ color: '#2E3238' }}>{profitRate}%</span>
-              </div>
+              ) : hwaPurchase > 0 ? (
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <div style={{ padding:'0 6px', height:26, background:'#E6F7EC', borderRadius:4, display:'flex', alignItems:'center' }}>
+                    <span style={{ fontFamily:SB, fontWeight:600, fontSize:13, lineHeight:'19px', letterSpacing:'-0.02em', color:'#18AC42' }}>정산대기</span>
+                  </div>
+                  <span style={{ fontFamily:RG, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#767D8A' }}>상태로 매입장부에 집계됩니다.</span>
+                </div>
+              ) : (
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <div style={{ padding:'0 6px', height:26, background:'#FEE7E7', borderRadius:4, display:'flex', alignItems:'center' }}>
+                    <span style={{ fontFamily:SB, fontWeight:600, fontSize:13, lineHeight:'19px', letterSpacing:'-0.02em', color:'#DD2222' }}>마감필요</span>
+                  </div>
+                  <span style={{ fontFamily:RG, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#767D8A' }}>상태로 매입장부에 집계됩니다.</span>
+                </div>
+              )}
             </div>
 
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{ position: 'relative', background: '#FFFFFF', borderRadius: '0 0 12px 12px', flexShrink: 0 }}>
-          <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 1, background: '#E4E5E9' }}/>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '20px 24px', paddingTop: 20 }}>
-            <div style={{ flex: 1 }} />
-            <button onClick={onClose} style={{ padding: '0 20px', height: 52, background: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer', fontFamily: SB, fontWeight: 600, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#2E3238', whiteSpace: 'nowrap' }}>닫기</button>
+        <div style={{ position:'relative' as const, background:'#FFFFFF', borderRadius:'0 0 12px 12px', flexShrink:0 }}>
+          <div style={{ position:'absolute' as const, left:0, right:0, top:0, height:1, background:'#E4E5E9' }}/>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8, padding:'20px 24px 24px' }}>
+            <button onClick={onClose} style={{ padding:'0 20px', height:52, background:'#FFFFFF', border:'none', borderRadius:4, cursor:'pointer', fontFamily:SB, fontWeight:600, fontSize:18, lineHeight:'26px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' as const }}>닫기</button>
             <button onClick={() => {
               const doCloseSale = hwaSale > 0 && saleCate === '대상';
               const doClosePurchase = hwaPurchase > 0 && purchaseCate === '대상';
               onConfirm?.(doCloseSale, doClosePurchase, hwaSale, hwaPurchase, saleCate, purchaseCate);
               onClose();
-            }} style={{ padding: '0 20px', height: 52, background: '#DD2222', border: 'none', borderRadius: 4, cursor: 'pointer', fontFamily: SB, fontWeight: 600, fontSize: 15, lineHeight: '22px', letterSpacing: '-0.02em', color: '#FFFFFF', whiteSpace: 'nowrap' }}>오더 취소하기</button>
+            }} style={{ padding:'0 20px', height:52, background:'#DD2222', border:'none', borderRadius:4, cursor:'pointer', fontFamily:SB, fontWeight:600, fontSize:18, lineHeight:'26px', letterSpacing:'-0.02em', color:'#FFFFFF', whiteSpace:'nowrap' as const }}>오더 취소하기</button>
           </div>
         </div>
       </div>
@@ -981,6 +956,7 @@ export default function BaechaManagement() {
       {/* 오더 취소 모달 */}
       {showCancelModal && (
         <OrderCancelModal
+          orderId={selectedOrderId}
           onClose={() => setShowCancelModal(false)}
           onConfirm={(closeSale, closePurchase, hwaBilling, hwaDispatch, saleCate, purchaseCate) => {
             const row = genRows(Math.ceil((selectedIdx + 1) / PAGE_SIZE)).find(r => r.idx === selectedIdx);

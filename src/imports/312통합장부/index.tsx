@@ -63,12 +63,13 @@ const PER_ROW_PURCHASE_AMOUNT: Record<string, number> = {
 
 const SHIPPERS = ['(주)글로벌로지스', '(주)케이로지스틱스', '(주)판교물류솔루션', '(주)수원익스프레스', '(주)동탄스마트물류'];
 const SHIPPER_GROUPS_312: Record<string, string[]> = {
-  '(주)글로벌로지스': ['기본그룹', 'A그룹', 'B그룹'],
-  '(주)케이로지스틱스': ['기본그룹', '수도권팀', '지방팀'],
-  '(주)판교물류솔루션': ['기본그룹', '판교팀'],
-  '(주)수원익스프레스': ['기본그룹', '수원팀'],
-  '(주)동탄스마트물류': ['기본그룹', '동탄팀', 'C그룹'],
+  '(주)글로벌로지스':    ['기본그룹', 'A그룹', 'B그룹'],
+  '(주)케이로지스틱스':  ['기본그룹', '수도권팀', '지방팀'],
+  '(주)판교물류솔루션':  ['기본그룹', '판교팀'],
+  '(주)수원익스프레스':  ['기본그룹', '수원팀'],
+  '(주)동탄스마트물류':  ['기본그룹', '동탄팀', 'C그룹'],
 };
+
 
 const PARTNERS = [
   '카모로지스틱스', '(주)글로벌로지스', '(주)케이로지스틱스', '(주)판교물류솔루션', '(주)수원익스프레스',
@@ -175,10 +176,25 @@ function StatusCardRow({ data, type }: { data: { label: string; count: string; a
     }
   };
 
+  // 오더 리스트 목록 일치 원칙: 선택된 상태만 건수 표시, 전체는 선택 합산
+  const isAllSelected = selected.has(0);
+  const getDisplayCount = (i: number): string => {
+    if (dynamicCountArr.length === 0) return item => item.count.replace("건", "");
+    if (i === 0) {
+      // 전체 카드: 선택된 상태들의 합산
+      if (isAllSelected) return dynamicCountArr[0].toLocaleString();
+      return [...selected].reduce((sum, idx) => sum + (dynamicCountArr[idx] ?? 0), 0).toLocaleString();
+    }
+    return dynamicCountArr[i].toLocaleString();
+  };
+
   return (
     <div className="flex gap-[4px] w-full" style={{height: 72}}>
       {data.map((item, i) => {
         const isSelected = selected.has(i);
+        const displayCount = dynamicCountArr.length > 0
+          ? dynamicCountArr[i].toLocaleString()
+          : item.count.replace("건", "");
         return (
           <div
             key={item.label}
@@ -186,8 +202,8 @@ function StatusCardRow({ data, type }: { data: { label: string; count: string; a
             className={`relative rounded-[8px] flex-1 min-w-0 h-full flex flex-col justify-center items-center px-[8px] py-[12px] cursor-pointer select-none ${isSelected ? "bg-white" : "bg-[#f6f7f8] hover:bg-[#EBEDEF]"}`}
           >
             {isSelected && <div aria-hidden className="absolute border border-[#EBEDEF] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-            <p className="font-['Pretendard_GOV:SemiBold'] text-[#5c6370] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis">{item.label}</p>
-            <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis">{dynamicCountArr.length > 0 ? dynamicCountArr[i].toLocaleString() : item.count.replace("건", "")}</p>
+            <p className="font-['Pretendard_GOV:SemiBold'] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: item.label === '마감필요' ? '#DD2222' : item.label === '정산대기' ? '#18AC42' : (item.label === '수금대기' || item.label === '지급대기') ? '#005FFF' : '#5c6370' }}>{item.label}</p>
+            <p className="font-['Pretendard_GOV:SemiBold'] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: item.label === '마감필요' ? '#DD2222' : item.label === '정산대기' ? '#18AC42' : (item.label === '수금대기' || item.label === '지급대기') ? '#005FFF' : (item.label === '정산보류' || item.label === '정산제외') ? '#9197A1' : '#2e3238' }}>{displayCount}</p>
           </div>
         );
       })}
@@ -618,12 +634,8 @@ function SwitchModule({ rangeStart, rangeEnd, setRangeStart, setRangeEnd }: {
 
       {open && wrapRect && createPortal(
         <div ref={panelRef} style={{ position: 'fixed', top: wrapRect.bottom + 4, left: wrapRect.left + wrapRect.width / 2 - 138, width: 276, background: '#FFFFFF', border: '1px solid #E4E5E9', borderRadius: 8, boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', zIndex: 99999, display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 12px 0', boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', width: 252, height: 36 }}>
-            <div onClick={() => setTab('current')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: tab === 'current' ? '1px solid #669FFF' : '1px solid #E4E5E9', borderRight: 'none', borderRadius: '4px 0 0 4px', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: tab === 'current' ? 600 : 400, color: tab === 'current' ? '#005FFF' : '#5C6370', letterSpacing: '-0.02em', background: '#FFFFFF' }}>현재 날짜 기준</div>
-            <div onClick={() => setTab('fixed')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: tab === 'fixed' ? '1px solid #669FFF' : '1px solid #E4E5E9', borderRadius: '0 4px 4px 0', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: tab === 'fixed' ? 600 : 400, color: tab === 'fixed' ? '#005FFF' : '#5C6370', letterSpacing: '-0.02em', background: '#FFFFFF' }}>고정 날짜</div>
-          </div>
           <div style={{ width: 252, height: 36, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 4px', boxSizing: 'border-box' }}>
-            <span style={{ fontFamily: "'Pretendard GOV:Bold'", fontSize: 18, fontWeight: 700, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
+            <span style={{ fontFamily: "'Pretendard GOV:SemiBold'", fontSize: 18, fontWeight: 600, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
             <div style={{ display: 'flex', gap: 4 }}>
               {([[-1, 'M4.5 1L0.5 5L4.5 9'], [1, 'M0.5 1L4.5 5L0.5 9']] as [number, string][]).map(([dir, d]) => (
                 <button key={dir} onClick={() => { const dt = new Date(viewYear, viewMonth + dir, 1); setViewYear(dt.getFullYear()); setViewMonth(dt.getMonth()); }} style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -726,11 +738,17 @@ function Frame892() {
   const [shipperSearch, setShipperSearch] = useState('');
   const [shipperHovered, setShipperHovered] = useState(false);
   const [hoveredIdx, setHoveredIdx] = useState<number|null>(null);
-  const [hoveredShipperForGroup, setHoveredShipperForGroup] = useState<number|null>(null);
-  const [shipperGroupSelected, setShipperGroupSelected] = useState<Set<string>>(new Set());
-  const [groupHoveredKey, setGroupHoveredKey] = useState<string|null>(null);
   const btnRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+
+  // 화주사 업무그룹 필터
+  const [groupSelected, setGroupSelected] = useState<Set<string>>(new Set());
+  const [groupOpen, setGroupOpen] = useState(false);
+  const [groupHovered, setGroupHovered] = useState(false);
+  const [groupHoveredKey, setGroupHoveredKey] = useState<string|null>(null);
+  const groupBtnRef = useRef<HTMLDivElement>(null);
+  const groupDropRef = useRef<HTMLDivElement>(null);
+  const [groupDropPos, setGroupDropPos] = useState<{ top: number; left: number } | null>(null);
 
   const [partnerOpen, setPartnerOpen] = useState(false);
   const [partnerSearch, setPartnerSearch] = useState('');
@@ -782,6 +800,17 @@ function Frame892() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [shipperOpen]);
+
+  useEffect(() => {
+    if (!groupOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!groupBtnRef.current?.contains(e.target as Node) && !groupDropRef.current?.contains(e.target as Node)) {
+        setGroupOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [groupOpen]);
 
   useEffect(() => {
     if (!partnerOpen) return;
@@ -837,125 +866,122 @@ function Frame892() {
           )}
         </div>
 
-        {/* 더블 패널 Dropdown */}
+        {/* Dropdown */}
         {shipperOpen && shipperDropPos && createPortal(
-          <div ref={dropRef} style={{
-            position:'fixed', top: shipperDropPos.top, left: shipperDropPos.left,
-            width: 353, background:'#FFFFFF',
-            border:'1px solid #E4E5E9',
-            boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)',
-            borderRadius:8,
-            display:'flex', flexDirection:'row',
-            zIndex:9999, boxSizing:'border-box',
-          }}>
-            {/* 왼쪽: 화주사 패널 */}
-            <div style={{ width:176, display:'flex', flexDirection:'column', flexShrink:0 }}>
-              {/* 검색 */}
-              <div style={{ padding:'8px 8px 2px', flexShrink:0 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:4, border:'1px solid #E4E5E9', borderRadius:4, padding:'6px 10px', height:36, boxSizing:'border-box' }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}>
-                    <circle cx="6.57" cy="6.57" r="5.07" stroke="#9197A1" strokeWidth="1.3"/>
-                    <line x1="10.91" y1="10.91" x2="14.5" y2="14.5" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/>
-                  </svg>
-                  <input
-                    autoFocus
-                    value={shipperSearch}
-                    onChange={e => setShipperSearch(e.target.value)}
-                    placeholder="화주사 검색"
-                    style={{ flex:1, border:'none', outline:'none', fontSize:15, color: shipperSearch ? '#2E3238' : '#767D8A', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', background:'transparent' }}
-                  />
-                </div>
-              </div>
-              {/* 리스트 */}
-              <div style={{ height:208, overflowY:'auto', padding:8, boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
-                {shipperSelected.size === 0 && (!shipperSearch || SHIPPERS.filter(s => s.includes(shipperSearch)).length === 0) ? (
-                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:4, minHeight:208 }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" fill="#9197A1"/>
-                      <line x1="12" y1="7" x2="12" y2="14" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="12" cy="17.5" r="1" fill="white"/>
-                    </svg>
-                    <span style={{ fontSize:13, color:'#5C6370', textAlign:'center', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px' }}>검색 결과가 없습니다.</span>
-                  </div>
-                ) : SHIPPERS.map((name, origIdx) => ({name, origIdx})).filter(({name, origIdx}) => (shipperSearch && name.includes(shipperSearch)) || shipperSelected.has(origIdx)).map(({name, origIdx}) => (
-                  <div
-                    key={origIdx}
-                    onMouseEnter={() => { setHoveredIdx(origIdx); setHoveredShipperForGroup(origIdx); }}
-                    onMouseLeave={() => { setHoveredIdx(null); }}
-                    onClick={() => { const next = new Set(shipperSelected); if (next.has(origIdx)) next.delete(origIdx); else next.add(origIdx); setShipperSelected(next); }}
-                    style={{ display:'flex', alignItems:'center', padding:'9px 8px 9px 4px', gap:8, height:40, borderRadius:4, cursor:'pointer', boxSizing:'border-box', background: hoveredIdx === origIdx ? '#F6F7F8' : '#FFFFFF' }}
-                  >
-                    <div style={{ width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <div style={{ width:16, height:16, border: shipperSelected.has(origIdx) ? '1.3px solid #005FFF' : '1.3px solid #ADB1B9', borderRadius:3, background: shipperSelected.has(origIdx) ? '#005FFF' : '#FFFFFF', display:'flex', alignItems:'center', justifyContent:'center', boxSizing:'border-box' }}>
-                        {shipperSelected.has(origIdx) && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                      </div>
-                    </div>
-                    <span style={{ fontSize:15, color:'#2E3238', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {shipperSearch ? (() => { const q = shipperSearch; const i = name.toLowerCase().indexOf(q.toLowerCase()); if (i === -1) return name; return <>{name.slice(0,i)}<span style={{color:'#005FFF'}}>{name.slice(i,i+q.length)}</span>{name.slice(i+q.length)}</>; })() : name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              {/* 푸터 */}
-              <div style={{ height:28, padding:'0 8px', borderTop:'1px solid #E4E5E9', display:'flex', justifyContent:'flex-end', alignItems:'center', flexShrink:0, boxSizing:'border-box' }}>
-                <span onClick={e => { e.stopPropagation(); setShipperSelected(new Set()); setShipperSearch(''); }} style={{ fontSize:12, color:'#9197A1', cursor:'pointer', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'18px' }}>필터 초기화</span>
+          (() => { const fs = Math.round(15 * (window.innerWidth / 1920)); return (
+          <div ref={dropRef} style={{ position:'fixed', top: shipperDropPos.top, left: shipperDropPos.left, width:176, background:'#FFFFFF', border:'1px solid #E4E5E9', boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius:8, display:'flex', flexDirection:'column', zIndex:9999, boxSizing:'border-box' }}>
+            {/* Search */}
+            <div style={{ padding:'8px 8px 2px', flexShrink:0 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:4, border:'1px solid #E4E5E9', borderRadius:4, padding:'6px 10px', height:36, boxSizing:'border-box' }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><circle cx="6.57" cy="6.57" r="5.07" stroke="#9197A1" strokeWidth="1.3"/><line x1="10.91" y1="10.91" x2="14.5" y2="14.5" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                <input autoFocus value={shipperSearch} onChange={e => setShipperSearch(e.target.value)} placeholder="화주사 검색"
+                  style={{ flex:1, border:'none', outline:'none', fontSize:fs, color: shipperSearch ? '#2E3238' : '#767D8A', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', background:'transparent' }} />
               </div>
             </div>
-
-            {/* 세로 구분선 */}
-            <div style={{ width:1, background:'#E4E5E9', alignSelf:'stretch', flexShrink:0 }} />
-
-            {/* 오른쪽: 업무그룹 패널 */}
-            <div style={{ width:176, display:'flex', flexDirection:'column', flexShrink:0 }}>
-              {/* 리스트 */}
-              <div style={{ height:208, overflowY:'auto', padding:8, boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
-                {(() => {
-                  // 호버된 화주사 또는 선택된 화주사들의 업무그룹
-                  const activeIdx = hoveredShipperForGroup;
-                  const allGroups: string[] = activeIdx !== null && SHIPPERS[activeIdx]
-                    ? SHIPPER_GROUPS_312[SHIPPERS[activeIdx]] ?? []
-                    : shipperSelected.size > 0
-                      ? [...shipperSelected].flatMap(i => SHIPPER_GROUPS_312[SHIPPERS[i]] ?? []).filter((v,i,a) => a.indexOf(v) === i)
-                      : [];
-                  if (allGroups.length === 0) return (
-                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:4, minHeight:208 }}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" fill="#9197A1"/>
-                        <line x1="12" y1="7" x2="12" y2="14" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                        <circle cx="12" cy="17.5" r="1" fill="white"/>
-                      </svg>
-                      <span style={{ fontSize:13, color:'#5C6370', textAlign:'center', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px' }}>화주사를 먼저 선택해 주세요.</span>
+            {/* List */}
+            <div style={{ maxHeight:200, overflowY:'auto', padding:8, boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
+              {(shipperSelected.size === 0 && (!shipperSearch || SHIPPERS.filter(s => s.includes(shipperSearch)).length === 0)) ? (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:200, gap:4 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#9197A1"/><line x1="12" y1="7" x2="12" y2="14" stroke="white" strokeWidth="1.5" strokeLinecap="round"/><circle cx="12" cy="17.5" r="1" fill="white"/></svg>
+                  <span style={{ fontSize:fs, color:'#5C6370', textAlign:'center', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px' }}>{shipperSearch ? '검색 결과가 없습니다.' : '검색어를 입력해 주세요.'}</span>
+                </div>
+              ) : SHIPPERS.map((name, origIdx) => ({name, origIdx}))
+                .filter(({name, origIdx}) => (shipperSearch && name.includes(shipperSearch)) || shipperSelected.has(origIdx))
+                .map(({name, origIdx}) => {
+                  const selected = shipperSelected.has(origIdx);
+                  return (
+                    <div key={origIdx}
+                      onMouseEnter={() => setHoveredIdx(origIdx)} onMouseLeave={() => setHoveredIdx(null)}
+                      onClick={() => { if (selected) { setShipperSelected(new Set()); setGroupSelected(new Set()); } else { setShipperSelected(new Set([origIdx])); setGroupSelected(new Set(SHIPPER_GROUPS_312[SHIPPERS[origIdx]] ?? [])); } setShipperOpen(false); }}
+                      style={{ display:'flex', alignItems:'center', padding:'9px 8px', height:40, borderRadius:4, cursor:'pointer', boxSizing:'border-box', background: hoveredIdx === origIdx ? '#F6F7F8' : '#FFFFFF' }}
+                    >
+                      <span style={{ fontSize:fs, color: selected ? '#005FFF' : '#2E3238', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {shipperSearch ? (() => { const q=shipperSearch; const i=name.toLowerCase().indexOf(q.toLowerCase()); if(i===-1) return name; return <>{name.slice(0,i)}<span style={{color:'#005FFF'}}>{name.slice(i,i+q.length)}</span>{name.slice(i+q.length)}</>; })() : name}
+                      </span>
+                      {selected && <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><path d="M3 8L6.5 11.5L13 4.5" stroke="#005FFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
                   );
-                  return allGroups.map(grpName => {
-                    const key = grpName;
-                    return (
-                      <div key={key}
-                        onMouseEnter={() => setGroupHoveredKey(key)}
-                        onMouseLeave={() => setGroupHoveredKey(null)}
-                        onClick={() => { const next = new Set(shipperGroupSelected); if (next.has(key)) next.delete(key); else next.add(key); setShipperGroupSelected(next); }}
-                        style={{ display:'flex', alignItems:'center', padding:'9px 8px 9px 4px', gap:8, height:40, borderRadius:4, cursor:'pointer', boxSizing:'border-box', background: groupHoveredKey === key ? '#F6F7F8' : '#FFFFFF' }}
-                      >
-                        <div style={{ width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                          <div style={{ width:16, height:16, border: shipperGroupSelected.has(key) ? '1.3px solid #005FFF' : '1.3px solid #ADB1B9', borderRadius:3, background: shipperGroupSelected.has(key) ? '#005FFF' : '#FFFFFF', display:'flex', alignItems:'center', justifyContent:'center', boxSizing:'border-box' }}>
-                            {shipperGroupSelected.has(key) && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                          </div>
-                        </div>
-                        <span style={{ fontSize:15, color:'#2E3238', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px' }}>{grpName}</span>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-              {/* 푸터 */}
-              <div style={{ height:28, padding:'0 8px', borderTop:'1px solid #E4E5E9', display:'flex', justifyContent:'flex-end', alignItems:'center', flexShrink:0, boxSizing:'border-box' }}>
-                <span onClick={e => { e.stopPropagation(); setShipperGroupSelected(new Set()); }} style={{ fontSize:12, color:'#9197A1', cursor:'pointer', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'18px' }}>필터 초기화</span>
-              </div>
+                })}
             </div>
-          </div>,
+          </div>
+          ); })(),
           document.body
         )}
       </div>
+
+      {/* 화주사 업무그룹 필터 - 화주사 선택 시에만 표시 */}
+      {shipperSelected.size > 0 && (() => {
+        const selectedShipper = SHIPPERS[[...shipperSelected][0]];
+        const groups = SHIPPER_GROUPS_312[selectedShipper] ?? [];
+        const groupBg = groupOpen ? '#eef3ff' : groupSelected.size > 0 ? '#f5f9ff' : groupHovered ? '#f6f7f8' : '#f6f7f8';
+        const groupBorder = groupOpen ? '1px solid transparent' : groupSelected.size > 0 ? '1px solid transparent' : groupHovered ? '1px solid #E4E5E9' : '1px solid transparent';
+        const groupTextColor = (groupOpen || groupSelected.size > 0) ? '#005fff' : '#2e3238';
+        return (
+          <div ref={groupBtnRef} style={{ position: 'relative' }}>
+            <div
+              className="content-stretch flex gap-[8px] h-[32px] items-center justify-center pl-[12px] pr-[10px] py-[6px] relative rounded-[30px] shrink-0 cursor-pointer select-none"
+              style={{ background: groupBg, border: groupBorder }}
+              onClick={() => { if (!groupOpen) setGroupDropPos(groupBtnRef.current!.getBoundingClientRect()); setGroupOpen(o => !o); }}
+              onMouseEnter={() => setGroupHovered(true)}
+              onMouseLeave={() => setGroupHovered(false)}
+            >
+              <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[14px] text-center tracking-[-0.28px] whitespace-nowrap" style={{ color: groupTextColor }}>
+                <p className="leading-[20px]">화주사 업무그룹</p>
+              </div>
+              {groupSelected.size > 0 && !groupOpen ? (
+                <div className="bg-[#ccdfff] content-stretch flex flex-col items-center justify-center relative rounded-[100px] shrink-0">
+                  <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 size-[16px] text-[#005fff] text-[11px] text-center tracking-[-0.22px]">
+                    <p className="leading-[18px]">{groupSelected.size}</p>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ transform: groupOpen ? 'rotate(180deg)' : undefined }} className="relative shrink-0 size-[12px]">
+                  <div className="-translate-y-1/2 absolute flex h-[3px] items-center justify-center left-[2.5px] top-1/2 w-[7px]">
+                    <div className="-scale-y-100 flex-none"><div className="h-[3px] relative w-[7px]"><div className="absolute inset-[-21.67%_-9.29%]">
+                      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 8.30002 4.30001">
+                        <path d="M1 3.30002L4.15001 0.650024L7.30002 3.30002" stroke={groupOpen ? '#005fff' : '#9197A1'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3"/>
+                      </svg>
+                    </div></div></div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {groupOpen && groupDropPos && createPortal(
+              (() => { const fs = Math.round(15 * (window.innerWidth / 1920)); const fs12 = Math.round(12 * (window.innerWidth / 1920)); return (
+              <div ref={groupDropRef} style={{ position:'fixed', top: (groupDropPos as DOMRect).bottom + 2, left: (groupDropPos as DOMRect).left, width:176, background:'#FFFFFF', border:'1px solid #E4E5E9', boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius:8, display:'flex', flexDirection:'column', zIndex:9999, boxSizing:'border-box' }}>
+                {/* 리스트 */}
+                <div style={{ maxHeight:216, overflowY:'auto', padding:8, boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
+                  {groups.map(grp => {
+                    const checked = groupSelected.has(grp);
+                    return (
+                      <div key={grp}
+                        onMouseEnter={() => setGroupHoveredKey(grp)} onMouseLeave={() => setGroupHoveredKey(null)}
+                        onClick={() => { const next = new Set(groupSelected); if (next.has(grp)) next.delete(grp); else next.add(grp); setGroupSelected(next); }}
+                        style={{ display:'flex', alignItems:'center', padding:'9px 8px 9px 4px', gap:8, height:40, borderRadius:4, cursor:'pointer', boxSizing:'border-box', background: groupHoveredKey === grp ? '#F6F7F8' : '#FFFFFF' }}
+                      >
+                        <div style={{ width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                          <div style={{ width:16, height:16, borderRadius:4, background: checked ? '#005FFF' : '#FFFFFF', border: checked ? 'none' : '1.3px solid #ADB1B9', display:'flex', alignItems:'center', justifyContent:'center', boxSizing:'border-box' }}>
+                            {checked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                        </div>
+                        <span style={{ fontSize:fs, color:'#2E3238', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', flex:1 }}>{grp}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Footer */}
+                <div style={{ height:28, padding:'0 8px', borderTop:'1px solid #E4E5E9', display:'flex', justifyContent:'flex-end', alignItems:'center', flexShrink:0, boxSizing:'border-box' }}>
+                  <span onClick={e => { e.stopPropagation(); setGroupSelected(new Set()); }} style={{ fontSize:fs12, color:'#9197A1', cursor:'pointer', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'18px' }}>필터 초기화</span>
+                </div>
+              </div>
+              ); })(),
+              document.body
+            )}
+          </div>
+        );
+      })()}
+
       <div ref={partnerBtnRef} style={{ position:'relative' }}>
         <div
           className="content-stretch flex gap-[8px] h-[32px] items-center justify-center pl-[12px] pr-[10px] py-[6px] relative rounded-[30px] shrink-0 cursor-pointer select-none"
@@ -998,84 +1024,43 @@ function Frame892() {
         </div>
 
         {partnerOpen && partnerDropPos && createPortal(
-          <div ref={partnerDropRef} style={{
-            position:'fixed', top: partnerDropPos.top, left: partnerDropPos.left,
-            width:176, background:'#FFFFFF',
-            border:'1px solid #E4E5E9',
-            boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)',
-            borderRadius:8,
-            display:'flex', flexDirection:'column',
-            zIndex:9999, boxSizing:'border-box',
-          }}>
+          (() => { const fs = Math.round(15 * (window.innerWidth / 1920)); return (
+          <div ref={partnerDropRef} style={{ position:'fixed', top: partnerDropPos.top, left: partnerDropPos.left, width:176, background:'#FFFFFF', border:'1px solid #E4E5E9', boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius:8, display:'flex', flexDirection:'column', zIndex:9999, boxSizing:'border-box' }}>
+            {/* Search */}
             <div style={{ padding:'8px 8px 2px', flexShrink:0 }}>
               <div style={{ display:'flex', alignItems:'center', gap:4, border:'1px solid #E4E5E9', borderRadius:4, padding:'6px 10px', height:36, boxSizing:'border-box' }}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}>
-                  <circle cx="6.57" cy="6.57" r="5.07" stroke="#9197A1" strokeWidth="1.3"/>
-                  <line x1="10.91" y1="10.91" x2="14.5" y2="14.5" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
-                <input
-                  value={partnerSearch}
-                  onChange={e => setPartnerSearch(e.target.value)}
-                  placeholder="협력사 검색"
-                  style={{ flex:1, border:'none', outline:'none', fontSize:15, color:'#767D8A', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', background:'transparent' }}
-                />
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><circle cx="6.57" cy="6.57" r="5.07" stroke="#9197A1" strokeWidth="1.3"/><line x1="10.91" y1="10.91" x2="14.5" y2="14.5" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                <input value={partnerSearch} onChange={e => setPartnerSearch(e.target.value)} placeholder="협력사 검색"
+                  style={{ flex:1, border:'none', outline:'none', fontSize:fs, color: partnerSearch ? '#2E3238' : '#767D8A', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', background:'transparent' }} />
               </div>
             </div>
-            <div style={{ height: (partnerSelected.size === 0 && (!partnerSearch || PARTNERS.filter(s => s.includes(partnerSearch)).length === 0)) ? 162 : undefined, maxHeight: (partnerSelected.size === 0 && (!partnerSearch || PARTNERS.filter(s => s.includes(partnerSearch)).length === 0)) ? undefined : 162, overflowY:'auto', padding:8, boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
-              {partnerSelected.size === 0 && (!partnerSearch || PARTNERS.filter(s => s.includes(partnerSearch)).length === 0) ? (
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:4 }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" fill="#9197A1"/>
-                    <line x1="12" y1="7" x2="12" y2="14" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                    <circle cx="12" cy="17.5" r="1" fill="white"/>
-                  </svg>
-                  <span style={{ fontSize: Math.round(15 * (window.innerWidth / 1920)), color:'#5C6370', textAlign:'center', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px' }}>검색 결과가 없습니다.</span>
+            {/* List */}
+            <div style={{ maxHeight:200, overflowY:'auto', padding:8, boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
+              {(partnerSelected.size === 0 && (!partnerSearch || PARTNERS.filter(s => s.includes(partnerSearch)).length === 0)) ? (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:200, gap:4 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#9197A1"/><line x1="12" y1="7" x2="12" y2="14" stroke="white" strokeWidth="1.5" strokeLinecap="round"/><circle cx="12" cy="17.5" r="1" fill="white"/></svg>
+                  <span style={{ fontSize:fs, color:'#5C6370', textAlign:'center', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px' }}>{partnerSearch ? '검색 결과가 없습니다.' : '검색어를 입력해 주세요.'}</span>
                 </div>
-              ) : PARTNERS.map((name, origIdx) => ({name, origIdx})).filter(({name, origIdx}) => (partnerSearch && name.includes(partnerSearch)) || partnerSelected.has(origIdx)).map(({name, origIdx}) => (
-                <div
-                  key={origIdx}
-                  onMouseEnter={() => setPartnerHoveredIdx(origIdx)}
-                  onMouseLeave={() => setPartnerHoveredIdx(null)}
-                  onClick={() => {
-                    const next = new Set(partnerSelected);
-                    if (next.has(origIdx)) next.delete(origIdx); else next.add(origIdx);
-                    setPartnerSelected(next);
-                  }}
-                  style={{
-                    display:'flex', alignItems:'center', padding:'9px 8px 9px 4px', gap:8,
-                    height:40, borderRadius:4, cursor:'pointer', boxSizing:'border-box',
-                    background: partnerHoveredIdx === origIdx ? '#F6F7F8' : '#FFFFFF',
-                  }}
-                >
-                  <div style={{ width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    <div style={{
-                      width:16, height:16,
-                      border: partnerSelected.has(origIdx) ? '1.3px solid #005FFF' : '1.3px solid #ADB1B9',
-                      borderRadius:3,
-                      background: partnerSelected.has(origIdx) ? '#005FFF' : '#FFFFFF',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                      boxSizing:'border-box',
-                    }}>
-                      {partnerSelected.has(origIdx) && (
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
+              ) : PARTNERS.map((name, origIdx) => ({name, origIdx}))
+                .filter(({name, origIdx}) => (partnerSearch && name.includes(partnerSearch)) || partnerSelected.has(origIdx))
+                .map(({name, origIdx}) => {
+                  const selected = partnerSelected.has(origIdx);
+                  return (
+                    <div key={origIdx}
+                      onMouseEnter={() => setPartnerHoveredIdx(origIdx)} onMouseLeave={() => setPartnerHoveredIdx(null)}
+                      onClick={() => { setPartnerSelected(selected ? new Set() : new Set([origIdx])); }}
+                      style={{ display:'flex', alignItems:'center', padding:'9px 8px', height:40, borderRadius:4, cursor:'pointer', boxSizing:'border-box', background: partnerHoveredIdx === origIdx ? '#F6F7F8' : '#FFFFFF' }}
+                    >
+                      <span style={{ fontSize:fs, color: selected ? '#005FFF' : '#2E3238', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {partnerSearch ? (() => { const q=partnerSearch; const i=name.toLowerCase().indexOf(q.toLowerCase()); if(i===-1) return name; return <>{name.slice(0,i)}<span style={{color:'#005FFF'}}>{name.slice(i,i+q.length)}</span>{name.slice(i+q.length)}</>; })() : name}
+                      </span>
+                      {selected && <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><path d="M3 8L6.5 11.5L13 4.5" stroke="#005FFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
-                  </div>
-                  <span style={{ fontSize:15, color:'#2E3238', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{name}</span>
-                </div>
-              ))}
+                  );
+                })}
             </div>
-            <div style={{ height:28, padding:'0 8px', borderTop:'1px solid #E4E5E9', display:'flex', justifyContent:'flex-end', alignItems:'center', flexShrink:0, boxSizing:'border-box' }}>
-              <span
-                onClick={e => { e.stopPropagation(); setPartnerSelected(new Set()); setPartnerSearch(''); }}
-                style={{ fontSize:12, color:'#9197A1', cursor:'pointer', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'18px' }}
-              >
-                필터 초기화
-              </span>
-            </div>
-          </div>,
+          </div>
+          ); })(),
           document.body
         )}
       </div>
@@ -1257,7 +1242,7 @@ function Frame877() {
   return (
     <div className="relative shrink-0 w-full">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[8px] py-[4px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">총 매출 ({totalCount})</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">총 매출</p>
         <p className="font-['Pretendard_GOV:Bold'] leading-[26px] relative shrink-0 text-[#2e3238] text-[18px] tracking-[-0.36px]">+{formatKorean(totalAmount)}</p>
       </div>
     </div>
@@ -1280,8 +1265,8 @@ function Frame883() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">마감필요</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">455건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#dd2222] text-[15px] tracking-[-0.3px]">마감필요</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#dd2222] text-[16px] tracking-[-0.32px]">455건</p>
       </div>
     </div>
   );
@@ -1291,8 +1276,8 @@ function Frame879() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">정산대기</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">2,273건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#18ac42] text-[15px] tracking-[-0.3px]">정산대기</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#18ac42] text-[16px] tracking-[-0.32px]">2,273건</p>
       </div>
     </div>
   );
@@ -1302,8 +1287,8 @@ function Frame880() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">수금대기</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">909건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#005fff] text-[15px] tracking-[-0.3px]">수금대기</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#005fff] text-[16px] tracking-[-0.32px]">909건</p>
       </div>
     </div>
   );
@@ -1325,7 +1310,7 @@ function Frame882() {
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
         <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">정산보류</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">454건</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#9197a1] text-[16px] tracking-[-0.32px]">454건</p>
       </div>
     </div>
   );
@@ -1344,13 +1329,23 @@ function Frame894() {
   );
 }
 
-function SummaryFooterRow({ label, value }: { label: string; value: string }) {
+function SummaryFooterRow({ label, value, rawAmount }: { label: string; value: string; rawAmount?: number }) {
+  const [tooltipVisible, setTooltipVisible] = useState(false);
   return (
     <div className="flex flex-row items-center gap-[12px] w-full" style={{ height: 72, padding: '12px 16px' }}>
-      {/* 텍스트 블록: label + value 수직 스택 */}
       <div className="flex flex-col items-start" style={{ gap: 0 }}>
         <p className="font-['Pretendard_GOV:SemiBold'] text-[#5c6370] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap">{label}</p>
-        <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap">{value}</p>
+        <div style={{ position: 'relative' }} onMouseEnter={() => setTooltipVisible(true)} onMouseLeave={() => setTooltipVisible(false)}>
+          <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap">{value}</p>
+          {tooltipVisible && rawAmount !== undefined && rawAmount !== 0 && (
+            <div style={{ position: 'absolute', left: 'calc(100% + 2px)', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', zIndex: 9999, pointerEvents: 'none', whiteSpace: 'nowrap' }}>
+              <svg width="6" height="10" viewBox="0 0 6 10" fill="none" style={{ flexShrink: 0 }}><path d="M6 0L0 5L6 10" fill="rgba(23,25,29,0.9)"/></svg>
+              <div style={{ background: 'rgba(23,25,29,0.9)', borderRadius: 6, padding: '2px 8px' }}>
+                <span style={{ fontFamily: "'Pretendard GOV', sans-serif", fontSize: 13, fontWeight: 400, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: '20px', whiteSpace: 'nowrap' }}>{Math.abs(rawAmount).toLocaleString()}원</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1359,26 +1354,21 @@ function SummaryFooterRow({ label, value }: { label: string; value: string }) {
 function Frame874() {
   const { selected } = useContext(SaleFilterCtx);
   const { saleTotalAmount, saleCounts } = useContext(DynamicCountCtx);
-  // Scale the dynamic total by the status filter selection ratio
   const totalAmount = useMemo(() => {
     const dynTotal = saleCounts[0] ?? 5000;
-    const dynBase = 5000;
-    const ratio = dynBase > 0 ? dynTotal / dynBase : 1;
+    const ratio = dynTotal / 5000;
     if (selected.has(0)) return Math.round(saleTotalAmount);
     return Math.round([...selected].reduce((sum, i) => {
       const statusTotal = i === 0 ? saleTotalAmount : (SALE_STATUS_DATA[i]?.amountRaw ?? 0) * ratio;
       return sum + statusTotal;
     }, 0));
   }, [selected, saleTotalAmount, saleCounts]);
-  const totalCount = selected.has(0)
-    ? (saleCounts[0] ?? 5000).toLocaleString() + "건"
-    : ([...selected].reduce((sum, i) => sum + (i === 0 ? (saleCounts[0] ?? 0) : (saleCounts[i] ?? 0)), 0).toLocaleString() + "건");
   return (
     <div style={{width:616, height:160, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'flex-start', padding:4, gap:8, background:'#F6F7F8', borderRadius:8, flexShrink:0, boxSizing:'border-box'}}>
       {/* 행1: 상태 필터 카드 */}
       <StatusCardRow data={SALE_STATUS_DATA} type="sale" />
       {/* 행2: 합계 */}
-      <SummaryFooterRow label={`총 매출 (${totalCount.replace("건", "")})`} value={`+${formatKorean(totalAmount)}`} />
+      <SummaryFooterRow label={`총 매출`} value={`+${formatKorean(totalAmount)}`} rawAmount={totalAmount} />
     </div>
   );
 }
@@ -1396,7 +1386,7 @@ function Frame884() {
   return (
     <div className="relative shrink-0 w-full">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[8px] py-[4px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">총 매입 ({totalCount})</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">총 매입</p>
         <p className="font-['Pretendard_GOV:Bold'] leading-[26px] relative shrink-0 text-[#2e3238] text-[18px] tracking-[-0.36px]">-{formatKorean(totalAmount)}</p>
       </div>
     </div>
@@ -1419,8 +1409,8 @@ function Frame886() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">마감필요</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">500건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#dd2222] text-[15px] tracking-[-0.3px]">마감필요</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#dd2222] text-[16px] tracking-[-0.32px]">500건</p>
       </div>
     </div>
   );
@@ -1430,8 +1420,8 @@ function Frame887() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">정산대기</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">1,500건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#18ac42] text-[15px] tracking-[-0.3px]">정산대기</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#18ac42] text-[16px] tracking-[-0.32px]">1,500건</p>
       </div>
     </div>
   );
@@ -1441,8 +1431,8 @@ function Frame888() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">지급대기</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">2,000건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#005fff] text-[15px] tracking-[-0.3px]">지급대기</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#005fff] text-[16px] tracking-[-0.32px]">2,000건</p>
       </div>
     </div>
   );
@@ -1464,7 +1454,7 @@ function Frame890() {
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
         <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">정산보류</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">500건</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#9197a1] text-[16px] tracking-[-0.32px]">500건</p>
       </div>
     </div>
   );
@@ -1486,26 +1476,21 @@ function Frame895() {
 function Frame876() {
   const { selected } = useContext(PurchaseFilterCtx);
   const { purchaseTotalAmount, purchaseCounts } = useContext(DynamicCountCtx);
-  // Scale the dynamic total by the status filter selection ratio
   const totalAmount = useMemo(() => {
     const dynTotal = purchaseCounts[0] ?? 5000;
-    const dynBase = 5000;
-    const ratio = dynBase > 0 ? dynTotal / dynBase : 1;
+    const ratio = dynTotal / 5000;
     if (selected.has(0)) return Math.round(purchaseTotalAmount);
     return Math.round([...selected].reduce((sum, i) => {
       const statusTotal = i === 0 ? purchaseTotalAmount : (PURCHASE_STATUS_DATA[i]?.amountRaw ?? 0) * ratio;
       return sum + statusTotal;
     }, 0));
   }, [selected, purchaseTotalAmount, purchaseCounts]);
-  const totalCount = selected.has(0)
-    ? (purchaseCounts[0] ?? 5000).toLocaleString() + "건"
-    : ([...selected].reduce((sum, i) => sum + (i === 0 ? (purchaseCounts[0] ?? 0) : (purchaseCounts[i] ?? 0)), 0).toLocaleString() + "건");
   return (
     <div style={{width:616, height:160, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'flex-start', padding:4, gap:8, background:'#F6F7F8', borderRadius:8, flexShrink:0, boxSizing:'border-box'}}>
       {/* 행1: 상태 필터 카드 */}
       <StatusCardRow data={PURCHASE_STATUS_DATA} type="purchase" />
       {/* 행2: 합계 */}
-      <SummaryFooterRow label={`총 매입 (${totalCount.replace("건", "")})`} value={`-${formatKorean(totalAmount)}`} />
+      <SummaryFooterRow label={`총 매입`} value={`-${formatKorean(totalAmount)}`} rawAmount={totalAmount} />
     </div>
   );
 }
@@ -18741,35 +18726,44 @@ function Con() {
 
   useEffect(() => {
     if (!tableRef.current) return;
+    const PAGE_SIZE_312 = 200;
+    const cancelled312all = getCancelledOrders();
+    const cancelledIdxSetAll = new Set(cancelled312all.map(o => o.rowIdx));
+    const baseSortedAll = Array.from({length: TOTAL_ROWS},(_,i)=>i)
+      .filter(i => !cancelledIdxSetAll.has(i) && !hiddenRows.has(i))
+      .sort((a,b)=>{
+        const parseLD2 = (s: string) => { const [yy,mm,dd]=s.split('.').map(Number); return new Date(2000+yy,mm-1,dd).getTime(); };
+        const da = parseLD2(getLoadingDate312(a)), db = parseLD2(getLoadingDate312(b));
+        if (da !== db) return da - db;
+        const SP: Record<string, number> = { '마감필요':0,'정산대기':1,'수금대기':2,'수금완료':3,'정산보류':4,'정산제외':5 };
+        const PP: Record<string, number> = { '마감필요':0,'정산대기':1,'지급대기':2,'지급완료':3,'정산보류':4,'정산제외':5 };
+        const pa = a < 5000 ? (SP[SALE_ROW_STATUSES[a%SALE_ROW_STATUSES.length]]??99) : (PP[PURCHASE_ROW_STATUSES[(a-5000)%PURCHASE_ROW_STATUSES.length]]??99);
+        const pb = b < 5000 ? (SP[SALE_ROW_STATUSES[b%SALE_ROW_STATUSES.length]]??99) : (PP[PURCHASE_ROW_STATUSES[(b-5000)%PURCHASE_ROW_STATUSES.length]]??99);
+        return pa - pb;
+      });
+    const cancelledVisible312 = cancelled312all.map(o => o.rowIdx).filter(i => !hiddenRows.has(i));
+    const allSorted312 = [...cancelledVisible312, ...baseSortedAll];
+    const pageStart312 = (currentPage - 1) * PAGE_SIZE_312;
+    const pageIndices312 = allSorted312.slice(pageStart312, pageStart312 + PAGE_SIZE_312);
     tableRef.current.querySelectorAll(':scope > *').forEach((col) => {
-      const cells = Array.from(col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"]'));
+      col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"][data-table-row]').forEach(c => c.remove());
+      const cells = Array.from(col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"]:not([data-table-row])'));
       if (!cells.length) return;
       const parent = cells[0].parentElement!;
       const SRC: Record<string, number> = { '마감필요': 0, '정산대기': 6, '수금대기': 9, '수금완료': 11, '정산보류': 13 };
-      const SALE_PRIORITY: Record<string, number> = { '마감필요':0,'정산대기':1,'수금대기':2,'수금완료':3,'정산보류':4,'정산제외':5 };
-      const PURCHASE_PRIORITY: Record<string, number> = { '마감필요':0,'정산대기':1,'지급대기':2,'지급완료':3,'정산보류':4,'정산제외':5 };
-      const parseLD = (s: string) => { const [yy,mm,dd]=s.split('.').map(Number); return new Date(2000+yy,mm-1,dd).getTime(); };
-      const cancelled312 = getCancelledOrders();
-      const cancelledIdxSet = new Set(cancelled312.map(o => o.rowIdx));
-      // 취소됐지만 청구마감완료 체크한 경우 → 정산대기로 표시
-      const baseSorted = Array.from({length: TOTAL_ROWS},(_,i)=>i).filter(i => !cancelledIdxSet.has(i)).sort((a,b)=>{
-        const da = parseLD(getLoadingDate312(a)), db = parseLD(getLoadingDate312(b));
-        if (da !== db) return da - db;
-        const isSaleA = a < 5000, isSaleB = b < 5000;
-        const pa = isSaleA ? (SALE_PRIORITY[SALE_ROW_STATUSES[a%SALE_ROW_STATUSES.length]]??99) : (PURCHASE_PRIORITY[PURCHASE_ROW_STATUSES[(a-5000)%PURCHASE_ROW_STATUSES.length]]??99);
-        const pb = isSaleB ? (SALE_PRIORITY[SALE_ROW_STATUSES[b%SALE_ROW_STATUSES.length]]??99) : (PURCHASE_PRIORITY[PURCHASE_ROW_STATUSES[(b-5000)%PURCHASE_ROW_STATUSES.length]]??99);
-        return pa - pb;
-      });
-      // 취소된 오더를 최상단에 삽입
-      const sortedIndices312 = [...cancelled312.map(o => o.rowIdx), ...baseSorted];
+      const cancelled312 = cancelled312all;
+      const cancelledIdxSet = cancelledIdxSetAll;
       const headerText312 = col.querySelector('[data-name="Table_Header Cells"]')?.textContent?.trim();
       const isOrderIdCol = headerText312 === '오더ID';
       const isLoadingDateCol = headerText312 === '상차일';
       const _h312 = headerText312?.replace(/\s/g,'') ?? '';
       const isSaleStatusCol = _h312.includes('매출상태') || (_h312.includes('매출') && _h312.includes('상태'));
       const isPurchaseStatusCol = _h312.includes('매입상태') || (_h312.includes('매입') && _h312.includes('상태'));
-      cells.forEach((c) => parent.removeChild(c));
-      for (const i of sortedIndices312) {
+      const isShipperCol = headerText312 === '화주사';
+      const isPartnerCol = headerText312 === '요청협력사';
+      const isDispatchCol = headerText312 === '배차방법';
+      cells.forEach((c) => { c.style.display = 'none'; });
+      for (const i of pageIndices312) {
         // 취소 오더 상태 결정: 스토어 데이터 기반 (자동) + 사용자 체크 오버라이드
         let s: string;
         let cancelledIsPurchase = false;
@@ -18788,11 +18782,32 @@ function Con() {
             s = '마감필요';
           }
         } else {
-          s = SALE_ROW_STATUSES[i % SALE_ROW_STATUSES.length];
+          s = i < 5000
+            ? SALE_ROW_STATUSES[i % SALE_ROW_STATUSES.length]
+            : PURCHASE_ROW_STATUSES[(i - 5000) % PURCHASE_ROW_STATUSES.length];
         }
         const cellIdx = SRC[s] ?? (i % cells.length);
         const cell = (cells[Math.min(cellIdx, cells.length - 1)].cloneNode(true)) as HTMLElement;
+        cell.style.display = '';
         cell.dataset.tableRow = String(i);
+        // 뱃지 컬러 동적 적용
+        const BADGE_COLORS_312: Record<string, { bg: string; text: string }> = {
+          '마감필요': { bg: '#FEE7E7', text: '#DD2222' },
+          '정산대기': { bg: '#E6F7EC', text: '#18AC42' },
+          '수금대기': { bg: '#E0EDFF', text: '#005FFF' },
+          '지급대기': { bg: '#E0EDFF', text: '#005FFF' },
+          '수금완료': { bg: '#F6F7F8', text: '#5C6370' },
+          '지급완료': { bg: '#F6F7F8', text: '#5C6370' },
+          '정산보류': { bg: '#F0F1F3', text: '#9197A1' },
+          '정산제외': { bg: '#EBEDEF', text: '#ADB1B9' },
+        };
+        const badge312 = cell.querySelector<HTMLElement>('[data-name="badge"]');
+        if (badge312 && BADGE_COLORS_312[s]) {
+          badge312.style.background = BADGE_COLORS_312[s].bg;
+          badge312.querySelectorAll<HTMLElement>('*').forEach(el => { el.style.color = BADGE_COLORS_312[s].text; });
+          const p312 = badge312.querySelector('p');
+          if (p312) p312.textContent = s;
+        }
         // 셀 전체 폰트 적용 (상태 배지 컬럼은 SemiBold, 나머지는 Regular)
         const isStatusCol = isSaleStatusCol || isPurchaseStatusCol;
         const cellFontWeight = isStatusCol ? '600' : '400';
@@ -18816,6 +18831,18 @@ function Con() {
         if (isLoadingDateCol) {
           const p = cell.querySelector('p') || cell;
           p.textContent = getLoadingDate312(i);
+        }
+        if (isShipperCol) {
+          const p = cell.querySelector('p') || cell;
+          p.textContent = SHIPPER_ROW_DATA[i % SHIPPER_ROW_DATA.length];
+        }
+        if (isPartnerCol) {
+          const p = cell.querySelector('p') || cell;
+          p.textContent = PARTNER_ROW_DATA[i % PARTNER_ROW_DATA.length];
+        }
+        if (isDispatchCol) {
+          const p = cell.querySelector('p') || cell;
+          p.textContent = DISPATCH_METHODS[i % DISPATCH_METHODS.length];
         }
         parent.appendChild(cell);
       }
@@ -18841,7 +18868,7 @@ function Con() {
         el.style.fontWeight = fw;
       });
     });
-  }, [cancelledTopRows, cancelledConfirmedSale, cancelledConfirmedPurchase]);
+  }, [cancelledTopRows, cancelledConfirmedSale, cancelledConfirmedPurchase, currentPage, hiddenRows]);
   useEffect(() => {
     if (!tableRef.current) return;
     const CHECKMARK = `<svg viewBox="0 0 10 8" fill="none" style="position:absolute;inset:0;width:100%;height:100%;padding:1px"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -18861,6 +18888,12 @@ function Con() {
       } else {
         inner.style.cssText = '';
         inner.innerHTML = '';
+      }
+      if (!isHeader) {
+        const rowIdx = Number(cb.dataset.cbRow);
+        tableRef.current!.querySelectorAll<HTMLElement>(`[data-table-row="${rowIdx}"]`).forEach(c => {
+          c.style.backgroundColor = isSelected ? '#CCDFFF' : '';
+        });
       }
     });
   }, [selectedRows, currentPage]);
@@ -18908,10 +18941,10 @@ function Con() {
       const newRow = cell?.dataset.tableRow ?? null;
       if (newRow !== hoveredRow) {
         if (hoveredRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = ''; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
         }
         if (newRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = 'rgba(246, 247, 248, 0.5)'; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { c.style.backgroundColor = '#F5F9FF'; });
         }
         hoveredRow = newRow;
       }
@@ -18925,7 +18958,7 @@ function Con() {
       const relatedTarget = (e as MouseEvent).relatedTarget as HTMLElement | null;
       if (!relatedTarget || !el.contains(relatedTarget)) {
         if (hoveredRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = ''; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
           hoveredRow = null;
         }
       }
@@ -18944,19 +18977,6 @@ function Con() {
     setCurrentPage(1);
   }, [hiddenRows]);
 
-  useEffect(() => {
-    if (!tableRef.current) return;
-    // 취소된 오더 인덱스는 항상 표시 (최상단 고정)
-    const cancelledIdxSetPage = new Set(getCancelledOrders().map(o => o.rowIdx));
-    const visibleRows = Array.from({ length: TOTAL_ROWS }, (_, i) => i).filter(i => !hiddenRows.has(i));
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const pageSet = new Set(visibleRows.slice(start, start + PAGE_SIZE));
-    tableRef.current.querySelectorAll<HTMLElement>('[data-table-row]').forEach((cell) => {
-      const row = Number(cell.dataset.tableRow);
-      // 취소 행은 항상 1페이지에서 표시
-      cell.style.display = (cancelledIdxSetPage.has(row) ? currentPage === 1 : pageSet.has(row)) ? '' : 'none';
-    });
-  }, [hiddenRows, currentPage, cancelledTopRows, cancelledConfirmedSale, cancelledConfirmedPurchase]);
 
   useEffect(() => {
     if (tableRef.current) tableRef.current.scrollTop = 0;

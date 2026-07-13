@@ -179,6 +179,10 @@ const DetailCtx = createContext<{
   setShowSaveErrorToast: (v: boolean) => void;
   isEditMode: boolean;
   setIsEditMode: (v: boolean) => void;
+  onCancelEditMode: () => void;
+  hasEditChangesRef: React.MutableRefObject<boolean>;
+  onConfirmAmend: () => void;
+  amendTotalsRef: React.MutableRefObject<{ billing: number; surcharge: number }>;
 }>({
   invoiceId: "", rowStatus: "확정대기", invoiceType: '매출', shipper: "(주)글로벌로지스",
   shipperGroup: "판교본사", period: "26.05.07 ~ 26.05.12", onClose: () => {},
@@ -199,17 +203,18 @@ const DetailCtx = createContext<{
   addedOrderCount: 0, setAddedOrderCount: () => {},
   showSaveToast: false, setShowSaveToast: () => {},
   showSaveErrorToast: false, setShowSaveErrorToast: () => {},
-  isEditMode: false, setIsEditMode: () => {},
+  isEditMode: false, setIsEditMode: () => {}, onCancelEditMode: () => {}, onConfirmAmend: () => {},
+  hasEditChangesRef: { current: false },
+  amendTotalsRef: { current: { billing: 0, surcharge: 0 } },
 });
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-  '확정대기': { bg: '#fce9e9', color: '#dd2222' },
-  '발행대기': { bg: '#EBEDEF', color: '#454B55' },
-  '수금대기': { bg: '#E4FBEB', color: '#18AC42' },
-  '수금완료': { bg: '#E6EFFF', color: '#005FFF' },
-  // 매입 거래명세서용 (수금→지급)
-  '지급대기': { bg: '#E4FBEB', color: '#18AC42' },
-  '지급완료': { bg: '#E6EFFF', color: '#005FFF' },
+  '확정대기': { bg: '#FEE7E7', color: '#DD2222' },
+  '발행대기': { bg: '#E6F7EC', color: '#18AC42' },
+  '수금대기': { bg: '#E0EDFF', color: '#005FFF' },
+  '수금완료': { bg: '#F6F7F8', color: '#5C6370' },
+  '지급대기': { bg: '#E0EDFF', color: '#005FFF' },
+  '지급완료': { bg: '#F6F7F8', color: '#5C6370' },
 };
 
 function Frame77() {
@@ -757,7 +762,7 @@ function AddOrderModal() {
   const calPortal = calOpen && calAnchor ? createPortal(
     <div ref={calRef} style={{ position:'fixed', top: calAnchor.bottom + 2, left: calAnchor.left, width:276, background:'#FFFFFF', border:'1px solid #E4E5E9', boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius:8, padding:12, display:'flex', flexDirection:'column', gap:8, zIndex:99999, boxSizing:'border-box' }}>
       <div style={{ height:36, display:'flex', justifyContent:'space-between', alignItems:'center', padding:'5px 4px' }}>
-        <span style={{ fontFamily:"'Pretendard GOV:Bold'", fontSize:18, fontWeight:700, color:'#2E3238', letterSpacing:'-0.02em' }}>{viewYear}년 {viewMonth+1}월</span>
+        <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontSize:18, fontWeight:600, color:'#2E3238', letterSpacing:'-0.02em' }}>{viewYear}년 {viewMonth+1}월</span>
         <div style={{ display:'flex', gap:2 }}>
           {([[-1,'M4.5 1L0.5 5L4.5 9'],[1,'M0.5 1L4.5 5L0.5 9']] as [number,string][]).map(([dir,d]) => (
             <button key={dir} onClick={() => { const dt = new Date(viewYear, viewMonth+dir, 1); setViewYear(dt.getFullYear()); setViewMonth(dt.getMonth()); }} style={{ width:26, height:26, borderRadius:4, border:'none', background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }} onMouseEnter={e=>(e.currentTarget.style.background='#F6F7F8')} onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
@@ -1627,7 +1632,7 @@ function Right_수금완료() {
  *  - 세금계산서 수정 발행 확정 (194px, #005FFF)
  */
 function Right_수정발행모드() {
-  const { setIsEditMode } = useContext(DetailCtx);
+  const { onCancelEditMode, onConfirmAmend } = useContext(DetailCtx);
 
   return (
     <div
@@ -1637,7 +1642,7 @@ function Right_수정발행모드() {
     >
       {/* 취소: 60×44, white border */}
       <div
-        onClick={() => setIsEditMode(false)}
+        onClick={onCancelEditMode}
         className="bg-white h-[44px] relative rounded-[4px] shrink-0 cursor-pointer hover:bg-[#f6f7f8]"
         style={{ width: 60 }}
       >
@@ -1648,6 +1653,7 @@ function Right_수정발행모드() {
       </div>
       {/* 세금계산서 수정 발행 확정: 194×44, blue */}
       <div
+        onClick={onConfirmAmend}
         className="bg-[#005fff] content-stretch flex h-[44px] items-center justify-center overflow-clip px-[16px] relative rounded-[4px] shrink-0 cursor-pointer hover:opacity-90"
         style={{ width: 194 }}
       >
@@ -1875,7 +1881,7 @@ function CalendarDropdownDetail({ anchorRect, value, onChange, onClose }: {
       <div style={{ width: 252, display: 'flex', flexDirection: 'column', gap: 4 }}>
         {/* Month/year header */}
         <div style={{ height: 36, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 4px' }}>
-          <span style={{ fontFamily: "'Pretendard GOV:Bold'", fontSize: 18, fontWeight: 700, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
+          <span style={{ fontFamily: "'Pretendard GOV:SemiBold'", fontSize: 18, fontWeight: 600, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
           <div style={{ display: 'flex', gap: 2 }}>
             <button onClick={() => { const d = new Date(viewYear, viewMonth - 1, 1); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }} style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <svg width="5" height="10" viewBox="0 0 5 10" fill="none"><path d="M4.5 1L0.5 5L4.5 9" stroke="#2E3238" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -8586,7 +8592,37 @@ function Frame369() {
   );
 }
 
+function EditOnlyCol({ label }: { label: string }) {
+  return (
+    <div className="relative shrink-0 w-[130px]">
+      <div className="content-stretch flex flex-col items-center overflow-clip relative rounded-[inherit] size-full">
+        <div className="bg-[#f6f7f8] h-[40px] relative shrink-0 w-full border-r border-[#E4E5E9]" data-name="Table_Header Cells">
+          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
+          <div className="flex flex-row items-center size-full">
+            <div className="content-stretch flex items-center p-[8px] relative size-full">
+              <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic overflow-hidden relative shrink-0 text-[#5c6370] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
+                <p className="leading-[22px] overflow-hidden text-ellipsis">{label}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white h-[40px] relative shrink-0 w-full" data-name="Table_Data Cells">
+          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+            <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+              <p className="[word-break:break-word] flex-[1_0_0] font-['Pretendard_GOV:Regular'] leading-[22px] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">-</p>
+            </div>
+          </div>
+          <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
+        </div>
+      </div>
+      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
+    </div>
+  );
+}
+
 function Component8({ tableRef }: { tableRef: RefObject<HTMLDivElement> }) {
+  const { isEditMode, invoiceType } = useContext(DetailCtx);
+  const billingLabel = invoiceType === '매입' ? '배차금액' : '청구금액';
   return (
     <div ref={tableRef} className="content-stretch flex flex-[1_0_0] items-start min-h-px relative w-full" data-name="통합장부표">
       <Frame357 />
@@ -8603,111 +8639,252 @@ function Component8({ tableRef }: { tableRef: RefObject<HTMLDivElement> }) {
       <Frame366 />
       <Frame365 />
       <Frame367 />
+      {isEditMode && <EditOnlyCol label={billingLabel} />}
+      {isEditMode && <EditOnlyCol label="추가운임" />}
       <Frame368 />
       <Frame369 />
     </div>
   );
 }
 
-// ── 오더 금액 수정 모달 ─────────────────────────────────────────────────────
-function AmountEditModal({
-  rowIdx, orderId, originalAmount, invoiceType, onClose, onConfirm,
-}: {
-  rowIdx: number; orderId: string; originalAmount: number;
-  invoiceType: '매출' | '매입'; onClose: () => void; onConfirm?: (newAmount: number) => void;
+// ── 추가운임 수정 모달 ────────────────────────────────────────────────────────
+const SURCHARGE_GROUPS = [
+  { group: '추가', items: ['수작업', '대기비', '경유비', '초과수당', '눈비', '휴일', '기타'] },
+  { group: '실비', items: ['톨비', '유류비', '주차비', '탁송', '물품대금', '창고비', '기타'] },
+] as const;
+
+function ConfirmAmendModal({ totals, onClose, onConfirm }: {
+  totals: { original: number; current: number };
+  onClose: () => void;
+  onConfirm: () => void;
 }) {
-  const { totalAmount, groupAmounts, adjTotal, adjItems, supplyAmount, taxAmount } = useContext(DetailCtx);
-  const title = invoiceType === '매입' ? '배차금액 수정' : '청구금액 수정';
+  const font = "'Pretendard GOV', sans-serif";
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
+      <div style={{ width: 400, background: '#fff', borderRadius: 12, border: '1px solid #E4E5E9', boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', display: 'flex', flexDirection: 'column', fontFamily: font }}>
+        {/* Header */}
+        <div style={{ padding: '24px 24px 6px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <span style={{ fontSize: 22, fontWeight: 700, color: '#000000', lineHeight: '32px', letterSpacing: '-0.02em' }}>세금계산서 수정 발행 확정</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="#9197A1" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+        {/* Subtext */}
+        <div style={{ padding: '0 24px', fontSize: 16, fontWeight: 400, color: '#2E3238', lineHeight: '24px', letterSpacing: '-0.02em' }}>
+          세금계산서의 수정된 합계 금액을 확인해 주세요.
+        </div>
+        {/* Amount rows */}
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 12px', background: '#F6F7F8', borderRadius: 8, height: 56 }}>
+            <span style={{ fontSize: 15, fontWeight: 400, color: '#5C6370', lineHeight: '22px', letterSpacing: '-0.02em' }}>기존 합계 금액</span>
+            <span style={{ fontSize: 16, fontWeight: 600, color: '#2E3238', lineHeight: '24px', letterSpacing: '-0.02em' }}>{totals.original.toLocaleString()}원</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 12px', background: '#F6F7F8', borderRadius: 8, height: 56 }}>
+            <span style={{ fontSize: 15, fontWeight: 400, color: '#5C6370', lineHeight: '22px', letterSpacing: '-0.02em' }}>수정 합계 금액</span>
+            <span style={{ fontSize: 16, fontWeight: 600, color: '#2E3238', lineHeight: '24px', letterSpacing: '-0.02em' }}>{totals.current.toLocaleString()}원</span>
+          </div>
+        </div>
+        {/* Buttons */}
+        <div style={{ padding: '0 24px 24px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ height: 52, padding: '0 20px', background: '#fff', border: 'none', borderRadius: 4, fontSize: 18, fontWeight: 600, cursor: 'pointer', color: '#2E3238', letterSpacing: '-0.02em' }}>닫기</button>
+          <button onClick={onConfirm} style={{ height: 52, padding: '0 20px', background: '#005FFF', border: 'none', borderRadius: 4, fontSize: 18, fontWeight: 600, cursor: 'pointer', color: '#fff', letterSpacing: '-0.02em' }}>확정하기</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function CancelEditConfirmModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
+      <div style={{ width: 416, background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', fontFamily: "'Pretendard GOV', sans-serif" }}>
+        {/* Header */}
+        <div style={{ padding: '24px 24px 6px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 22, fontWeight: 700, color: '#000000', lineHeight: '32px', letterSpacing: '-0.02em' }}>세금계산서 수정 발행을 취소하시겠어요?</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center', marginTop: 4 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="#9197A1" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+        {/* Subtext */}
+        <div style={{ padding: '0 24px 0', fontSize: 16, fontWeight: 400, color: '#2E3238', lineHeight: '24px', letterSpacing: '-0.02em' }}>취소할 경우, 수정된 내용은 이전으로 되돌아갑니다.</div>
+        {/* Buttons */}
+        <div style={{ padding: 24, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ height: 52, padding: '0 20px', background: '#fff', border: 'none', borderRadius: 4, fontSize: 18, fontWeight: 600, cursor: 'pointer', color: '#2E3238', letterSpacing: '-0.02em' }}>닫기</button>
+          <button onClick={onConfirm} style={{ height: 52, padding: '0 20px', background: '#005FFF', border: 'none', borderRadius: 4, fontSize: 18, fontWeight: 600, cursor: 'pointer', color: '#fff', letterSpacing: '-0.02em' }}>취소하기</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+type SurchargeRow = { group: string; item: string; note: string; amountStr: string; noteFocused: boolean; amountFocused: boolean };
+
+function SurchargeEditModal({ orderId, invoiceType, onClose, onConfirm }: {
+  orderId: string; invoiceType: '매출' | '매입'; onClose: () => void; onConfirm?: (total: number) => void;
+}) {
   const amountLabel = invoiceType === '매입' ? '배차금액' : '청구금액';
-
-  const [sign, setSign] = React.useState<'+' | '-'>('+');
-  const [adjStr, setAdjStr] = React.useState('');
-  const [afterStr, setAfterStr] = React.useState('');
-  const [confirmed, setConfirmed] = React.useState(false);
-  const [adjFocused, setAdjFocused] = React.useState(false);
-  const [afterFocused, setAfterFocused] = React.useState(false);
-
-  const adjAmt = parseInt(adjStr.replace(/,/g, '') || '0');
-
-  // ── 우측 패널 연산 (isValid보다 먼저 선언) ──────────────────────
-  const newOrderAmount = afterStr ? parseInt(afterStr.replace(/,/g, '')) : originalAmount;
-  const delta = newOrderAmount - originalAmount;
-  const isChanged = delta !== 0;
-  const newAmountTotal = totalAmount + delta;
-  const affectedGroup = DETAIL_ROW_GROUPS[rowIdx] ?? '';
-  const newGroupAmounts: Record<string, number> = Object.fromEntries(
-    Object.entries(groupAmounts).map(([g, v]) =>
-      [g, g === affectedGroup ? v + delta : v]
+  const [rows, setRows] = React.useState<SurchargeRow[]>(
+    SURCHARGE_GROUPS.flatMap(({ group, items }) =>
+      items.map(item => ({ group, item, note: '', amountStr: '', noteFocused: false, amountFocused: false }))
     )
   );
-  const grandTotal = newAmountTotal + adjTotal;
-  const newSupplyAmount = Math.floor(grandTotal / 1.1);
-  const newTaxAmount = grandTotal - newSupplyAmount;
 
-  const supplyError = isChanged && newSupplyAmount <= 0;
-  const isValid = (adjAmt > 0 || afterStr.length > 0) && confirmed && !supplyError;
+  const total = rows.reduce((sum, r) => sum + (parseInt(r.amountStr.replace(/,/g, '')) || 0), 0);
+  const isValid = total > 0;
 
-  // 변경 금액 입력 → 수정 후 자동 계산
-  const handleAdjChange = (raw: string) => {
-    const num = parseInt(raw || '0');
-    setAdjStr(raw ? num.toLocaleString('ko-KR') : '');
-    const newAmt = sign === '+' ? originalAmount + num : originalAmount - num;
-    setAfterStr(num > 0 ? newAmt.toLocaleString('ko-KR') : '');
+  const update = (idx: number, patch: Partial<SurchargeRow>) =>
+    setRows(prev => prev.map((r, i) => i === idx ? { ...r, ...patch } : r));
+
+  const handleAmount = (idx: number, raw: string) => {
+    const digits = raw.replace(/[^0-9]/g, '');
+    update(idx, { amountStr: digits ? parseInt(digits).toLocaleString('ko-KR') : '' });
   };
-
-  // 수정 후 입력 → 변경 금액·토글 역산
-  const handleAfterChange = (raw: string) => {
-    const afterAmt = parseInt(raw || '0');
-    setAfterStr(raw ? afterAmt.toLocaleString('ko-KR') : '');
-    if (!raw) {
-      setAdjStr('');
-      return;
-    }
-    const diff = afterAmt - originalAmount;
-    if (diff >= 0) {
-      setSign('+');
-      setAdjStr(diff > 0 ? diff.toLocaleString('ko-KR') : '');
-    } else {
-      setSign('-');
-      setAdjStr(Math.abs(diff).toLocaleString('ko-KR'));
-    }
-  };
-
-  const handleSignChange = (s: '+' | '-') => {
-    setSign(s);
-    if (adjAmt > 0) {
-      const newAmt = s === '+' ? originalAmount + adjAmt : originalAmount - adjAmt;
-      setAfterStr(newAmt.toLocaleString('ko-KR'));
-    }
-  };
-  const fmt = (n: number) => `${n.toLocaleString('ko-KR')}원`;
 
   const T = (fw: number, fs: number, lh: string, color: string): React.CSSProperties => ({
     fontFamily: "'Pretendard GOV', sans-serif", fontWeight: fw, fontSize: fs,
     lineHeight: lh, letterSpacing: '-0.02em', color,
   });
 
-  const DisabledInput = ({ value }: { value: string }) => (
-    <div style={{ height: 36, padding: '6px 10px', background: '#F6F7F8', border: '1px solid #E4E5E9', borderRadius: 4, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
-      <span style={T(400, 15, '22px', '#767D8A')}>{value}</span>
-    </div>
-  );
-
-  const Divider = () => <div style={{ height: 1, background: '#E4E5E9', alignSelf: 'stretch' }} />;
-
-  const SRow = ({ label, value, bold, sub }: { label: string; value: string; bold?: boolean; sub?: boolean }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <span style={T(bold ? 600 : 400, 15, '22px', sub ? '#9197A1' : bold ? '#2E3238' : '#5C6370')}>{label}</span>
-      <span style={T(bold ? 600 : 400, 15, '22px', sub ? '#9197A1' : bold ? '#2E3238' : '#5C6370')}>{value}</span>
-    </div>
-  );
+  let groupRendered: Record<string, boolean> = {};
 
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
-      <div style={{ width: 800, background: '#FFFFFF', border: '1px solid #E4E5E9', boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius: 12, display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div style={{ width: 800, maxHeight: '90vh', overflowY: 'auto', background: '#FFFFFF', border: '1px solid #E4E5E9', boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius: 12, display: 'flex', flexDirection: 'column' }}>
+
+        {/* 헤더 */}
+        <div style={{ padding: '24px 24px 16px', flexShrink: 0, position: 'relative' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={T(700, 22, '32px', '#000000')}>추가운임</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', height: 26, background: '#EBEDEF', borderRadius: 4 }}>
+                <span style={T(600, 13, '19px', '#454B55')}>{orderId}</span>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ width: 26, height: 26, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+              <svg width="17" height="17" fill="none" viewBox="0 0 17 17">
+                <path d="M0.75 0.75L16.25 16.25" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5"/>
+                <path d="M16.25 0.75L0.75 16.25" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5"/>
+              </svg>
+            </button>
+          </div>
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, background: '#E4E5E9' }} />
+        </div>
+
+        {/* 본문 */}
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+          {/* 컬럼 헤더 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 36, borderBottom: '1px solid #E4E5E9' }}>
+            <span style={{ ...T(600, 16, '24px', '#5C6370'), width: 60, flexShrink: 0 }}>항목</span>
+            <span style={{ ...T(600, 16, '24px', '#5C6370'), opacity: 0, width: 60, flexShrink: 0 }}>&nbsp;</span>
+            <span style={{ ...T(600, 16, '24px', '#5C6370'), flex: 1 }}>&nbsp;</span>
+            <span style={{ ...T(600, 16, '24px', '#5C6370'), width: 302, textAlign: 'left', flexShrink: 0 }}>{amountLabel}</span>
+          </div>
+
+          {/* 항목 행들 */}
+          {rows.map((row, idx) => {
+            const showGroup = !groupRendered[row.group];
+            if (showGroup) groupRendered[row.group] = true;
+            const isRequired = row.item === '기타';
+            return (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 36 }}>
+                {/* 카테고리 레이블 */}
+                <span style={{ ...T(600, 16, '24px', '#2E3238'), width: 60, flexShrink: 0 }}>
+                  {showGroup ? row.group : ''}
+                </span>
+                {/* 항목명 */}
+                <span style={{ ...T(400, 15, '22px', '#2E3238'), width: 60, flexShrink: 0 }}>{row.item}</span>
+                {/* 사유 입력 */}
+                <div style={{ flex: 1, height: 36, display: 'flex', alignItems: 'center', padding: '6px 10px', border: `1px solid ${row.noteFocused ? '#005FFF' : '#E4E5E9'}`, borderRadius: 4, boxSizing: 'border-box', gap: 4 }}>
+                  <input
+                    type="text"
+                    value={row.note}
+                    placeholder={isRequired ? '사유(필수)' : '사유'}
+                    onFocus={() => update(idx, { noteFocused: true })}
+                    onBlur={() => update(idx, { noteFocused: false })}
+                    onChange={e => update(idx, { note: e.target.value })}
+                    style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', ...T(400, 15, '22px', '#2E3238'), padding: 0 }}
+                    className="placeholder:text-[#767d8a]"
+                  />
+                  {row.noteFocused && row.note && (
+                    <span onMouseDown={e => e.preventDefault()}>
+                      <ClearIcon onClick={() => update(idx, { note: '' })} />
+                    </span>
+                  )}
+                </div>
+                {/* 금액 입력 */}
+                <div style={{ width: 302, height: 36, display: 'flex', alignItems: 'center', padding: '6px 10px', border: `1px solid ${row.amountFocused ? '#005FFF' : '#E4E5E9'}`, borderRadius: 4, boxSizing: 'border-box', gap: 4, flexShrink: 0 }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={row.amountStr}
+                    placeholder="0원"
+                    onFocus={() => update(idx, { amountFocused: true })}
+                    onBlur={() => update(idx, { amountFocused: false })}
+                    onChange={e => handleAmount(idx, e.target.value)}
+                    style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', textAlign: 'right', ...T(400, 15, '22px', '#2E3238'), padding: 0 }}
+                    className="placeholder:text-[#767d8a]"
+                  />
+                  {row.amountStr && <span style={T(400, 15, '22px', '#2E3238')}>원</span>}
+                  {row.amountFocused && row.amountStr && (
+                    <span onMouseDown={e => e.preventDefault()}>
+                      <ClearIcon onClick={() => update(idx, { amountStr: '' })} />
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 푸터 */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, padding: '20px 24px 24px', borderTop: '1px solid #E4E5E9', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ width: 71, height: 52, background: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer', ...T(600, 18, '26px', '#2E3238') }}>닫기</button>
+          <button
+            disabled={!isValid}
+            onClick={() => { if (!isValid) return; onConfirm?.(total); }}
+            style={{ width: 102, height: 52, background: isValid ? '#005FFF' : '#CCDFFF', border: 'none', borderRadius: 4, cursor: isValid ? 'pointer' : 'default', ...T(600, 18, '26px', '#FFFFFF') }}
+          >수정하기</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ── 오더 금액 수정 모달 ─────────────────────────────────────────────────────
+function AmountEditModal({
+  rowIdx: _rowIdx, orderId, originalAmount, invoiceType, onClose, onConfirm,
+}: {
+  rowIdx: number; orderId: string; originalAmount: number;
+  invoiceType: '매출' | '매입'; onClose: () => void; onConfirm?: (newAmount: number) => void;
+}) {
+  const title = invoiceType === '매입' ? '배차금액 수정' : '청구금액 수정';
+
+  const [inputStr, setInputStr] = React.useState('');
+  const [focused, setFocused] = React.useState(false);
+
+  const parsedValue = inputStr ? parseInt(inputStr.replace(/,/g, '')) : null;
+  const isValid = parsedValue !== null && parsedValue !== originalAmount;
+
+  const T = (fw: number, fs: number, lh: string, color: string): React.CSSProperties => ({
+    fontFamily: "'Pretendard GOV', sans-serif", fontWeight: fw, fontSize: fs,
+    lineHeight: lh, letterSpacing: '-0.02em', color,
+  });
+
+  const handleChange = (raw: string) => {
+    const digits = raw.replace(/[^0-9]/g, '');
+    if (!digits) { setInputStr(''); return; }
+    setInputStr(parseInt(digits).toLocaleString('ko-KR'));
+  };
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
+      <div style={{ width: 400, background: '#FFFFFF', border: '1px solid #E4E5E9', boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius: 12, display: 'flex', flexDirection: 'column' }}>
 
         {/* ─ 헤더 ─ */}
-        <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid #E4E5E9', flexShrink: 0 }}>
+        <div style={{ padding: '24px 24px 16px', flexShrink: 0, position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={T(700, 22, '32px', '#000000')}>{title}</span>
@@ -8716,186 +8893,53 @@ function AmountEditModal({
               </div>
             </div>
             <button onClick={onClose} style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-              <svg width="17.5" height="17.5" fill="none" viewBox="0 0 17.5 17.5">
-                <path d="M0.75 0.75L16.75 16.75" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5"/>
-                <path d="M16.75 0.75L0.75 16.75" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5"/>
+              <svg width="17" height="17" fill="none" viewBox="0 0 17 17">
+                <path d="M0.75 0.75L16.25 16.25" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5"/>
+                <path d="M16.25 0.75L0.75 16.25" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5"/>
               </svg>
             </button>
           </div>
+          {/* 구분선 */}
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, background: '#E4E5E9' }} />
         </div>
 
-        {/* ─ 콘텐츠 ─ */}
-        <div style={{ display: 'flex' }}>
-
-          {/* 좌측: 수정 전 / 변경 금액 / 수정 후 */}
-          <div style={{ display: 'flex', flexDirection: 'column', padding: 24, gap: 20, width: '50%', flexShrink: 0 }}>
-            {/* 수정 전 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
-              <span style={T(600, 14, '20px', '#2E3238')}>수정 전 금액</span>
-              <DisabledInput value={fmt(originalAmount)} />
-            </div>
-            {/* 변경 금액 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
-              <span style={T(600, 14, '20px', '#2E3238')}>수정 금액</span>
-              <div style={{ display: 'flex', gap: 0, alignItems: 'center', width: '100%' }}>
-                {/* +/- 토글 — 조정금액과 동일한 디자인 */}
-                <div className="content-stretch flex items-center relative shrink-0">
-                  <div className="bg-white h-[36px] min-w-[51px] relative rounded-bl-[4px] rounded-tl-[4px] shrink-0">
-                    <button onClick={() => handleSignChange('+')} className="w-full h-full flex items-center justify-center px-[10px]">
-                      <div aria-hidden className={`absolute inset-0 pointer-events-none border ${sign === '+' ? 'border-[#005fff] rounded-[4px]' : 'border-[#e3e5e9] rounded-tl-[4px] rounded-bl-[4px] border-r-0'}`} />
-                      <svg width="12" height="12" fill="none" viewBox="0 0 12 12"><path d="M6 1V11M1 6H11" stroke={sign === '+' ? '#005FFF' : '#9197A1'} strokeWidth="1.5" strokeLinecap="round"/></svg>
-                    </button>
-                  </div>
-                  <div className="bg-white h-[36px] min-w-[50px] relative rounded-br-[4px] rounded-tr-[4px] shrink-0">
-                    <button onClick={() => handleSignChange('-')} className="flex items-center justify-center size-full px-[12px]">
-                      <svg width="14" height="2" fill="none" viewBox="0 0 14 2"><line stroke={sign === '-' ? '#005FFF' : '#9197A1'} strokeLinecap="round" strokeWidth="1.3" x1="0.65" x2="13.35" y1="1" y2="1"/></svg>
-                    </button>
-                    <div aria-hidden className={`absolute inset-0 pointer-events-none border ${sign === '-' ? 'border-[#005fff] rounded-[4px]' : 'border-[#e3e5e9] rounded-tr-[4px] rounded-br-[4px] border-l-0'}`} />
-                  </div>
-                </div>
-                {/* 변경 금액 — focus 시 clear 아이콘 */}
-                <div style={{ flex: 1, marginLeft: 8, height: 36, display: 'flex', alignItems: 'center', border: `1px solid ${adjFocused ? '#005FFF' : '#E4E5E9'}`, borderRadius: 4, padding: '0 10px', boxSizing: 'border-box', background: '#FFFFFF', gap: 0 }}>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={adjStr}
-                    placeholder="0"
-                    onFocus={() => setAdjFocused(true)}
-                    onBlur={() => setAdjFocused(false)}
-                    onChange={e => handleAdjChange(e.target.value.replace(/[^0-9]/g, ''))}
-                    style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', textAlign: 'right', ...T(400, 15, '22px', '#2E3238'), padding: 0 }}
-                    className="placeholder:text-[#767d8a]"
-                  />
-                  <span style={T(400, 15, '22px', adjStr ? '#2E3238' : '#767D8A')}>원</span>
-                  {adjFocused && adjStr && (
-                    <span style={{ marginLeft: 4, display: 'flex' }} onMouseDown={e => e.preventDefault()}>
-                      <ClearIcon onClick={() => { setAdjStr(''); setAfterStr(''); }} />
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            {/* 수정 후 — 편집 가능, placeholder "0원" 간격 없음 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
-              <span style={T(600, 14, '20px', '#2E3238')}>수정 후 금액</span>
-              {/* 수정 후 — focus 시 clear 아이콘 */}
-              <div style={{ width: '100%', height: 36, display: 'flex', alignItems: 'center', border: `1px solid ${afterFocused ? '#005FFF' : '#E4E5E9'}`, borderRadius: 4, padding: '0 10px', boxSizing: 'border-box', background: '#FFFFFF' }}>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={afterStr}
-                  placeholder="0"
-                  onFocus={() => setAfterFocused(true)}
-                  onBlur={() => setAfterFocused(false)}
-                  onChange={e => handleAfterChange(e.target.value.replace(/[^0-9]/g, ''))}
-                  style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', textAlign: 'right', ...T(400, 15, '22px', '#2E3238'), padding: 0 }}
-                  className="placeholder:text-[#767d8a]"
-                />
-                <span style={T(400, 15, '22px', afterStr ? '#2E3238' : '#767D8A')}>원</span>
-                {afterFocused && afterStr && (
-                  <span style={{ marginLeft: 4, display: 'flex' }} onMouseDown={e => e.preventDefault()}>
-                    <ClearIcon onClick={() => { setAfterStr(''); setAdjStr(''); }} />
-                  </span>
-                )}
-              </div>
-            </div>
+        {/* ─ 본문 ─ */}
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* 기존 금액 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12, background: '#F6F7F8', borderRadius: 4, height: 48, boxSizing: 'border-box' }}>
+            <span style={T(400, 15, '22px', '#5C6370')}>기존 금액</span>
+            <span style={T(600, 16, '24px', '#2E3238')}>{originalAmount.toLocaleString('ko-KR')}원</span>
           </div>
-
-          {/* 수직 구분선 */}
-          <div style={{ width: 1, background: '#E4E5E9', flexShrink: 0 }} />
-
-          {/* 우측 요약 — 콘텐츠 높이가 모달 전체 높이를 결정 */}
-          <div style={{ display: 'flex', flexDirection: 'column', padding: 24, gap: 12, width: '50%', flexShrink: 0 }}>
-            {/* 요약 카드 — 수정 시 파란색 하이라이트 */}
-            <div style={{ background: '#F6F7F8', borderRadius: 8, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
-              {/* 청구/배차금액 합계 → 금액만 파란색 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={T(600, 15, '22px', '#2E3238')}>{amountLabel} 합계</span>
-                <span style={T(600, 15, '22px', isChanged ? '#005FFF' : '#2E3238')}>{fmt(newAmountTotal)}</span>
-              </div>
-              {/* 업무그룹별 합계 → 변경된 그룹 금액만 파란색 */}
-              {Object.entries(newGroupAmounts).map(([group, amt]) => {
-                const groupChanged = isChanged && group === affectedGroup;
-                return (
-                  <div key={group} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={T(400, 15, '22px', '#5C6370')}>{group} {amountLabel}</span>
-                    <span style={T(400, 15, '22px', groupChanged ? '#005FFF' : '#5C6370')}>{fmt(amt)}</span>
-                  </div>
-                );
-              })}
-              <Divider />
-              {/* 조정금액 */}
-              <SRow label="조정금액 합계" value={fmt(adjTotal)} bold />
-              {adjItems.map((item, idx) => (
-                <React.Fragment key={item.id}>
-                  <SRow label={`조정금액 ${idx + 1}`} value={`${item.sign}${fmt(item.amount)}`} />
-                  {item.note && (
-                    <p style={{ ...T(400, 14, '20px', '#9197A1'), margin: 0 }}>사유: {item.note}</p>
-                  )}
-                </React.Fragment>
-              ))}
-              <Divider />
-              {/* 공급가액 / 세액 → 연산값으로 표시 */}
-              <SRow label="공급가액" value={fmt(newSupplyAmount)} bold />
-              <SRow label="세액" value={fmt(newTaxAmount)} bold />
-              <Divider />
-              {/* 합계 금액 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={T(600, 15, '22px', '#2E3238')}>합계 금액</span>
-                <span style={T(700, 22, '32px', '#2E3238')}>{fmt(grandTotal)}</span>
-              </div>
-            </div>
-            {/* 확인 체크박스 — 오더 리스트와 동일한 커스텀 체크박스 */}
-            <div
-              onClick={() => setConfirmed(v => !v)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}
-            >
-              <div
-                style={{
-                  width: 16, height: 16, borderRadius: 3,
-                  border: `1.3px solid ${confirmed ? '#005FFF' : '#ADB1B9'}`,
-                  background: confirmed ? '#005FFF' : '#FFFFFF',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, transition: 'background 0.15s, border-color 0.15s',
-                }}
-              >
-                {confirmed && (
-                  <svg width="10" height="8" fill="none" viewBox="0 0 10 8">
-                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </div>
-              <span style={T(400, 15, '22px', '#5C6370')}>최종 변경 금액을 확인했습니다.</span>
-            </div>
+          {/* 입력 필드 */}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '6px 10px', height: 36, border: `1px solid ${focused ? '#005FFF' : '#E4E5E9'}`, borderRadius: 4, boxSizing: 'border-box', background: '#FFFFFF' }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={inputStr}
+              placeholder="0원"
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              onChange={e => handleChange(e.target.value)}
+              style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', textAlign: 'right', ...T(400, 15, '22px', '#2E3238'), padding: 0 }}
+              className="placeholder:text-[#767d8a]"
+            />
+            {inputStr && <span style={{ ...T(400, 15, '22px', '#2E3238'), flexShrink: 0 }}>원</span>}
+            {focused && inputStr && (
+              <span style={{ marginLeft: 4 }} onMouseDown={e => e.preventDefault()}>
+                <ClearIcon onClick={() => setInputStr('')} />
+              </span>
+            )}
           </div>
         </div>
 
         {/* ─ 푸터 ─ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '20px 24px 24px', borderTop: '1px solid #E4E5E9', flexShrink: 0 }}>
-          {/* 공급가액 0원 에러 메시지 */}
-          {supplyError && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: '#FEF0F0', border: '1px solid #F9C6C6', borderRadius: 6 }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-                <circle cx="8" cy="8" r="7" fill="#DD2222"/>
-                <path d="M8 4.5V8.5M8 10.5V11" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              <span style={{ ...T(400, 14, '20px', '#DD2222') }}>공급가액이 0원을 초과하도록 금액을 입력해 주세요.</span>
-            </div>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <button onClick={onClose} style={{ padding: '0 20px', width: 71, height: 52, background: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer', ...T(600, 18, '26px', '#2E3238') }}>취소</button>
-            <button
-              disabled={!isValid}
-              onClick={() => {
-                if (!isValid) return;
-                const finalAmount = afterStr
-                  ? parseInt(afterStr.replace(/,/g, ''))
-                  : sign === '+' ? originalAmount + adjAmt : originalAmount - adjAmt;
-                onConfirm?.(finalAmount);
-              }}
-              style={{ padding: '0 20px', width: 102, height: 52, background: isValid ? '#005FFF' : '#CCDFFF', border: 'none', borderRadius: 4, cursor: isValid ? 'pointer' : 'not-allowed', ...T(600, 18, '26px', '#FFFFFF') }}
-            >수정하기</button>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, padding: '20px 24px 24px', borderTop: '1px solid #E4E5E9', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ width: 71, height: 52, background: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer', ...T(600, 18, '26px', '#2E3238') }}>닫기</button>
+          <button
+            disabled={!isValid}
+            onClick={() => { if (!isValid || parsedValue === null) return; onConfirm?.(parsedValue); }}
+            style={{ width: 102, height: 52, background: isValid ? '#005FFF' : '#CCDFFF', border: 'none', borderRadius: 4, cursor: isValid ? 'pointer' : 'default', ...T(600, 18, '26px', '#FFFFFF') }}
+          >수정하기</button>
         </div>
       </div>
     </div>,
@@ -8905,12 +8949,12 @@ function AmountEditModal({
 
 function Contents() {
   const tableRef = useRef<HTMLDivElement>(null);
-  const { setTotalAmount, setGroupAmounts, totalAmount, groupAmounts, excludedIndices, invoiceType, rowStatus, isEditMode } = useContext(DetailCtx);
+  const { setTotalAmount, setGroupAmounts, totalAmount, groupAmounts, excludedIndices, invoiceType, rowStatus, isEditMode, hasEditChangesRef, amendTotalsRef } = useContext(DetailCtx);
   const amountColLabel = invoiceType === '매입' ? '배차금액 합계' : '청구금액 합계';
   const amountLabelShort = invoiceType === '매입' ? '배차금액' : '청구금액';
-  const [editingCell, setEditingCell] = React.useState<{ rowIdx: number; amount: number; orderId: string } | null>(null);
-  // 수정된 금액 오버라이드 (rowIdx → 새 금액)
+  const [editingCell, setEditingCell] = React.useState<{ rowIdx: number; amount: number; orderId: string; colType: 'billing' | 'surcharge' } | null>(null);
   const [amountOverrides, setAmountOverrides] = React.useState<Record<number, number>>({});
+  const [surchargeOverrides, setSurchargeOverrides] = React.useState<Record<number, number>>({});
   // 수정 완료 토스트
   const [amendToast, setAmendToast] = React.useState<{ orderId: string } | null>(null);
   React.useEffect(() => {
@@ -8946,10 +8990,15 @@ function Contents() {
         '요청 차량':   i => DETAIL_ROW_DATA[i].vehicle,
         '요청 차량 특성': i => DETAIL_ROW_DATA[i].vchar,
         '차량번호':    i => String(DETAIL_ROW_DATA[i].plate),
-        [amountColLabel]: i => (amountOverrides[i] ?? DETAIL_ROW_DATA[i].amount).toLocaleString(),
+        '청구금액':    i => (amountOverrides[i] ?? DETAIL_ROW_DATA[i].amount).toLocaleString(),
+        '배차금액':    i => (amountOverrides[i] ?? DETAIL_ROW_DATA[i].amount).toLocaleString(),
+        '추가운임':    i => (surchargeOverrides[i] ?? 0).toLocaleString(),
+        [amountColLabel]: i => ((amountOverrides[i] ?? DETAIL_ROW_DATA[i].amount) + (surchargeOverrides[i] ?? 0)).toLocaleString(),
         '금액메모':    i => DETAIL_ROW_DATA[i].memo,
       };
-      const isAmountCol = header === amountColLabel;
+      const isAmountSumCol = header === amountColLabel;
+      const isBillingCol = isEditMode && header === amountLabelShort;
+      const isSurchargeCol = isEditMode && header === '추가운임';
       const colFn = COL_MAP[header];
       cells.forEach((c) => parent.removeChild(c));
       let tplIdx = 0;
@@ -8961,78 +9010,77 @@ function Contents() {
           const p = cell.querySelector('p');
           if (p) p.textContent = colFn(i);
         }
-        if (isAmountCol) {
-          const cellAmount = amountOverrides[i] ?? DETAIL_ROW_DATA[i].amount;
+        if (isAmountSumCol) {
+          const cellAmount = (amountOverrides[i] ?? DETAIL_ROW_DATA[i].amount) + (surchargeOverrides[i] ?? 0);
           rowAmounts[i] = cellAmount;
           total += cellAmount;
+        }
+        if (isBillingCol || isSurchargeCol) {
+          const currentAmount = isBillingCol
+            ? (amountOverrides[i] ?? DETAIL_ROW_DATA[i].amount)
+            : (surchargeOverrides[i] ?? 0);
+          const amountText = currentAmount.toLocaleString();
 
-          // 수정 발행 모드: 금액 텍스트 옆에 수정 버튼 추가
-          if (isEditMode) {
-            const amountText = (amountOverrides[i] ?? DETAIL_ROW_DATA[i].amount).toLocaleString();
+          while (cell.firstChild) cell.removeChild(cell.firstChild);
+          Object.assign(cell.style, {
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 8px',
+            gap: '6px',
+            boxSizing: 'border-box',
+            borderBottom: '1px solid #E4E5E9',
+          });
 
-            // 셀 내부 초기화 후 border-bottom 복원
-            while (cell.firstChild) cell.removeChild(cell.firstChild);
-            Object.assign(cell.style, {
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 8px',
-              gap: '6px',
-              boxSizing: 'border-box',
-              borderBottom: '1px solid #E4E5E9',
-            });
+          const textEl = document.createElement('span');
+          Object.assign(textEl.style, {
+            fontFamily: "'Pretendard GOV', sans-serif",
+            fontWeight: '400',
+            fontSize: '15px',
+            lineHeight: '22px',
+            letterSpacing: '-0.02em',
+            color: '#2E3238',
+            flex: '1',
+            minWidth: '0',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          });
+          textEl.textContent = amountText;
+          cell.appendChild(textEl);
 
-            // 금액 텍스트
-            const textEl = document.createElement('span');
-            Object.assign(textEl.style, {
-              fontFamily: "'Pretendard GOV', sans-serif",
-              fontWeight: '400',
-              fontSize: '15px',
-              lineHeight: '22px',
-              letterSpacing: '-0.02em',
-              color: '#2E3238',
-              flex: '1',
-              minWidth: '0',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            });
-            textEl.textContent = amountText;
-            cell.appendChild(textEl);
-
-            // 수정 버튼 (40×26, white border, 14SB)
-            const editBtn = document.createElement('button');
-            editBtn.dataset.editBtn = 'true';
-            Object.assign(editBtn.style, {
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'center',
-              alignItems: 'center',
-              padding: '0px 8px',
-              width: '40px',
-              height: '26px',
-              minWidth: '40px',
-              background: '#FFFFFF',
-              border: '1px solid #E4E5E9',
-              borderRadius: '2px',
-              cursor: 'pointer',
-              flexShrink: '0',
-              fontFamily: "'Pretendard GOV', sans-serif",
-              fontWeight: '600',
-              fontSize: '14px',
-              lineHeight: '20px',
-              letterSpacing: '-0.02em',
-              color: '#2E3238',
-              whiteSpace: 'nowrap',
-              boxSizing: 'border-box',
-            });
-            editBtn.textContent = '수정';
-            editBtn.addEventListener('click', () => {
-              setEditingCell({ rowIdx: i, amount: DETAIL_ROW_DATA[i].amount, orderId: ORDER_IDS[i] });
-            });
-            cell.appendChild(editBtn);
-          }
+          const editBtn = document.createElement('button');
+          editBtn.dataset.editBtn = 'true';
+          Object.assign(editBtn.style, {
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '0px 8px',
+            width: '40px',
+            height: '26px',
+            minWidth: '40px',
+            background: '#FFFFFF',
+            border: '1px solid #E4E5E9',
+            borderRadius: '2px',
+            cursor: 'pointer',
+            flexShrink: '0',
+            fontFamily: "'Pretendard GOV', sans-serif",
+            fontWeight: '600',
+            fontSize: '14px',
+            lineHeight: '20px',
+            letterSpacing: '-0.02em',
+            color: '#2E3238',
+            whiteSpace: 'nowrap',
+            boxSizing: 'border-box',
+          });
+          editBtn.textContent = '수정';
+          const colType = isBillingCol ? 'billing' : 'surcharge';
+          editBtn.addEventListener('click', () => {
+            setEditingCell({ rowIdx: i, amount: currentAmount, orderId: ORDER_IDS[i], colType });
+          });
+          cell.appendChild(editBtn);
         }
         parent.appendChild(cell);
         tplIdx++;
@@ -9058,7 +9106,7 @@ function Contents() {
           el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
         }
         if (newRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { c.style.backgroundColor = 'rgba(246, 247, 248, 0.5)'; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { c.style.backgroundColor = '#F5F9FF'; });
         }
         hoveredRow = newRow;
       }
@@ -9075,7 +9123,15 @@ function Contents() {
     el.addEventListener('mouseover', over);
     el.addEventListener('mouseout', out);
     return () => { el.removeEventListener('mouseover', over); el.removeEventListener('mouseout', out); };
-  }, [excludedIndices, isEditMode, amountOverrides]);
+  }, [excludedIndices, isEditMode, amountOverrides, surchargeOverrides]);
+
+  React.useEffect(() => {
+    if (amendTotalsRef) {
+      const billing = Object.values(amountOverrides).reduce((s, v) => s + v, 0);
+      const surcharge = Object.values(surchargeOverrides).reduce((s, v) => s + v, 0);
+      amendTotalsRef.current = { billing, surcharge };
+    }
+  }, [amountOverrides, surchargeOverrides, amendTotalsRef]);
 
   return (
     /* Contents: padding 0 32px, flex-col */
@@ -9093,7 +9149,7 @@ function Contents() {
         {/* Table_Control_Module: 항상 표시, 확정대기만 오더 추가/제외 표시 */}
         <div style={{
           display: 'flex', flexDirection: 'row', justifyContent: 'space-between',
-          alignItems: 'center', padding: '0px 0px 8px 0px', width: '1167px', height: 44, flexShrink: 0,
+          alignItems: 'center', padding: '8px 0px 8px 0px', width: '1167px', height: 52, flexShrink: 0,
         }}>
           {/* 좌측: 오더 추가, 오더 제외 — 확정대기만 */}
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -9114,7 +9170,7 @@ function Contents() {
         </div>
       </div>
       {/* 금액 수정 모달 */}
-      {editingCell && (
+      {editingCell && editingCell.colType === 'billing' && (
         <AmountEditModal
           rowIdx={editingCell.rowIdx}
           orderId={editingCell.orderId}
@@ -9123,17 +9179,28 @@ function Contents() {
           onClose={() => setEditingCell(null)}
           onConfirm={(newAmount) => {
             const delta = newAmount - editingCell.amount;
-            // 셀 금액 업데이트
             setAmountOverrides(prev => ({ ...prev, [editingCell.rowIdx]: newAmount }));
-            // 우측 패널 합계 업데이트
+            if (hasEditChangesRef) hasEditChangesRef.current = true;
             setTotalAmount(totalAmount + delta);
             const affGroup = DETAIL_ROW_GROUPS[editingCell.rowIdx] ?? '';
             const updatedGroups = { ...groupAmounts };
-            if (affGroup && updatedGroups[affGroup] !== undefined) {
-              updatedGroups[affGroup] += delta;
-            }
+            if (affGroup && updatedGroups[affGroup] !== undefined) updatedGroups[affGroup] += delta;
             setGroupAmounts(updatedGroups);
-            // 토스트 + 모달 닫기
+            setAmendToast({ orderId: editingCell.orderId });
+            setEditingCell(null);
+          }}
+        />
+      )}
+      {editingCell && editingCell.colType === 'surcharge' && (
+        <SurchargeEditModal
+          orderId={editingCell.orderId}
+          invoiceType={invoiceType}
+          onClose={() => setEditingCell(null)}
+          onConfirm={(newAmount) => {
+            const delta = newAmount - editingCell.amount;
+            setSurchargeOverrides(prev => ({ ...prev, [editingCell.rowIdx]: newAmount }));
+            if (hasEditChangesRef) hasEditChangesRef.current = true;
+            setTotalAmount(totalAmount + delta);
             setAmendToast({ orderId: editingCell.orderId });
             setEditingCell(null);
           }}
@@ -9728,7 +9795,7 @@ function EditModeBanner() {
         lineHeight: '20px', letterSpacing: '-0.02em', color: '#005FFF',
         flexShrink: 0,
       }}>
-        세금계산서 수정 발행 중입니다. {amountLabel}과 조정금액을 수정할 수 있습니다.
+        세금계산서 수정 발행 중입니다. {amountLabel}, 추가운임, 조정금액을 수정할 수 있습니다.
       </p>
     </div>
   );
@@ -9794,6 +9861,26 @@ export default function Component10({ invoiceId, rowStatus, invoiceType = '매�
   const [showSaveToast, setShowSaveToast] = useState(false);
   const [showSaveErrorToast, setShowSaveErrorToast] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [confirmAmendOpen, setConfirmAmendOpen] = useState(false);
+  const [confirmAmendTotals, setConfirmAmendTotals] = useState<{ original: number; current: number }>({ original: 0, current: 0 });
+  const hasEditChangesRef = React.useRef(false);
+  const amendTotalsRef = React.useRef<{ billing: number; surcharge: number }>({ billing: 0, surcharge: 0 });
+  const originalTotalRef = React.useRef(0);
+  const totalAmountRef = React.useRef(totalAmount);
+  React.useEffect(() => { totalAmountRef.current = totalAmount; }, [totalAmount]);
+  React.useEffect(() => { if (isEditMode) { originalTotalRef.current = totalAmountRef.current; } }, [isEditMode]);
+  const onCancelEditMode = React.useCallback(() => {
+    if (hasEditChangesRef.current) { setCancelConfirmOpen(true); } else { setIsEditMode(false); }
+  }, []);
+  const onConfirmAmend = React.useCallback(() => {
+    if (hasEditChangesRef.current) {
+      setConfirmAmendTotals({ original: originalTotalRef.current, current: totalAmountRef.current });
+      setConfirmAmendOpen(true);
+    } else {
+      setIsEditMode(false);
+    }
+  }, []);
   const adjTotal = adjItems.reduce((s, it) => s + (it.sign === '+' ? it.amount : -it.amount), 0);
   useEffect(() => {
     if (!showAddOrderToast) return;
@@ -9814,10 +9901,12 @@ export default function Component10({ invoiceId, rowStatus, invoiceType = '매�
   const supplyAmount = Math.round(finalAmount / 1.1);
   const taxAmount = finalAmount - supplyAmount;
   return (
-    <DetailCtx.Provider value={{ invoiceId, rowStatus: currentStatus, invoiceType, shipper, shipperGroup, period, onClose: handleClose, totalAmount, supplyAmount, taxAmount, adjTotal, setTotalAmount, groupAmounts, setGroupAmounts, adjItems, setAdjItems: setAdjItems as (fn: AdjItem[] | ((p: AdjItem[]) => AdjItem[])) => void, setCurrentStatus, addOrderOpen, setAddOrderOpen, taxInvoiceOpen, setTaxInvoiceOpen, showTaxToast, setShowTaxToast, confirmInvoiceOpen, setConfirmInvoiceOpen, showConfirmToast, setShowConfirmToast, excludeModalOpen, setExcludeModalOpen, showExcludeToast, setShowExcludeToast, excludedIndices, setExcludedIndices, addedOrders, setAddedOrders: setAddedOrders as (fn: Set<string> | ((p: Set<string>) => Set<string>)) => void, showAddOrderToast, setShowAddOrderToast, addedOrderCount, setAddedOrderCount, showSaveToast, setShowSaveToast, showSaveErrorToast, setShowSaveErrorToast, isEditMode, setIsEditMode }}>
+    <DetailCtx.Provider value={{ invoiceId, rowStatus: currentStatus, invoiceType, shipper, shipperGroup, period, onClose: handleClose, totalAmount, supplyAmount, taxAmount, adjTotal, setTotalAmount, groupAmounts, setGroupAmounts, adjItems, setAdjItems: setAdjItems as (fn: AdjItem[] | ((p: AdjItem[]) => AdjItem[])) => void, setCurrentStatus, addOrderOpen, setAddOrderOpen, taxInvoiceOpen, setTaxInvoiceOpen, showTaxToast, setShowTaxToast, confirmInvoiceOpen, setConfirmInvoiceOpen, showConfirmToast, setShowConfirmToast, excludeModalOpen, setExcludeModalOpen, showExcludeToast, setShowExcludeToast, excludedIndices, setExcludedIndices, addedOrders, setAddedOrders: setAddedOrders as (fn: Set<string> | ((p: Set<string>) => Set<string>)) => void, showAddOrderToast, setShowAddOrderToast, addedOrderCount, setAddedOrderCount, showSaveToast, setShowSaveToast, showSaveErrorToast, setShowSaveErrorToast, isEditMode, setIsEditMode, onCancelEditMode, hasEditChangesRef, onConfirmAmend, amendTotalsRef }}>
       <div className="bg-white relative size-full" data-name="3.1.5 매출 거래명세서_화주사 - 매출 거래명세서 상세(확정대기)">
         <Ui />
       </div>
+      {cancelConfirmOpen && <CancelEditConfirmModal onClose={() => setCancelConfirmOpen(false)} onConfirm={() => { setCancelConfirmOpen(false); setIsEditMode(false); hasEditChangesRef.current = false; }} />}
+      {confirmAmendOpen && <ConfirmAmendModal totals={confirmAmendTotals} onClose={() => setConfirmAmendOpen(false)} onConfirm={() => { setConfirmAmendOpen(false); setIsEditMode(false); hasEditChangesRef.current = false; }} />}
       {addOrderOpen && <AddOrderModal />}
       {taxInvoiceOpen && <TaxInvoiceModal />}
       {showTaxToast && <TaxToast onClose={() => setShowTaxToast(false)} />}

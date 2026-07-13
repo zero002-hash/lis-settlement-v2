@@ -14035,10 +14035,10 @@ function Con() {
       const newRow = cell?.dataset.tableRow ?? null;
       if (newRow !== hoveredRow) {
         if (hoveredRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = ''; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
         }
         if (newRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = 'rgba(246, 247, 248, 0.5)'; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { c.style.backgroundColor = 'rgba(246, 247, 248, 0.5)'; });
         }
         hoveredRow = newRow;
       }
@@ -14052,7 +14052,7 @@ function Con() {
       const relatedTarget = (e as MouseEvent).relatedTarget as HTMLElement | null;
       if (!relatedTarget || !el.contains(relatedTarget)) {
         if (hoveredRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = ''; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
           hoveredRow = null;
         }
       }

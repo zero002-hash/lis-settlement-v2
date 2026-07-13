@@ -41,11 +41,20 @@ const PARTNERS_314 = [
 ];
 const PARTNER_ROW_DATA_314 = PARTNERS_314;
 
+const SHIPPER_GROUPS_314: Record<string, string[]> = {
+  '(주)글로벌로지스':   ['기본그룹', 'A그룹', 'B그룹'],
+  '(주)케이로지스틱스': ['기본그룹', '수도권팀', '지방팀'],
+  '(주)판교물류솔루션': ['기본그룹', '판교팀'],
+  '(주)수원익스프레스': ['기본그룹', '수원팀'],
+  '(주)동탄스마트물류': ['기본그룹', '동탄팀', 'C그룹'],
+};
+const PARTNER_GROUPS_314: Record<string, string[]> = PARTNERS_314.reduce((acc, n) => { acc[n] = ['기본그룹', 'A그룹', 'B그룹']; return acc; }, {} as Record<string, string[]>);
+
 interface DateFilterCtxType314 { rangeStart: Date|null; rangeEnd: Date|null; setRangeStart: (d: Date|null) => void; setRangeEnd: (d: Date|null) => void; }
 const DateFilterCtx314 = createContext<DateFilterCtxType314>({ rangeStart: null, rangeEnd: null, setRangeStart: () => {}, setRangeEnd: () => {} });
 
-interface BubbleCtxType314 { shipperSelected: Set<number>; setShipperSelected: (s: Set<number>) => void; partnerSelected: Set<number>; setPartnerSelected: (s: Set<number>) => void; }
-const BubbleCtx314 = createContext<BubbleCtxType314>({ shipperSelected: new Set(), setShipperSelected: () => {}, partnerSelected: new Set(), setPartnerSelected: () => {} });
+interface BubbleCtxType314 { shipperSelected: Set<number>; setShipperSelected: (s: Set<number>) => void; partnerSelected: Set<number>; setPartnerSelected: (s: Set<number>) => void; shipperGroupSelected314: Set<string>; setShipperGroupSelected314: (s: Set<string>) => void; partnerGroupSelected314: Set<string>; setPartnerGroupSelected314: (s: Set<string>) => void; }
+const BubbleCtx314 = createContext<BubbleCtxType314>({ shipperSelected: new Set(), setShipperSelected: () => {}, partnerSelected: new Set(), setPartnerSelected: () => {}, shipperGroupSelected314: new Set(), setShipperGroupSelected314: () => {}, partnerGroupSelected314: new Set(), setPartnerGroupSelected314: () => {} });
 
 const DynamicCountCtx314 = createContext<{ saleCounts: number[]; saleTotalAmount: number }>({ saleCounts: [], saleTotalAmount: 0 });
 
@@ -61,15 +70,26 @@ const PER_ROW_SALE_AMOUNT_314: Record<string, number> = {
 const PageCtx314 = createContext<{ currentPage: number; setCurrentPage: (n: number) => void; filteredTotal: number; setFilteredTotal: (n: number) => void }>({ currentPage: 1, setCurrentPage: () => {}, filteredTotal: 5000, setFilteredTotal: () => {} });
 const FilterCtx314 = createContext<{ selected: Set<number>; setSelected: (s: Set<number>) => void }>({ selected: new Set([0]), setSelected: () => {} });
 
-function DashboardCard({ label, amount, active, onClick }: { label: string; amount: string; active: boolean; onClick?: () => void }) {
+function DashboardCard({ label, amount, active, onClick, rawAmount }: { label: string; amount: string; active: boolean; onClick?: () => void; rawAmount?: number }) {
+  const [tooltipVisible, setTooltipVisible] = useState(false);
   return (
     <div
       onClick={onClick}
       className={`relative rounded-[8px] flex-1 min-w-0 h-[72px] flex flex-col items-start px-[16px] py-[12px] ${active ? "bg-white" : "bg-[#f6f7f8] hover:bg-[#EBEDEF]"} ${onClick ? "cursor-pointer select-none" : ""}`}
     >
       {active && <div aria-hidden className="absolute border border-[#EBEDEF] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-      <p className="font-['Pretendard_GOV:SemiBold'] text-[#5c6370] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis">{label}</p>
-      <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis">{amount}</p>
+      <p className="font-['Pretendard_GOV:SemiBold'] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: label.startsWith('마감필요') ? '#DD2222' : label.startsWith('정산대기') ? '#18AC42' : label.startsWith('지급대기') ? '#005FFF' : '#5c6370' }}>{label}</p>
+      <div style={{ position: 'relative' }} onMouseEnter={() => setTooltipVisible(true)} onMouseLeave={() => setTooltipVisible(false)}>
+        <p className="font-['Pretendard_GOV:SemiBold'] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: label.startsWith('마감필요') ? '#DD2222' : label.startsWith('정산대기') ? '#18AC42' : label.startsWith('지급대기') ? '#005FFF' : label.startsWith('정산보류') ? '#9197A1' : '#2e3238' }}>{amount}</p>
+        {tooltipVisible && rawAmount !== undefined && rawAmount > 0 && (
+          <div style={{ position: 'absolute', left: 'calc(100% + 2px)', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', zIndex: 9999, pointerEvents: 'none', whiteSpace: 'nowrap' }}>
+            <div style={{ width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderRight: '6px solid rgba(0,0,0,0.84)' }} />
+            <div style={{ background: 'rgba(0,0,0,0.84)', borderRadius: 4, padding: '4px' }}>
+              <span style={{ fontFamily: "'Pretendard GOV', sans-serif", fontSize: 12, fontWeight: 400, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: '18px' }}>{rawAmount.toLocaleString()}원</span>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -98,12 +118,16 @@ function StatusCardRowLarge({ items }: { items: { label: string; amount: string 
     }
   };
 
+  const isAllSelected314 = selected.has(0);
   const dynamicItems = saleCounts.length > 0 ? items.map((item, i) => {
-    if (i === 0) return { ...item, label: `전체 (${saleCounts[0].toLocaleString()}건)`, amount: formatKorean(saleTotalAmount) };
     const rawLabel = item.label.split(' (')[0];
     const count = saleCounts[i] ?? 0;
     const perRow = PER_ROW_SALE_AMOUNT_314[rawLabel] ?? 0;
-    return { ...item, label: `${rawLabel} (${count.toLocaleString()}건)`, amount: formatKorean(count * perRow) };
+    const ownAmount = count * perRow;
+    if (i === 0) {
+      return { ...item, label: `전체 (${saleCounts[0].toLocaleString()}건)`, amount: formatKorean(saleTotalAmount), rawAmount: saleTotalAmount };
+    }
+    return { ...item, label: `${rawLabel} (${count.toLocaleString()}건)`, amount: formatKorean(ownAmount), rawAmount: ownAmount };
   }) : items;
 
   return (
@@ -111,7 +135,7 @@ function StatusCardRowLarge({ items }: { items: { label: string; amount: string 
       <div className="bg-[#f6f7f8] rounded-[8px] flex-1 flex flex-col justify-center items-start p-[4px] gap-[12px]" style={{height: 80}}>
         <div className="flex gap-[4px] w-full" style={{height: 72}}>
           {dynamicItems.map((item, i) => (
-            <DashboardCard key={item.label} label={item.label.replace("건)", ")")} amount={item.amount} active={selected.has(i)} onClick={() => handleClick(i)} />
+            <DashboardCard key={item.label} label={item.label.replace("건)", ")")} amount={item.amount} active={selected.has(i)} onClick={() => handleClick(i)} rawAmount={(item as any).rawAmount} />
           ))}
         </div>
       </div>
@@ -205,6 +229,7 @@ function Frame682() {
 }
 
 function Frame720() {
+  const [hoveredTab, setHoveredTab] = useState<string|null>(null);
   const { activeTab, setActiveTab } = useContext(MaeIpSubTabCtx);
   const tabs: MaeIpSubTab[] = ["정보망배차", "정보망배차(바로선지급)", "정보망배차(픽커)", "소속기사배차", "협력사위탁"];
   return (
@@ -215,10 +240,12 @@ function Frame720() {
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            className={`content-stretch flex gap-[4px] h-[44px] items-center justify-center px-[12px] py-[8px] relative shrink-0 cursor-pointer rounded-[8px] ${isActive ? "bg-[#f6f7f8]" : "hover:bg-[#EBEDEF]"}`}
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'8px 12px', gap:4, height:48, border:'none', borderBottom: isActive ? '2px solid #17191D' : '2px solid transparent', background:'transparent', cursor:'pointer', flexShrink:0, boxSizing:'border-box' }}
             data-name="Tab_Atom"
+            onMouseEnter={() => setHoveredTab(t)}
+            onMouseLeave={() => setHoveredTab(null)}
           >
-            <p className={`[word-break:break-word] font-['Pretendard_GOV:SemiBold'] leading-[24px] not-italic relative shrink-0 text-[16px] tracking-[-0.32px] whitespace-nowrap ${isActive ? "text-[#2e3238]" : "text-[#5c6370]"}`}>{t}</p>
+            <p style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, lineHeight:'24px', letterSpacing:'-0.02em', color: isActive ? '#2E3238' : hoveredTab === t ? '#17191D' : '#5C6370', whiteSpace:'nowrap' }}>{t}</p>
           </button>
         );
       })}
@@ -228,7 +255,7 @@ function Frame720() {
 
 function Frame3() {
   return (
-    <div className="content-stretch flex items-center py-[6px] relative shrink-0 w-full">
+    <div className="content-stretch flex items-center relative shrink-0 w-full">
       <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
       <Frame720 />
     </div>
@@ -574,12 +601,8 @@ function SwitchModule({ rangeStart, rangeEnd, setRangeStart, setRangeEnd }: {
 
       {open && wrapRect && createPortal(
         <div ref={panelRef} style={{ position: 'fixed', top: wrapRect.bottom + 4, left: wrapRect.left + wrapRect.width / 2 - 138, width: 276, background: '#FFFFFF', border: '1px solid #E4E5E9', borderRadius: 8, boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', zIndex: 99999, display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 12px 0', boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', width: 252, height: 36 }}>
-            <div onClick={() => setTab('current')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: tab === 'current' ? '1px solid #669FFF' : '1px solid #E4E5E9', borderRight: 'none', borderRadius: '4px 0 0 4px', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: tab === 'current' ? 600 : 400, color: tab === 'current' ? '#005FFF' : '#5C6370', letterSpacing: '-0.02em', background: '#FFFFFF' }}>현재 날짜 기준</div>
-            <div onClick={() => setTab('fixed')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: tab === 'fixed' ? '1px solid #669FFF' : '1px solid #E4E5E9', borderRadius: '0 4px 4px 0', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: tab === 'fixed' ? 600 : 400, color: tab === 'fixed' ? '#005FFF' : '#5C6370', letterSpacing: '-0.02em', background: '#FFFFFF' }}>고정 날짜</div>
-          </div>
           <div style={{ width: 252, height: 36, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 4px', boxSizing: 'border-box' }}>
-            <span style={{ fontFamily: "'Pretendard GOV:Bold'", fontSize: 18, fontWeight: 700, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
+            <span style={{ fontFamily: "'Pretendard GOV:SemiBold'", fontSize: 18, fontWeight: 600, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
             <div style={{ display: 'flex', gap: 4 }}>
               {([[-1, 'M4.5 1L0.5 5L4.5 9'], [1, 'M0.5 1L4.5 5L0.5 9']] as [number, string][]).map(([dir, d]) => (
                 <button key={dir} onClick={() => { const dt = new Date(viewYear, viewMonth + dir, 1); setViewYear(dt.getFullYear()); setViewMonth(dt.getMonth()); }} style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -678,7 +701,7 @@ function Calender() {
 }
 
 function BubbleFilter314() {
-  const { shipperSelected, setShipperSelected, partnerSelected, setPartnerSelected } = useContext(BubbleCtx314);
+  const { shipperSelected, setShipperSelected, partnerSelected, setPartnerSelected, shipperGroupSelected314, setShipperGroupSelected314, partnerGroupSelected314, setPartnerGroupSelected314 } = useContext(BubbleCtx314);
   const [shipperOpen, setShipperOpen] = useState(false);
   const [shipperSearch, setShipperSearch] = useState('');
   const [shipperHovered, setShipperHovered] = useState(false);
@@ -694,6 +717,21 @@ function BubbleFilter314() {
   const partnerBtnRef = useRef<HTMLDivElement>(null);
   const partnerDropRef = useRef<HTMLDivElement>(null);
   const [partnerDropPos, setPartnerDropPos] = useState<{ top: number; left: number } | null>(null);
+
+  // 화주사 업무그룹
+  const [sgrpOpen314, setSgrpOpen314] = useState(false);
+  const [sgrpHovered314, setSgrpHovered314] = useState(false);
+  const [sgrpItemHov314, setSgrpItemHov314] = useState<string|null>(null);
+  const sgrpBtnRef314 = useRef<HTMLDivElement>(null);
+  const sgrpDropRef314 = useRef<HTMLDivElement>(null);
+  const [sgrpDropPos314, setSgrpDropPos314] = useState<{ top: number; left: number } | null>(null);
+  // 협력사(협력사위탁탭) 업무그룹
+  const [pgrpOpen314, setPgrpOpen314] = useState(false);
+  const [pgrpHovered314, setPgrpHovered314] = useState(false);
+  const [pgrpItemHov314, setPgrpItemHov314] = useState<string|null>(null);
+  const pgrpBtnRef314 = useRef<HTMLDivElement>(null);
+  const pgrpDropRef314 = useRef<HTMLDivElement>(null);
+  const [pgrpDropPos314, setPgrpDropPos314] = useState<{ top: number; left: number } | null>(null);
 
   const shipperBg = shipperOpen ? '#eef3ff' : shipperSelected.size > 0 ? '#f5f9ff' : shipperHovered ? '#f6f7f8' : '#f6f7f8';
   const shipperBorder = shipperOpen ? '1px solid transparent' : shipperSelected.size > 0 ? '1px solid transparent' : shipperHovered ? '1px solid #E4E5E9' : '1px solid transparent';
@@ -721,12 +759,30 @@ function BubbleFilter314() {
     return () => document.removeEventListener('mousedown', handler);
   }, [partnerOpen]);
 
+  useEffect(() => {
+    if (!sgrpOpen314) return;
+    const h = (e: MouseEvent) => { if (!sgrpBtnRef314.current?.contains(e.target as Node) && !sgrpDropRef314.current?.contains(e.target as Node)) setSgrpOpen314(false); };
+    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h);
+  }, [sgrpOpen314]);
+  useEffect(() => {
+    if (!pgrpOpen314) return;
+    const h = (e: MouseEvent) => { if (!pgrpBtnRef314.current?.contains(e.target as Node) && !pgrpDropRef314.current?.contains(e.target as Node)) setPgrpOpen314(false); };
+    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h);
+  }, [pgrpOpen314]);
+
   const partnerBg = partnerOpen ? '#eef3ff' : partnerSelected.size > 0 ? '#f5f9ff' : partnerHovered ? '#f6f7f8' : '#f6f7f8';
   const partnerBorder = partnerOpen ? '1px solid transparent' : partnerSelected.size > 0 ? '1px solid transparent' : partnerHovered ? '1px solid #E4E5E9' : '1px solid transparent';
   const partnerTextColor = (partnerOpen || partnerSelected.size > 0) ? '#005fff' : '#2e3238';
 
+  const activeTabCtx314 = useContext(MaeIpSubTabCtx);
+  const activeTab314 = activeTabCtx314.activeTab;
+  const isExtraTab314 = activeTab314 === '소속기사배차';
+  const isPartnerTab314 = activeTab314 === '협력사위탁';
+
   return (
     <div className="content-stretch flex items-center gap-[4px] relative shrink-0 z-[7]">
+      {/* 소속기사배차 탭: 모든 필터 숨김 */}
+      {isExtraTab314 ? null : (<>
       <div ref={btnRef} style={{ position: 'relative' }}>
         <div
           className="content-stretch flex gap-[8px] h-[32px] items-center justify-center pl-[12px] pr-[10px] py-[6px] relative rounded-[30px] shrink-0 cursor-pointer select-none"
@@ -743,7 +799,7 @@ function BubbleFilter314() {
           onMouseLeave={() => setShipperHovered(false)}
         >
           <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[14px] text-center tracking-[-0.28px] whitespace-nowrap" style={{ color: shipperTextColor }}>
-            <p className="leading-[20px]">화주사</p>
+            <p className="leading-[20px]">{isPartnerTab314 ? '협력사' : '화주사'}</p>
           </div>
           {shipperSelected.size > 0 && !shipperOpen ? (
             <div className="bg-[#ccdfff] content-stretch flex flex-col items-center justify-center relative rounded-[100px] shrink-0">
@@ -769,90 +825,146 @@ function BubbleFilter314() {
         </div>
 
         {shipperOpen && dropdownPos && createPortal(
-          <div ref={dropRef} style={{
-            position: 'fixed', top: dropdownPos.top, left: dropdownPos.left,
-            width: 176, background: '#FFFFFF',
-            border: '1px solid #E4E5E9',
-            boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)',
-            borderRadius: 8,
-            display: 'flex', flexDirection: 'column',
-            zIndex: 9999, boxSizing: 'border-box',
-          }}>
-            <div style={{ padding: '8px 8px 2px', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, border: '1px solid #E4E5E9', borderRadius: 4, padding: '6px 10px', height: 36, boxSizing: 'border-box' }}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-                  <circle cx="6.57" cy="6.57" r="5.07" stroke="#9197A1" strokeWidth="1.3"/>
-                  <line x1="10.91" y1="10.91" x2="14.5" y2="14.5" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
-                <input
-                  value={shipperSearch}
-                  onChange={e => setShipperSearch(e.target.value)}
-                  placeholder="화주사 검색"
-                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#767D8A', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px', background: 'transparent' }}
-                />
+          (() => { const fs = Math.round(15 * (window.innerWidth / 1920)); return (
+          <div ref={dropRef} style={{ position:'fixed', top:dropdownPos.top, left:dropdownPos.left, width:176, background:'#FFFFFF', border:'1px solid #E4E5E9', boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius:8, display:'flex', flexDirection:'column', zIndex:9999, boxSizing:'border-box' }}>
+            <div style={{ padding:'8px 8px 2px', flexShrink:0 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:4, border:'1px solid #E4E5E9', borderRadius:4, padding:'6px 10px', height:36, boxSizing:'border-box' }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><circle cx="6.57" cy="6.57" r="5.07" stroke="#9197A1" strokeWidth="1.3"/><line x1="10.91" y1="10.91" x2="14.5" y2="14.5" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                <input autoFocus value={shipperSearch} onChange={e => setShipperSearch(e.target.value)} placeholder={isPartnerTab314 ? "협력사 검색" : "화주사 검색"}
+                  style={{ flex:1, border:'none', outline:'none', fontSize:fs, color: shipperSearch ? '#2E3238' : '#767D8A', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', background:'transparent' }} />
               </div>
             </div>
-            <div style={{ height: (shipperSelected.size === 0 && (!shipperSearch || BUBBLE_SHIPPERS_314.filter(s => s.includes(shipperSearch)).length === 0)) ? 162 : undefined, maxHeight: (shipperSelected.size === 0 && (!shipperSearch || BUBBLE_SHIPPERS_314.filter(s => s.includes(shipperSearch)).length === 0)) ? undefined : 162, overflowY: 'auto', padding: 8, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-              {shipperSelected.size === 0 && (!shipperSearch || BUBBLE_SHIPPERS_314.filter(s => s.includes(shipperSearch)).length === 0) ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 4 }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" fill="#9197A1"/>
-                    <line x1="12" y1="7" x2="12" y2="14" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                    <circle cx="12" cy="17.5" r="1" fill="white"/>
-                  </svg>
-                  <span style={{ fontSize: Math.round(15 * (window.innerWidth / 1920)), color: '#5C6370', textAlign: 'center', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px' }}>검색 결과가 없습니다.</span>
+            <div style={{ maxHeight:200, overflowY:'auto', padding:8, boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
+              {(shipperSelected.size === 0 && (!shipperSearch || BUBBLE_SHIPPERS_314.filter(s => s.includes(shipperSearch)).length === 0)) ? (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:200, gap:4 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#9197A1"/><line x1="12" y1="7" x2="12" y2="14" stroke="white" strokeWidth="1.5" strokeLinecap="round"/><circle cx="12" cy="17.5" r="1" fill="white"/></svg>
+                  <span style={{ fontSize:fs, color:'#5C6370', textAlign:'center', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px' }}>{shipperSearch ? '검색 결과가 없습니다.' : '검색어를 입력해 주세요.'}</span>
                 </div>
-              ) : BUBBLE_SHIPPERS_314.map((name, origIdx) => ({name, origIdx})).filter(({name, origIdx}) => (shipperSearch && name.includes(shipperSearch)) || shipperSelected.has(origIdx)).map(({name, origIdx}) => (
-                <div
-                  key={origIdx}
-                  onMouseEnter={() => setHoveredIdx(origIdx)}
-                  onMouseLeave={() => setHoveredIdx(null)}
-                  onClick={() => {
-                    const next = new Set(shipperSelected);
-                    if (next.has(origIdx)) next.delete(origIdx); else next.add(origIdx);
-                    setShipperSelected(next);
-                  }}
-                  style={{
-                    display: 'flex', alignItems: 'center', padding: '9px 8px 9px 4px', gap: 8,
-                    height: 40, borderRadius: 4, cursor: 'pointer', boxSizing: 'border-box',
-                    background: hoveredIdx === origIdx ? '#F6F7F8' : '#FFFFFF',
-                  }}
-                >
-                  <div style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <div style={{
-                      width: 16, height: 16,
-                      border: shipperSelected.has(origIdx) ? '1.3px solid #005FFF' : '1.3px solid #ADB1B9',
-                      borderRadius: 3,
-                      background: shipperSelected.has(origIdx) ? '#005FFF' : '#FFFFFF',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxSizing: 'border-box',
-                    }}>
-                      {shipperSelected.has(origIdx) && (
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
+              ) : (isPartnerTab314 ? PARTNERS_314 : BUBBLE_SHIPPERS_314).map((name, origIdx) => ({name, origIdx}))
+                .filter(({name, origIdx}) => (shipperSearch && name.includes(shipperSearch)) || shipperSelected.has(origIdx))
+                .map(({name, origIdx}) => {
+                  const sel = shipperSelected.has(origIdx);
+                  return (
+                    <div key={origIdx} onMouseEnter={() => setHoveredIdx(origIdx)} onMouseLeave={() => setHoveredIdx(null)}
+                      onClick={() => {
+                        const grps = isPartnerTab314 ? (PARTNER_GROUPS_314[name] ?? []) : (SHIPPER_GROUPS_314[name] ?? []);
+                        if (sel) { setShipperSelected(new Set()); setShipperGroupSelected314(new Set()); setPartnerGroupSelected314(new Set()); }
+                        else { setShipperSelected(new Set([origIdx])); if (isPartnerTab314) setPartnerGroupSelected314(new Set(grps)); else setShipperGroupSelected314(new Set(grps)); }
+                      }}
+                      style={{ display:'flex', alignItems:'center', padding:'9px 8px', height:40, borderRadius:4, cursor:'pointer', boxSizing:'border-box', background: hoveredIdx === origIdx ? '#F6F7F8' : '#FFFFFF' }}
+                    >
+                      <span style={{ fontSize:fs, color: sel ? '#005FFF' : '#2E3238', fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', lineHeight:'22px', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {shipperSearch ? (() => { const q=shipperSearch; const i=name.toLowerCase().indexOf(q.toLowerCase()); if(i===-1) return name; return <>{name.slice(0,i)}<span style={{color:'#005FFF'}}>{name.slice(i,i+q.length)}</span>{name.slice(i+q.length)}</>; })() : name}
+                      </span>
+                      {sel && <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><path d="M3 8L6.5 11.5L13 4.5" stroke="#005FFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
-                  </div>
-                  <span style={{ fontSize: 15, color: '#2E3238', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px' }}>{name}</span>
-                </div>
-              ))}
+                  );
+                })}
             </div>
-            <div style={{ height: 28, padding: '0 8px', borderTop: '1px solid #E4E5E9', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexShrink: 0, boxSizing: 'border-box' }}>
-              <span
-                onClick={e => { e.stopPropagation(); setShipperSelected(new Set()); setShipperSearch(''); }}
-                style={{ fontSize: 12, color: '#9197A1', cursor: 'pointer', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '18px' }}
-              >
-                필터 초기화
-              </span>
-            </div>
-          </div>,
+          </div>
+          ); })(),
           document.body
         )}
       </div>
 
-      {/* 요청협력사 bubble filter */}
-      <div ref={partnerBtnRef} style={{ position: 'relative' }}>
+      {/* 화주사 업무그룹 (정보망배차 계열 탭) */}
+      {shipperSelected.size > 0 && !isPartnerTab314 && (() => {
+        const nm = BUBBLE_SHIPPERS_314[[...shipperSelected][0]]; const grps = SHIPPER_GROUPS_314[nm] ?? [];
+        const bg = sgrpOpen314 ? '#eef3ff' : shipperGroupSelected314.size > 0 ? '#f5f9ff' : sgrpHovered314 ? '#f6f7f8' : '#f6f7f8';
+        const br = sgrpOpen314 ? '1px solid transparent' : shipperGroupSelected314.size > 0 ? '1px solid transparent' : sgrpHovered314 ? '1px solid #E4E5E9' : '1px solid transparent';
+        return (
+          <div ref={sgrpBtnRef314} style={{ position:'relative' }}>
+            <div className="content-stretch flex gap-[8px] h-[32px] items-center justify-center pl-[12px] pr-[10px] py-[6px] relative rounded-[30px] shrink-0 cursor-pointer select-none"
+              style={{ background: bg, border: br }}
+              onClick={() => { if (!sgrpOpen314) setSgrpDropPos314(sgrpBtnRef314.current!.getBoundingClientRect()); setSgrpOpen314(o=>!o); }}
+              onMouseEnter={() => setSgrpHovered314(true)} onMouseLeave={() => setSgrpHovered314(false)}
+            >
+              <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[14px] text-center tracking-[-0.28px] whitespace-nowrap" style={{ color: (sgrpOpen314||shipperGroupSelected314.size>0)?'#005fff':'#2e3238' }}>
+                <p className="leading-[20px]">화주사 업무그룹</p>
+              </div>
+              {shipperGroupSelected314.size > 0 && !sgrpOpen314 ? (
+                <div className="bg-[#ccdfff] content-stretch flex flex-col items-center justify-center relative rounded-[100px] shrink-0">
+                  <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 size-[16px] text-[#005fff] text-[11px] text-center tracking-[-0.22px]"><p className="leading-[18px]">{shipperGroupSelected314.size}</p></div>
+                </div>
+              ) : <div style={{ transform: sgrpOpen314?'rotate(180deg)':undefined }} className="relative shrink-0 size-[12px]"><div className="-translate-y-1/2 absolute flex h-[3px] items-center justify-center left-[2.5px] top-1/2 w-[7px]"><div className="-scale-y-100 flex-none"><div className="h-[3px] relative w-[7px]"><div className="absolute inset-[-21.67%_-9.29%]"><svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 8.30002 4.30001"><path d="M1 3.30002L4.15001 0.650024L7.30002 3.30002" stroke={sgrpOpen314?'#005fff':'#9197A1'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3"/></svg></div></div></div></div></div>}
+            </div>
+            {sgrpOpen314 && sgrpDropPos314 && createPortal(
+              (() => { const fs=Math.round(15*(window.innerWidth/1920)); const fs12=Math.round(12*(window.innerWidth/1920)); return (
+              <div ref={sgrpDropRef314} style={{ position:'fixed', top:(sgrpDropPos314 as DOMRect).bottom+2, left:(sgrpDropPos314 as DOMRect).left, width:176, background:'#FFFFFF', border:'1px solid #E4E5E9', boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius:8, display:'flex', flexDirection:'column', zIndex:9999, boxSizing:'border-box' }}>
+                <div style={{ maxHeight:216, overflowY:'auto', padding:8, boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
+                  {grps.map(g => { const ck=shipperGroupSelected314.has(g); return (
+                    <div key={g} onMouseEnter={()=>setSgrpItemHov314(g)} onMouseLeave={()=>setSgrpItemHov314(null)}
+                      onClick={()=>{ const n=new Set(shipperGroupSelected314); if(n.has(g))n.delete(g); else n.add(g); setShipperGroupSelected314(n); }}
+                      style={{ display:'flex', alignItems:'center', padding:'9px 8px 9px 4px', gap:8, height:40, borderRadius:4, cursor:'pointer', boxSizing:'border-box', background:sgrpItemHov314===g?'#F6F7F8':'#FFFFFF' }}>
+                      <div style={{ width:20,height:20,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+                        <div style={{ width:16,height:16,borderRadius:4,background:ck?'#005FFF':'#FFFFFF',border:ck?'none':'1.3px solid #ADB1B9',display:'flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box' }}>
+                          {ck&&<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </div>
+                      </div>
+                      <span style={{ fontSize:fs,color:'#2E3238',fontFamily:"'Pretendard GOV', sans-serif",letterSpacing:'-0.02em',lineHeight:'22px',flex:1 }}>{g}</span>
+                    </div>
+                  ); })}
+                </div>
+                <div style={{ height:28,padding:'0 8px',borderTop:'1px solid #E4E5E9',display:'flex',justifyContent:'flex-end',alignItems:'center',flexShrink:0,boxSizing:'border-box' }}>
+                  <span onClick={e=>{e.stopPropagation();setShipperGroupSelected314(new Set());}} style={{ fontSize:fs12,color:'#9197A1',cursor:'pointer',fontFamily:"'Pretendard GOV', sans-serif",letterSpacing:'-0.02em',lineHeight:'18px' }}>필터 초기화</span>
+                </div>
+              </div>
+              ); })(), document.body
+            )}
+          </div>
+        );
+      })()}
+
+      {/* 협력사 업무그룹 (협력사위탁 탭) */}
+      {shipperSelected.size > 0 && isPartnerTab314 && (() => {
+        const nm = PARTNERS_314[[...shipperSelected][0]]; const grps = PARTNER_GROUPS_314[nm] ?? [];
+        const bg = pgrpOpen314 ? '#eef3ff' : partnerGroupSelected314.size > 0 ? '#f5f9ff' : pgrpHovered314 ? '#f6f7f8' : '#f6f7f8';
+        const br = pgrpOpen314 ? '1px solid transparent' : partnerGroupSelected314.size > 0 ? '1px solid transparent' : pgrpHovered314 ? '1px solid #E4E5E9' : '1px solid transparent';
+        return (
+          <div ref={pgrpBtnRef314} style={{ position:'relative' }}>
+            <div className="content-stretch flex gap-[8px] h-[32px] items-center justify-center pl-[12px] pr-[10px] py-[6px] relative rounded-[30px] shrink-0 cursor-pointer select-none"
+              style={{ background: bg, border: br }}
+              onClick={() => { if (!pgrpOpen314) setPgrpDropPos314(pgrpBtnRef314.current!.getBoundingClientRect()); setPgrpOpen314(o=>!o); }}
+              onMouseEnter={() => setPgrpHovered314(true)} onMouseLeave={() => setPgrpHovered314(false)}
+            >
+              <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[14px] text-center tracking-[-0.28px] whitespace-nowrap" style={{ color: (pgrpOpen314||partnerGroupSelected314.size>0)?'#005fff':'#2e3238' }}>
+                <p className="leading-[20px]">협력사 업무그룹</p>
+              </div>
+              {partnerGroupSelected314.size > 0 && !pgrpOpen314 ? (
+                <div className="bg-[#ccdfff] content-stretch flex flex-col items-center justify-center relative rounded-[100px] shrink-0">
+                  <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 size-[16px] text-[#005fff] text-[11px] text-center tracking-[-0.22px]"><p className="leading-[18px]">{partnerGroupSelected314.size}</p></div>
+                </div>
+              ) : <div style={{ transform: pgrpOpen314?'rotate(180deg)':undefined }} className="relative shrink-0 size-[12px]"><div className="-translate-y-1/2 absolute flex h-[3px] items-center justify-center left-[2.5px] top-1/2 w-[7px]"><div className="-scale-y-100 flex-none"><div className="h-[3px] relative w-[7px]"><div className="absolute inset-[-21.67%_-9.29%]"><svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 8.30002 4.30001"><path d="M1 3.30002L4.15001 0.650024L7.30002 3.30002" stroke={pgrpOpen314?'#005fff':'#9197A1'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3"/></svg></div></div></div></div></div>}
+            </div>
+            {pgrpOpen314 && pgrpDropPos314 && createPortal(
+              (() => { const fs=Math.round(15*(window.innerWidth/1920)); const fs12=Math.round(12*(window.innerWidth/1920)); return (
+              <div ref={pgrpDropRef314} style={{ position:'fixed', top:(pgrpDropPos314 as DOMRect).bottom+2, left:(pgrpDropPos314 as DOMRect).left, width:176, background:'#FFFFFF', border:'1px solid #E4E5E9', boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius:8, display:'flex', flexDirection:'column', zIndex:9999, boxSizing:'border-box' }}>
+                <div style={{ maxHeight:216, overflowY:'auto', padding:8, boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
+                  {grps.map(g => { const ck=partnerGroupSelected314.has(g); return (
+                    <div key={g} onMouseEnter={()=>setPgrpItemHov314(g)} onMouseLeave={()=>setPgrpItemHov314(null)}
+                      onClick={()=>{ const n=new Set(partnerGroupSelected314); if(n.has(g))n.delete(g); else n.add(g); setPartnerGroupSelected314(n); }}
+                      style={{ display:'flex', alignItems:'center', padding:'9px 8px 9px 4px', gap:8, height:40, borderRadius:4, cursor:'pointer', boxSizing:'border-box', background:pgrpItemHov314===g?'#F6F7F8':'#FFFFFF' }}>
+                      <div style={{ width:20,height:20,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+                        <div style={{ width:16,height:16,borderRadius:4,background:ck?'#005FFF':'#FFFFFF',border:ck?'none':'1.3px solid #ADB1B9',display:'flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box' }}>
+                          {ck&&<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </div>
+                      </div>
+                      <span style={{ fontSize:fs,color:'#2E3238',fontFamily:"'Pretendard GOV', sans-serif",letterSpacing:'-0.02em',lineHeight:'22px',flex:1 }}>{g}</span>
+                    </div>
+                  ); })}
+                </div>
+                <div style={{ height:28,padding:'0 8px',borderTop:'1px solid #E4E5E9',display:'flex',justifyContent:'flex-end',alignItems:'center',flexShrink:0,boxSizing:'border-box' }}>
+                  <span onClick={e=>{e.stopPropagation();setPartnerGroupSelected314(new Set());}} style={{ fontSize:fs12,color:'#9197A1',cursor:'pointer',fontFamily:"'Pretendard GOV', sans-serif",letterSpacing:'-0.02em',lineHeight:'18px' }}>필터 초기화</span>
+                </div>
+              </div>
+              ); })(), document.body
+            )}
+          </div>
+        );
+      })()}
+
+      {/* 요청협력사 bubble filter - 협력사위탁 탭에서 숨김 */}
+      <div ref={partnerBtnRef} style={{ position: 'relative', display: (isPartnerTab314 || isExtraTab314) ? 'none' : undefined }}>
         <div
           className="content-stretch flex gap-[8px] h-[32px] items-center justify-center pl-[12px] pr-[10px] py-[6px] relative rounded-[30px] shrink-0 cursor-pointer select-none"
           style={{ background: partnerBg, border: partnerBorder }}
@@ -975,13 +1087,14 @@ function BubbleFilter314() {
           document.body
         )}
       </div>
+      </>)}
     </div>
   );
 }
 
 function Component9() {
   return (
-    <div className="content-center flex flex-wrap gap-[4px] isolate items-center relative shrink-0" data-name="필터 그룹">
+    <div className="content-center flex flex-wrap gap-[8px] isolate items-center relative shrink-0" data-name="필터 그룹">
       <Calender />
       <BubbleFilter314 />
     </div>
@@ -1068,7 +1181,7 @@ function Frame734() {
         )}
       </div>
       {open && dropPos && createPortal(
-        <div ref={dropRef} style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, width: 200, background: '#FFFFFF', border: '1px solid #E4E5E9', boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius: 8, zIndex: 9999, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+        <div ref={dropRef} style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, width: 176, background: '#FFFFFF', border: '1px solid #E4E5E9', boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', borderRadius: 8, zIndex: 9999, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
           <div style={{ maxHeight: 260, overflowY: 'auto', padding: 8, boxSizing: 'border-box' }}>
           {INFO_TYPE_OPTIONS_314.map((name, idx) => (
             <div key={idx}
@@ -1099,10 +1212,11 @@ function Frame734() {
 function Filter() {
   const { activeTab } = useContext(MaeIpSubTabCtx);
   const isPayTab = activeTab === '정보망배차(바로선지급)' || activeTab === '정보망배차(픽커)';
+  const isExtraTab = activeTab === '소속기사배차' || activeTab === '협력사위탁';
   return (
     <div className="content-stretch flex gap-[8px] items-center relative shrink-0" data-name="Filter">
       <Component9 />
-      {!isPayTab && <Frame734 />}
+      {!isPayTab && !isExtraTab && <Frame734 />}
     </div>
   );
 }
@@ -1124,7 +1238,7 @@ function Frame684() {
   return (
     <div className="content-stretch flex gap-[4px] items-center relative shrink-0">
       <div className="content-stretch flex gap-[4px] h-[36px] items-center justify-center overflow-clip px-[12px] relative rounded-[4px] shrink-0 cursor-pointer" data-name="Button"
-        onClick={() => { setShipperSelected(new Set()); setPartnerSelected(new Set()); }}>
+        onClick={() => { setShipperSelected(new Set()); setPartnerSelected(new Set()); setShipperGroupSelected314(new Set()); setPartnerGroupSelected314(new Set()); }}>
         <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Icon_16/restart">
           <div className="absolute bg-white left-0 size-[16px] top-0" data-name="16 / ic_16_reload_gray">
             <Component15 />
@@ -1398,7 +1512,7 @@ function CalendarDropdown314({ anchorRect, value, onChange, onClose }: {
   return createPortal(
     <div ref={ref} style={{position:'fixed',top:anchorRect.bottom+2,left:anchorRect.left,width:276,background:'#FFFFFF',border:'1px solid #E4E5E9',boxShadow:'0px 2px 6px 1px rgba(34,34,34,0.06)',borderRadius:8,padding:12,display:'flex',flexDirection:'column',gap:8,zIndex:99999,boxSizing:'border-box'}}>
       <div style={{height:36,display:'flex',justifyContent:'space-between',alignItems:'center',padding:'5px 4px'}}>
-        <span style={{fontFamily:"'Pretendard GOV:Bold'",fontSize:18,fontWeight:700,color:'#2E3238',letterSpacing:'-0.02em'}}>{viewYear}년 {viewMonth+1}월</span>
+        <span style={{fontFamily:"'Pretendard GOV:SemiBold'",fontSize:18,fontWeight:600,color:'#2E3238',letterSpacing:'-0.02em'}}>{viewYear}년 {viewMonth+1}월</span>
         <div style={{display:'flex',gap:2}}>
           {([[-1,'M4.5 1L0.5 5L4.5 9'],[1,'M0.5 1L4.5 5L0.5 9']] as [number,string][]).map(([dir,d])=>(
             <button key={dir} onClick={()=>{const dt=new Date(viewYear,viewMonth+dir,1);setViewYear(dt.getFullYear());setViewMonth(dt.getMonth());}} style={{width:26,height:26,borderRadius:4,border:'none',background:'transparent',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}} onMouseEnter={e=>(e.currentTarget.style.background='#F6F7F8')} onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
@@ -1991,7 +2105,7 @@ const TableCtrlCtx = createContext<{ filteredTotal: number; selectedCount: numbe
 function Frame717() {
   const { filteredTotal, selectedCount } = useContext(TableCtrlCtx);
   return (
-    <div className="content-stretch flex items-center relative shrink-0">
+    <div className="content-stretch flex gap-[2px] items-center relative shrink-0">
       <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] not-italic relative shrink-0 text-[#2e3238] text-[15px] tracking-[-0.3px] whitespace-nowrap">
         <p className="leading-[22px]">{selectedCount > 0 ? `총 ${filteredTotal.toLocaleString()}건 중 ${selectedCount.toLocaleString()}건 선택` : `총 ${filteredTotal.toLocaleString()}건`}</p>
       </div>
@@ -2018,7 +2132,7 @@ function Frame685() {
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
@@ -2031,7 +2145,7 @@ function Frame685() {
             </div>
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
@@ -2044,7 +2158,7 @@ function Frame685() {
             </div>
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
@@ -2057,110 +2171,110 @@ function Frame685() {
             </div>
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
-        <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+        <div className="bg-white content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
           <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
             <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
           </div>
         </div>
       </div>
-      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-r border-solid inset-0 pointer-events-none" />
+      <div aria-hidden className="absolute border-[#e3e5e9] border-r border-solid inset-0 pointer-events-none" />
     </div>
   );
 }
@@ -2171,6 +2285,7 @@ function Title7() {
       <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic overflow-hidden relative shrink-0 text-[#5c6370] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
         <p className="leading-[22px] overflow-hidden text-ellipsis">매입 상태</p>
       </div>
+      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
   );
 }
@@ -2436,7 +2551,7 @@ function Frame686() {
           </div>
         </div>
       </div>
-      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
+      
     </div>
   );
 }
@@ -2661,7 +2776,7 @@ function Frame25() {
 
 function Frame716() {
   return (
-    <div className="relative shrink-0 w-[120px]">
+    <div className="relative shrink-0 w-[120px] border-l border-[#E4E5E9]">
       <div className="content-stretch flex flex-col items-center overflow-clip relative rounded-[inherit] w-full">
         <div className="bg-[#f6f7f8] h-[40px] relative shrink-0 w-full sticky top-0 z-[1] border-r border-[#E4E5E9]" data-name="Table_Header Cells">
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
@@ -2832,7 +2947,6 @@ function Frame716() {
           <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
         </div>
       </div>
-      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
     </div>
   );
 }
@@ -15225,8 +15339,20 @@ function Con() {
   const isExtraTab = activeTab === '소속기사배차' || activeTab === '협력사위탁';
   const [selected, setSelected] = useState<Set<number>>(new Set([0]));
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-  const [shipperSelected, setShipperSelected] = useState<Set<number>>(new Set());
-  const [partnerSelected, setPartnerSelected] = useState<Set<number>>(new Set());
+  // 탭별 독립 필터 상태
+  type TabFilter314 = { shipperSelected: Set<number>; partnerSelected: Set<number>; shipperGroupSelected314: Set<string>; partnerGroupSelected314: Set<string>; };
+  const emptyFilter314 = (): TabFilter314 => ({ shipperSelected: new Set(), partnerSelected: new Set(), shipperGroupSelected314: new Set(), partnerGroupSelected314: new Set() });
+  const [tabFilters314, setTabFilters314] = useState<Record<string, TabFilter314>>({});
+  const curFilter314 = tabFilters314[activeTab] ?? emptyFilter314();
+  const updateTabFilter314 = (patch: Partial<TabFilter314>) => setTabFilters314(prev => ({ ...prev, [activeTab]: { ...emptyFilter314(), ...prev[activeTab], ...patch } }));
+  const shipperSelected = curFilter314.shipperSelected;
+  const partnerSelected = curFilter314.partnerSelected;
+  const shipperGroupSelected314 = curFilter314.shipperGroupSelected314;
+  const partnerGroupSelected314 = curFilter314.partnerGroupSelected314;
+  const setShipperSelected = (s: Set<number>) => updateTabFilter314({ shipperSelected: s });
+  const setPartnerSelected = (s: Set<number>) => updateTabFilter314({ partnerSelected: s });
+  const setShipperGroupSelected314 = (s: Set<string>) => updateTabFilter314({ shipperGroupSelected314: s });
+  const setPartnerGroupSelected314 = (s: Set<string>) => updateTabFilter314({ partnerGroupSelected314: s });
   const [dateRangeStart, setDateRangeStart] = useState<Date|null>(() => { const t = new Date(2026,5,29); t.setMonth(t.getMonth()-2); t.setHours(0,0,0,0); return t; });
   const [dateRangeEnd, setDateRangeEnd] = useState<Date|null>(new Date(2026,5,29));
   const [orderDetailId, setOrderDetailId] = useState<string|null>(null);
@@ -15304,8 +15430,24 @@ function Con() {
 
   useEffect(() => {
     if (!tableRef.current) return;
+    const PAGE_SIZE_314 = 200;
+    const parseLD314 = (s: string) => { const [yy,mm,dd]=s.split('.').map(Number); return new Date(2000+yy,mm-1,dd).getTime(); };
+    const cancelled314 = getCancelledOrders();
+    const cancelledIdxSet314 = new Set(cancelled314.map(o => o.rowIdx));
+    const baseSorted314 = Array.from({ length: TOTAL_ROWS }, (_, i) => i).filter(i => !cancelledIdxSet314.has(i) && !hiddenRows.has(i)).sort((a, b) => {
+      const da = parseLD314(getLoadingDate314(a)), db = parseLD314(getLoadingDate314(b));
+      if (da !== db) return da - db;
+      const sa = STATUS_PRIORITY_314_SORT[ROW_STATUSES_314[a % ROW_STATUSES_314.length]] ?? 99;
+      const sb = STATUS_PRIORITY_314_SORT[ROW_STATUSES_314[b % ROW_STATUSES_314.length]] ?? 99;
+      return sa !== sb ? sa - sb : a - b;
+    });
+    const cancelledVisible314 = cancelled314.map(o => o.rowIdx).filter(i => !hiddenRows.has(i));
+    const allSorted314 = [...cancelledVisible314, ...baseSorted314];
+    const pageStart314 = (currentPage - 1) * PAGE_SIZE_314;
+    const pageIndices314 = allSorted314.slice(pageStart314, pageStart314 + PAGE_SIZE_314);
     tableRef.current.querySelectorAll(':scope > *').forEach((col) => {
-      const cells = Array.from(col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"]'));
+      col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"][data-table-row]').forEach(c => c.remove());
+      const cells = Array.from(col.querySelectorAll<HTMLElement>('[data-name="Table_Data Cells"]:not([data-table-row])'));
       if (!cells.length) return;
       const parent = cells[0].parentElement!;
       const SRC: Record<string, number> = { '마감필요': 3, '정산대기': 0, '지급대기': 7, '지급완료': 9, '정산보류': 13 };
@@ -15315,22 +15457,28 @@ function Con() {
       const isPartnerCol = headerText === '요청협력사' || headerText === '협력사';
       const isInvoiceDateCol = headerText === '계산서 작성일자';
       const isLoadingDateCol = headerText === '상차일';
-      cells.forEach((c) => parent.removeChild(c));
-      const parseLD314 = (s: string) => { const [yy,mm,dd]=s.split('.').map(Number); return new Date(2000+yy,mm-1,dd).getTime(); };
-      const cancelled314 = getCancelledOrders();
-      const cancelledIdxSet314 = new Set(cancelled314.map(o => o.rowIdx));
-      const baseSorted314 = Array.from({ length: TOTAL_ROWS }, (_, i) => i).filter(i => !cancelledIdxSet314.has(i)).sort((a, b) => {
-        const da = parseLD314(getLoadingDate314(a)), db = parseLD314(getLoadingDate314(b));
-        if (da !== db) return da - db;
-        const sa = STATUS_PRIORITY_314_SORT[ROW_STATUSES_314[a % ROW_STATUSES_314.length]] ?? 99;
-        const sb = STATUS_PRIORITY_314_SORT[ROW_STATUSES_314[b % ROW_STATUSES_314.length]] ?? 99;
-        return sa !== sb ? sa - sb : a - b;
-      });
-      const sortedIndices = [...cancelled314.map(o => o.rowIdx), ...baseSorted314];
-      for (const origIdx of sortedIndices) {
+      cells.forEach((c) => { c.style.display = 'none'; });
+      for (const origIdx of pageIndices314) {
         const s = cancelledIdxSet314.has(origIdx) ? '마감필요' : ROW_STATUSES_314[origIdx % ROW_STATUSES_314.length];
         const cell = (cells[SRC[s] ?? (origIdx % cells.length)].cloneNode(true)) as HTMLElement;
+        cell.style.display = '';
         cell.dataset.tableRow = String(origIdx);
+        // 뱃지 컬러 동적 적용
+        const BADGE_COLORS_314: Record<string, { bg: string; text: string }> = {
+          '마감필요': { bg: '#FEE7E7', text: '#DD2222' },
+          '정산대기': { bg: '#E6F7EC', text: '#18AC42' },
+          '지급대기': { bg: '#E0EDFF', text: '#005FFF' },
+          '지급완료': { bg: '#F6F7F8', text: '#5C6370' },
+          '정산보류': { bg: '#F0F1F3', text: '#9197A1' },
+          '정산제외': { bg: '#EBEDEF', text: '#ADB1B9' },
+        };
+        const badge314 = cell.querySelector<HTMLElement>('[data-name="badge"]');
+        if (badge314 && BADGE_COLORS_314[s]) {
+          badge314.style.background = BADGE_COLORS_314[s].bg;
+          badge314.querySelectorAll<HTMLElement>('*').forEach(el => { el.style.color = BADGE_COLORS_314[s].text; });
+          const p314 = badge314.querySelector('p');
+          if (p314) p314.textContent = s;
+        }
         if (isOrderIdCol) {
           const p = cell.querySelector('p');
           if (p) {
@@ -15377,7 +15525,7 @@ function Con() {
     });
     // Remove static Figma checkmarks to prevent double SVG on selection
     tableRef.current.querySelectorAll('[data-name="Selection Controls"] [data-name="Vector"]').forEach((el) => (el as HTMLElement).remove());
-  }, [cancelledTopRows314, activeTab]);
+  }, [cancelledTopRows314, activeTab, currentPage, hiddenRows]);
   useEffect(() => {
     if (!tableRef.current) return;
     const CHECKMARK = `<svg viewBox="0 0 10 8" fill="none" style="position:absolute;inset:0;width:100%;height:100%;padding:1px"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -15397,6 +15545,12 @@ function Con() {
       } else {
         inner.style.cssText = '';
         inner.innerHTML = '';
+      }
+      if (!isHeader) {
+        const rowIdx = Number(cb.dataset.cbRow);
+        tableRef.current!.querySelectorAll<HTMLElement>(`[data-table-row="${rowIdx}"]`).forEach(c => {
+          c.style.backgroundColor = isSelected ? '#CCDFFF' : '';
+        });
       }
     });
   }, [selectedRows, currentPage]);
@@ -15445,10 +15599,10 @@ function Con() {
       const newRow = cell?.dataset.tableRow ?? null;
       if (newRow !== hoveredRow) {
         if (hoveredRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = ''; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
         }
         if (newRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = 'rgba(246, 247, 248, 0.5)'; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${newRow}"]`).forEach(c => { c.style.backgroundColor = '#F5F9FF'; });
         }
         hoveredRow = newRow;
       }
@@ -15462,7 +15616,7 @@ function Con() {
       const relatedTarget = (e as MouseEvent).relatedTarget as HTMLElement | null;
       if (!relatedTarget || !el.contains(relatedTarget)) {
         if (hoveredRow !== null) {
-          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { if (!c.querySelector('[data-name="Selection Controls"]')) c.style.backgroundColor = ''; });
+          el.querySelectorAll<HTMLElement>(`[data-table-row="${hoveredRow}"]`).forEach(c => { c.style.backgroundColor = ''; });
           hoveredRow = null;
         }
       }
@@ -15473,25 +15627,11 @@ function Con() {
   }, []);
 
 
-  const PAGE_SIZE = 200;
-
   useEffect(() => {
     const total = TOTAL_ROWS - hiddenRows.size;
     setFilteredTotal(total);
     setCurrentPage(1);
   }, [hiddenRows]);
-
-  useEffect(() => {
-    if (!tableRef.current) return;
-    const cancelledIdxSetPage314 = new Set(getCancelledOrders().map(o => o.rowIdx));
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    tableRef.current.querySelectorAll<HTMLElement>('[data-table-row]').forEach((cell) => {
-      const row = Number(cell.dataset.tableRow);
-      const isCancelled = cancelledIdxSetPage314.has(row);
-      cell.style.display = (isCancelled ? currentPage === 1 : (!hiddenRows.has(row) && row >= start && row < end)) ? '' : 'none';
-    });
-  }, [hiddenRows, currentPage, cancelledTopRows314, activeTab]);
 
   useEffect(() => {
     if (tableRef.current) tableRef.current.scrollTop = 0;
@@ -15610,7 +15750,7 @@ function Con() {
     <>
     <DateFilterCtx314.Provider value={{ rangeStart: dateRangeStart, rangeEnd: dateRangeEnd, setRangeStart: setDateRangeStart, setRangeEnd: setDateRangeEnd }}>
     <DynamicCountCtx314.Provider value={dynamicCounts}>
-    <BubbleCtx314.Provider value={{ shipperSelected, setShipperSelected, partnerSelected, setPartnerSelected }}>
+    <BubbleCtx314.Provider value={{ shipperSelected, setShipperSelected, partnerSelected, setPartnerSelected, shipperGroupSelected314, setShipperGroupSelected314, partnerGroupSelected314, setPartnerGroupSelected314 }}>
     <FilterCtx314.Provider value={{ selected, setSelected }}>
     <TableCtrlCtx.Provider value={{ filteredTotal: TOTAL_ROWS - hiddenRows.size, selectedCount: selectedRows.size, selectedRows }}>
     <div className="flex-[1_0_0] min-h-px relative w-full" data-name="con">
