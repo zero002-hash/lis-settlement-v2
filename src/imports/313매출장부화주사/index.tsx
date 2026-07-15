@@ -131,15 +131,22 @@ const ModalCtx313 = createContext<{
 });
 const FilterCtx313 = createContext<{ selected: Set<number>; setSelected: (s: Set<number>) => void }>({ selected: new Set([0]), setSelected: () => {} });
 
+const STATUS_LABEL_COLORS_313: Record<string, string> = {
+  '마감필요': '#dd2222', '정산대기': '#18ac42', '수금대기': '#005fff',
+  '수급대기': '#005fff', '수금완료': '#5c6370', '정산보류': '#9197a1',
+  '지급대기': '#005fff', '지급완료': '#5c6370', '확정대기': '#dd2222', '발행대기': '#18ac42',
+};
 function DashboardCard({ label, amount, active, onClick }: { label: string; amount: string; active: boolean; onClick?: () => void }) {
+  const baseLabel = label.split(' (')[0];
+  const labelColor = STATUS_LABEL_COLORS_313[baseLabel] ?? '#5c6370';
   return (
     <div
       onClick={onClick}
       className={`relative rounded-[8px] flex-1 min-w-0 h-[72px] flex flex-col items-start px-[16px] py-[12px] ${active ? "bg-white" : "bg-[#f6f7f8] hover:bg-[#EBEDEF]"} ${onClick ? "cursor-pointer select-none" : ""}`}
     >
       {active && <div aria-hidden className="absolute border border-[#EBEDEF] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-      <p className="font-['Pretendard_GOV:SemiBold'] text-[#5c6370] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis">{label}</p>
-      <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis">{amount}</p>
+      <p className="font-['Pretendard_GOV:SemiBold'] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: labelColor }}>{label}</p>
+      <p className="font-['Pretendard_GOV:SemiBold'] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: labelColor }}>{amount}</p>
     </div>
   );
 }
@@ -3197,9 +3204,9 @@ function TableControlModule() {
 
 const BADGE_STYLES_313S: Record<string, { bg: string; text: string }> = {
   '마감필요': { bg: '#fce9e9', text: '#dd2222' },
-  '정산대기': { bg: '#ebedef', text: '#454b55' },
-  '수금대기': { bg: '#e4fbeb', text: '#18ac42' },
-  '수금완료': { bg: '#e6efff', text: '#005fff' },
+  '정산대기': { bg: '#e4fbeb', text: '#18ac42' },
+  '수금대기': { bg: '#e6efff', text: '#005fff' },
+  '수금완료': { bg: '#ebedef', text: '#454b55' },
   '정산보류': { bg: '#ebedef', text: '#9197a1' },
   '정산제외': { bg: '#ebedef', text: '#c7cbd1' },
 };
@@ -3355,7 +3362,7 @@ function ButtonDataCell313S({ rowIdx, text }: { rowIdx: number; text: string }) 
 
 function CheckboxDataCell313S({ rowIdx }: { rowIdx: number }) {
   return (
-    <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells" data-table-row={rowIdx} data-cb-row={rowIdx}>
+    <div className="content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells" data-table-row={rowIdx} data-cb-row={rowIdx}>
       <ColBorder313S />
       <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
         <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
@@ -3375,7 +3382,7 @@ type ColDef313S = {
   render: (d: RowData313S, rowIdx: number, h: RowHandlers313S) => React.ReactNode;
 };
 
-const TABLE_COLS_313S: ColDef313S[] = [
+const TABLE_COLS_313S_BASE: ColDef313S[] = [
   { label: '매출 상태', width: 100, render: (d, i) => <BadgeDataCell313S key={i} status={d.status} rowIdx={i} /> },
   { label: '오더ID', width: 120, render: (d, i, h) => <TextDataCell313S key={i} text={d.orderId} rowIdx={i} underline onClick={() => h.onOrderClick(d.orderId, i)} /> },
   { label: '화주사', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.shipper || '-'} rowIdx={i} /> },
@@ -3411,12 +3418,25 @@ const TABLE_COLS_313S: ColDef313S[] = [
   { label: '증빙서류', width: 100, render: (_d, i) => <ButtonDataCell313S key={i} rowIdx={i} text="1장" /> },
 ];
 
+const TABLE_COLS_313S = TABLE_COLS_313S_BASE;
+
+// 협력사 탭: "화주사"→"협력사", "화주사 업무그룹"→"협력사 업무그룹", 주문번호 컬럼 제거
+const TABLE_COLS_313S_PARTNER: ColDef313S[] = TABLE_COLS_313S_BASE
+  .filter(c => c.label !== '화주사 주문번호')
+  .map(c => {
+    if (c.label === '화주사') return { ...c, label: '협력사' };
+    if (c.label === '화주사 업무그룹') return { ...c, label: '협력사 업무그룹' };
+    return c;
+  });
+
 function DynamicTable313S({ pageRows, overrides, cancelledIdxSet, handlers }: {
   pageRows: number[];
   overrides: RowOverrides313S;
   cancelledIdxSet: Set<number>;
   handlers: RowHandlers313S;
 }) {
+  const { activeTab } = useContext(SubTabCtx);
+  const cols = activeTab === '협력사' ? TABLE_COLS_313S_PARTNER : TABLE_COLS_313S;
   return (
     <>
       <div className="relative shrink-0">
@@ -3429,9 +3449,9 @@ function DynamicTable313S({ pageRows, overrides, cancelledIdxSet, handlers }: {
           </div>
           {pageRows.map((rowIdx) => <CheckboxDataCell313S key={rowIdx} rowIdx={rowIdx} />)}
         </div>
-        <div aria-hidden className="absolute border-[#e3e5e9] border-l border-r border-solid inset-0 pointer-events-none" />
+        <div aria-hidden className="absolute border-[#e3e5e9] border-r border-solid inset-0 pointer-events-none" />
       </div>
-      {TABLE_COLS_313S.map((col) => (
+      {cols.map((col) => (
         <div key={col.label} className="relative shrink-0" style={{ width: col.width }}>
           <div className="content-stretch flex flex-col items-center overflow-clip relative rounded-[inherit] w-full">
             <HeaderCell313S label={col.label} />

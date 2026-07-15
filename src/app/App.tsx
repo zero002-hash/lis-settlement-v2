@@ -1,32 +1,21 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { SubTabCtx, type MaeChulSubTab, MaeIpSubTabCtx, type MaeIpSubTab, MaeChulMyeongseSubTabCtx, type MaeChulMyeongseSubTab, MaeIpMyeongseSubTabCtx, type MaeIpMyeongseSubTab, NavCtx } from "@/imports/shared/subTabCtx";
-
-const BaechaManagement = lazy(() => import("@/imports/배차관리/index"));
-const TonghapJangbu = lazy(() => import("@/imports/312통합장부/index"));
-const MaeChulJangbuHwaju = lazy(() => import("@/imports/313매출장부화주사/index"));
-const MaeChulJangbuHyeop = lazy(() => import("@/imports/313매출장부협력사/index"));
-const MaeIpJangbu = lazy(() => import("@/imports/314매입장부정보망배차/index"));
-const MaeChulMyeongse = lazy(() => import("@/imports/315매출거래명세서화주사/index"));
-const MaeIpMyeongse = lazy(() => import("@/imports/316매입거래명세서소속기사/index"));
-
-function TabFallback() {
-  return (
-    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#ffffff" }}>
-      <div style={{ color: "#888", fontSize: 14 }}>로딩 중...</div>
-    </div>
-  );
-}
+import BaechaManagement from "@/imports/배차관리/index";
+import TonghapJangbu from "@/imports/312통합장부/index";
+import MaeChulJangbuHwaju from "@/imports/313매출장부화주사/index";
+import MaeChulJangbuHyeop from "@/imports/313매출장부협력사/index";
+import MaeIpJangbu from "@/imports/314매입장부정보망배차/index";
+import MaeChulMyeongse from "@/imports/315매출거래명세서화주사/index";
+import MaeIpMyeongse from "@/imports/316매입거래명세서소속기사/index";
 
 function MaeChulJangbu() {
   const [activeTab, setActiveTab] = useState<MaeChulSubTab>("화주사");
   return (
     <SubTabCtx.Provider value={{ activeTab, setActiveTab }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <Suspense fallback={<TabFallback />}>
           {activeTab === "화주사" && <MaeChulJangbuHwaju />}
           {activeTab === "협력사" && <MaeChulJangbuHyeop />}
           {activeTab === "기사" && <MaeChulJangbuHwaju />}
-        </Suspense>
       </div>
     </SubTabCtx.Provider>
   );
@@ -37,9 +26,7 @@ function MaeIpJangbuWrapper() {
   return (
     <MaeIpSubTabCtx.Provider value={{ activeTab, setActiveTab }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <Suspense fallback={<TabFallback />}>
           <MaeIpJangbu />
-        </Suspense>
       </div>
     </MaeIpSubTabCtx.Provider>
   );
@@ -50,9 +37,7 @@ function MaeChulMyeongseWrapper() {
   return (
     <MaeChulMyeongseSubTabCtx.Provider value={{ activeTab, setActiveTab }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <Suspense fallback={<TabFallback />}>
           <MaeChulMyeongse />
-        </Suspense>
       </div>
     </MaeChulMyeongseSubTabCtx.Provider>
   );
@@ -63,9 +48,7 @@ function MaeIpMyeongseWrapper() {
   return (
     <MaeIpMyeongseSubTabCtx.Provider value={{ activeTab, setActiveTab }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <Suspense fallback={<TabFallback />}>
           <MaeIpMyeongse />
-        </Suspense>
       </div>
     </MaeIpMyeongseSubTabCtx.Provider>
   );
@@ -144,11 +127,7 @@ export default function App() {
             pointerEvents: i === activeTab ? "auto" : "none",
           }}
         >
-          {i === activeTab && (
-            <Suspense fallback={<TabFallback />}>
-              <Component />
-            </Suspense>
-          )}
+          {i === activeTab && <Component />}
         </div>
       ))}
 

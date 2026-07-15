@@ -70,15 +70,22 @@ const PARTNER_LIST_316 = ['카모로지스틱스', '(주)글로벌로지스', '(
 interface BubbleCtxType316 { originSelected: Set<number>; setOriginSelected: (s: Set<number>) => void; driverSelected: Set<number>; setDriverSelected: (s: Set<number>) => void; partnerSelected316: Set<number>; setPartnerSelected316: (s: Set<number>) => void; }
 const BubbleCtx316 = createContext<BubbleCtxType316>({ originSelected: new Set(), setOriginSelected: () => {}, driverSelected: new Set(), setDriverSelected: () => {}, partnerSelected316: new Set(), setPartnerSelected316: () => {} });
 
+const STATUS_LABEL_COLORS_316: Record<string, string> = {
+  '마감필요': '#dd2222', '정산대기': '#18ac42', '수금대기': '#005fff',
+  '수급대기': '#005fff', '수금완료': '#5c6370', '정산보류': '#9197a1',
+  '지급대기': '#005fff', '지급완료': '#5c6370', '확정대기': '#dd2222', '발행대기': '#18ac42',
+};
 function DashboardCard({ label, amount, active, onClick }: { label: string; amount: string; active: boolean; onClick?: () => void }) {
+  const baseLabel = label.split(' (')[0];
+  const labelColor = STATUS_LABEL_COLORS_316[baseLabel] ?? '#5c6370';
   return (
     <div
       onClick={onClick}
       className={`relative rounded-[8px] flex-1 min-w-0 h-[72px] flex flex-col items-start px-[16px] py-[12px] ${active ? "bg-white" : "bg-[#f6f7f8] hover:bg-[#EBEDEF]"} ${onClick ? "cursor-pointer select-none" : ""}`}
     >
       {active && <div aria-hidden className="absolute border border-[#EBEDEF] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-      <p className="font-['Pretendard_GOV:SemiBold'] text-[#5c6370] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis">{label}</p>
-      <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis">{amount}</p>
+      <p className="font-['Pretendard_GOV:SemiBold'] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: labelColor }}>{label}</p>
+      <p className="font-['Pretendard_GOV:SemiBold'] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: labelColor }}>{amount}</p>
     </div>
   );
 }
@@ -2316,7 +2323,7 @@ function Frame373() {
           </div>
         </div>
         {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
+          <div key={i} className="content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells">
             <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
             <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
               <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
@@ -2324,16 +2331,16 @@ function Frame373() {
           </div>
         ))}
       </div>
-      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-r border-solid inset-0 pointer-events-none" />
+      <div aria-hidden className="absolute border-[#e3e5e9] border-r border-solid inset-0 pointer-events-none" />
     </div>
   );
 }
 
 const STATUS_BADGE_STYLES_316: Record<string, { bg: string; text: string }> = {
   '확정대기': { bg: '#fce9e9', text: '#d22' },
-  '발행대기': { bg: '#ebedef', text: '#454b55' },
-  '지급대기': { bg: '#e4fbeb', text: '#18ac42' },
-  '지급완료': { bg: '#e6efff', text: '#005fff' },
+  '발행대기': { bg: '#e4fbeb', text: '#18ac42' },
+  '지급대기': { bg: '#e6efff', text: '#005fff' },
+  '지급완료': { bg: '#ebedef', text: '#454b55' },
 };
 // Con()의 SRC 매핑과 순서가 일치해야 함: 확정대기(6) → 발행대기(5) → 지급대기(2) → 지급완료(7)
 const STATUS_ROW_ORDER_316 = [

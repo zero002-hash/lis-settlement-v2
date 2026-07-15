@@ -127,6 +127,12 @@ function formatKorean(n: number): string {
   return parts.join(" ") + "원";
 }
 
+const STATUS_LABEL_COLORS_312: Record<string, string> = {
+  '마감필요': '#dd2222', '정산대기': '#18ac42', '수금대기': '#005fff',
+  '수급대기': '#005fff', '수금완료': '#5c6370', '정산보류': '#9197a1',
+  '지급대기': '#005fff', '지급완료': '#5c6370', '확정대기': '#dd2222', '발행대기': '#18ac42',
+};
+
 const SALE_STATUS_DATA = [
   { label: "전체",    count: "5,000건", amount: null,          amountRaw: 10_000_000 },
   { label: "마감필요", count: "455건",  amount: "0원",         amountRaw: 0 },
@@ -183,8 +189,8 @@ function StatusCardRow({ data, type }: { data: { label: string; count: string; a
             className={`relative rounded-[8px] flex-1 min-w-0 h-full flex flex-col justify-center items-center px-[8px] py-[12px] cursor-pointer select-none ${isSelected ? "bg-white" : "bg-[#f6f7f8] hover:bg-[#EBEDEF]"}`}
           >
             {isSelected && <div aria-hidden className="absolute border border-[#EBEDEF] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-            <p className="font-['Pretendard_GOV:SemiBold'] text-[#5c6370] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis">{item.label}</p>
-            <p className="font-['Pretendard_GOV:SemiBold'] text-[#2e3238] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis">{dynamicCountArr.length > 0 ? dynamicCountArr[i].toLocaleString() : item.count.replace("건", "")}</p>
+            <p className="font-['Pretendard_GOV:SemiBold'] text-[15px] leading-[22px] tracking-[-0.3px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: STATUS_LABEL_COLORS_312[item.label] ?? '#5c6370' }}>{item.label}</p>
+            <p className="font-['Pretendard_GOV:SemiBold'] text-[18px] leading-[26px] tracking-[-0.36px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: STATUS_LABEL_COLORS_312[item.label] ?? '#2e3238' }}>{dynamicCountArr.length > 0 ? dynamicCountArr[i].toLocaleString() : item.count.replace("건", "")}</p>
           </div>
         );
       })}
@@ -1308,8 +1314,8 @@ function Frame883() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">마감필요</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">455건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[15px] tracking-[-0.3px]" style={{ color: '#dd2222' }}>마감필요</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[16px] tracking-[-0.32px]" style={{ color: '#dd2222' }}>455건</p>
       </div>
     </div>
   );
@@ -1319,8 +1325,8 @@ function Frame879() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">정산대기</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">2,273건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[15px] tracking-[-0.3px]" style={{ color: '#18ac42' }}>정산대기</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[16px] tracking-[-0.32px]" style={{ color: '#18ac42' }}>2,273건</p>
       </div>
     </div>
   );
@@ -1330,8 +1336,8 @@ function Frame880() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">수금대기</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">909건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[15px] tracking-[-0.3px]" style={{ color: '#005fff' }}>수금대기</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[16px] tracking-[-0.32px]" style={{ color: '#005fff' }}>909건</p>
       </div>
     </div>
   );
@@ -1343,6 +1349,7 @@ function Frame881() {
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
         <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">수금완료</p>
         <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">909건</p>
+
       </div>
     </div>
   );
@@ -1352,8 +1359,8 @@ function Frame882() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">정산보류</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">454건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[15px] tracking-[-0.3px]" style={{ color: '#9197a1' }}>정산보류</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[16px] tracking-[-0.32px]" style={{ color: '#9197a1' }}>454건</p>
       </div>
     </div>
   );
@@ -1444,8 +1451,8 @@ function Frame886() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">마감필요</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">500건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[15px] tracking-[-0.3px]" style={{ color: '#dd2222' }}>마감필요</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[16px] tracking-[-0.32px]" style={{ color: '#dd2222' }}>500건</p>
       </div>
     </div>
   );
@@ -1455,8 +1462,8 @@ function Frame887() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">정산대기</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">1,500건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[15px] tracking-[-0.3px]" style={{ color: '#18ac42' }}>정산대기</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[16px] tracking-[-0.32px]" style={{ color: '#18ac42' }}>1,500건</p>
       </div>
     </div>
   );
@@ -1466,8 +1473,8 @@ function Frame888() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">지급대기</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">2,000건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[15px] tracking-[-0.3px]" style={{ color: '#005fff' }}>지급대기</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[16px] tracking-[-0.32px]" style={{ color: '#005fff' }}>2,000건</p>
       </div>
     </div>
   );
@@ -1479,6 +1486,7 @@ function Frame889() {
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
         <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">지급완료</p>
         <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">500건</p>
+
       </div>
     </div>
   );
@@ -1488,8 +1496,8 @@ function Frame890() {
   return (
     <div className="bg-[#f6f7f8] flex-[1_0_0] min-w-px relative rounded-[8px]">
       <div className="[word-break:break-word] content-stretch flex flex-col gap-[4px] items-start not-italic px-[16px] py-[12px] relative size-full whitespace-nowrap">
-        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">정산보류</p>
-        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[#2e3238] text-[16px] tracking-[-0.32px]">500건</p>
+        <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[15px] tracking-[-0.3px]" style={{ color: '#9197a1' }}>정산보류</p>
+        <p className="font-['Pretendard_GOV:Bold'] leading-[24px] relative shrink-0 text-[16px] tracking-[-0.32px]" style={{ color: '#9197a1' }}>500건</p>
       </div>
     </div>
   );
@@ -1920,11 +1928,11 @@ type RowData = ReturnType<typeof getRowData>;
 
 const BADGE_STYLES: Record<string, { bg: string; text: string }> = {
   '마감필요': { bg: '#fce9e9', text: '#dd2222' },
-  '정산대기': { bg: '#ebedef', text: '#454b55' },
-  '수금대기': { bg: '#e4fbeb', text: '#18ac42' },
-  '수금완료': { bg: '#e6efff', text: '#005fff' },
-  '지급대기': { bg: '#e4fbeb', text: '#18ac42' },
-  '지급완료': { bg: '#e6efff', text: '#005fff' },
+  '정산대기': { bg: '#e4fbeb', text: '#18ac42' },
+  '수금대기': { bg: '#e6efff', text: '#005fff' },
+  '수금완료': { bg: '#ebedef', text: '#454b55' },
+  '지급대기': { bg: '#e6efff', text: '#005fff' },
+  '지급완료': { bg: '#ebedef', text: '#454b55' },
   '정산보류': { bg: '#ebedef', text: '#9197a1' },
   '정산제외': { bg: '#ebedef', text: '#c7cbd1' },
 };
@@ -1964,11 +1972,8 @@ function BadgeDataCell({ status, rowIdx }: { status: string; rowIdx: number }) {
             data-name="badge"
             style={{ background: style.bg }}
           >
-            <div
-              className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[13px] tracking-[-0.26px] whitespace-nowrap"
-              style={{ color: style.text }}
-            >
-              <p className="leading-[19px]">{status}</p>
+            <div style={{ fontFamily: "'Pretendard GOV:SemiBold'", fontWeight: 600, fontSize: 13, letterSpacing: '-0.26px', color: style.text, lineHeight: 0, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <p style={{ lineHeight: '19px' }}>{status}</p>
             </div>
           </div>
         </div>
@@ -2017,8 +2022,8 @@ function LinkDataCell({ text, rowIdx, onClick }: { text: string; rowIdx: number;
       <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
         <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
           <div className="content-stretch flex flex-[1_0_0] gap-[4px] items-center min-w-px relative">
-            <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#005fff] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-              <p className="leading-[22px] overflow-hidden text-ellipsis cursor-pointer" onClick={onClick}>{text}</p>
+            <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[0px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
+              <p className="[text-decoration-skip-ink:none] [text-underline-position:from-font] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline cursor-pointer" onClick={onClick}>{text}</p>
             </div>
           </div>
         </div>
@@ -2050,7 +2055,7 @@ function ButtonDataCell({ rowIdx }: { rowIdx: number }) {
 
 function CheckboxDataCell312({ rowIdx }: { rowIdx: number }) {
   return (
-    <div className="bg-[#f6f7f8] content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells" data-table-row={rowIdx} data-cb-row={rowIdx}>
+    <div className="content-stretch flex h-[40px] items-center justify-center px-[8px] py-[10px] relative shrink-0 w-[34px]" data-name="Table_Data Cells" data-table-row={rowIdx} data-cb-row={rowIdx}>
       <ColBorder />
       <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Selection Controls">
         <div className="absolute bg-white border-[#adb1b9] border-[1.3px] border-solid inset-[10%] rounded-[4px]" data-name="2021.11" />
@@ -2176,7 +2181,7 @@ function DynamicTable312({ pageRows, handlers }: {
           </div>
           {pageRows.map((rowIdx) => <CheckboxDataCell312 key={rowIdx} rowIdx={rowIdx} />)}
         </div>
-        <div aria-hidden className="absolute border-[#e3e5e9] border-l border-r border-solid inset-0 pointer-events-none" />
+        <div aria-hidden className="absolute border-[#e3e5e9] border-r border-solid inset-0 pointer-events-none" />
       </div>
       {TABLE_COLS.map((col) => (
         <div
@@ -3052,7 +3057,7 @@ function Con() {
         searchMatch = field.toLowerCase().includes(appliedSearch.text.toLowerCase());
       }
 
-      if (!saleMatch || !purchaseMatch || !shipperMatch || !partnerMatch || !dispatchMatch || !dateMatch || !searchMatch) hidden.add(i);
+      if (!(saleMatch || purchaseMatch) || !shipperMatch || !partnerMatch || !dispatchMatch || !dateMatch || !searchMatch) hidden.add(i);
     }
     return hidden;
   }, [saleSelected, purchaseSelected, shipperSelected, partnerSelected, dispatchSelected, dateType, dateRangeStart, dateRangeEnd, appliedSearch]);
@@ -3094,21 +3099,37 @@ function Con() {
       }
       const saleStatus = SALE_ROW_STATUSES[i % SALE_ROW_STATUSES.length];
       const purchaseStatus = PURCHASE_ROW_STATUSES[i % PURCHASE_ROW_STATUSES.length];
-      saleCounts[0]++;
-      saleTotalAmount += PER_ROW_SALE_AMOUNT[saleStatus] ?? 0;
-      for (let si = 1; si < SALE_STATUS_DATA.length; si++) {
-        const aliases = STATUS_ALIASES[SALE_STATUS_DATA[si].label] ?? [SALE_STATUS_DATA[si].label];
-        if (aliases.includes(saleStatus)) saleCounts[si]++;
+
+      // 매출 패널 건수: 매입 상태 필터를 교차 적용
+      const purchaseMatchForSale = purchaseSelected.has(0) || [...purchaseSelected].some((idx) => {
+        const aliases = STATUS_ALIASES[PURCHASE_STATUS_DATA[idx].label] ?? [PURCHASE_STATUS_DATA[idx].label];
+        return aliases.includes(purchaseStatus);
+      });
+      if (purchaseMatchForSale) {
+        saleCounts[0]++;
+        saleTotalAmount += PER_ROW_SALE_AMOUNT[saleStatus] ?? 0;
+        for (let si = 1; si < SALE_STATUS_DATA.length; si++) {
+          const aliases = STATUS_ALIASES[SALE_STATUS_DATA[si].label] ?? [SALE_STATUS_DATA[si].label];
+          if (aliases.includes(saleStatus)) saleCounts[si]++;
+        }
       }
-      purchaseCounts[0]++;
-      purchaseTotalAmount += PER_ROW_PURCHASE_AMOUNT[purchaseStatus] ?? 0;
-      for (let pi = 1; pi < PURCHASE_STATUS_DATA.length; pi++) {
-        const aliases = STATUS_ALIASES[PURCHASE_STATUS_DATA[pi].label] ?? [PURCHASE_STATUS_DATA[pi].label];
-        if (aliases.includes(purchaseStatus)) purchaseCounts[pi]++;
+
+      // 매입 패널 건수: 매출 상태 필터를 교차 적용
+      const saleMatchForPurchase = saleSelected.has(0) || [...saleSelected].some((idx) => {
+        const aliases = STATUS_ALIASES[SALE_STATUS_DATA[idx].label] ?? [SALE_STATUS_DATA[idx].label];
+        return aliases.includes(saleStatus);
+      });
+      if (saleMatchForPurchase) {
+        purchaseCounts[0]++;
+        purchaseTotalAmount += PER_ROW_PURCHASE_AMOUNT[purchaseStatus] ?? 0;
+        for (let pi = 1; pi < PURCHASE_STATUS_DATA.length; pi++) {
+          const aliases = STATUS_ALIASES[PURCHASE_STATUS_DATA[pi].label] ?? [PURCHASE_STATUS_DATA[pi].label];
+          if (aliases.includes(purchaseStatus)) purchaseCounts[pi]++;
+        }
       }
     }
     return { saleCounts, purchaseCounts, saleTotalAmount, purchaseTotalAmount };
-  }, [shipperSelected, partnerSelected, dispatchSelected, dateType, dateRangeStart, dateRangeEnd]);
+  }, [saleSelected, purchaseSelected, shipperSelected, partnerSelected, dispatchSelected, dateType, dateRangeStart, dateRangeEnd]);
 
   const pageRows = useMemo(() => {
     const SALE_PRIORITY: Record<string, number> = { '마감필요':0,'정산대기':1,'수금대기':2,'수금완료':3,'정산보류':4,'정산제외':5 };

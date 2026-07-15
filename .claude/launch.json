@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "lis-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/sue.su/lis-1 && npm run dev"],
       "port": 5173
     }
   ]
