@@ -13,9 +13,7 @@ function MaeChulJangbu() {
   return (
     <SubTabCtx.Provider value={{ activeTab, setActiveTab }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-          {activeTab === "화주사" && <MaeChulJangbuHwaju />}
-          {activeTab === "협력사" && <MaeChulJangbuHyeop />}
-          {activeTab === "기사" && <MaeChulJangbuHwaju />}
+          <MaeChulJangbuHwaju />
       </div>
     </SubTabCtx.Provider>
   );

@@ -742,7 +742,7 @@ function Calender() {
   );
 }
 
-function ShipperGroupBubbleFilter313({ hidden }: { hidden: boolean }) {
+function ShipperGroupBubbleFilter313({ hidden, label = '화주사 업무그룹' }: { hidden: boolean; label?: string }) {
   const { groupSelected, setGroupSelected } = useContext(BubbleCtx313);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -778,7 +778,7 @@ function ShipperGroupBubbleFilter313({ hidden }: { hidden: boolean }) {
         }}
       >
         <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[14px] text-center tracking-[-0.28px] whitespace-nowrap" style={{ color: textColor }}>
-          <p className="leading-[20px]">화주사 업무그룹</p>
+          <p className="leading-[20px]">{label}</p>
         </div>
         {groupSelected.size > 0 && !open ? (
           <div className="bg-[#ccdfff] content-stretch flex flex-col items-center justify-center relative rounded-[100px] shrink-0">
@@ -851,7 +851,7 @@ function ShipperGroupBubbleFilter313({ hidden }: { hidden: boolean }) {
 
 function BubbleFilter313() {
   const { activeTab } = useContext(SubTabCtx);
-  const isPartnerTab = activeTab === '협력사';
+  const isPartnerTab = false;
   const isDriverTab = activeTab === '기사';
   const { shipperSelected, setShipperSelected, partnerSelected, setPartnerSelected } = useContext(BubbleCtx313);
   const [shipperOpen, setShipperOpen] = useState(false);
@@ -918,7 +918,7 @@ function BubbleFilter313() {
           onMouseLeave={() => setShipperHovered(false)}
         >
           <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[14px] text-center tracking-[-0.28px] whitespace-nowrap" style={{ color: shipperTextColor }}>
-            <p className="leading-[20px]">화주사</p>
+            <p className="leading-[20px]">{activeTab === '협력사' ? '협력사' : '화주사'}</p>
           </div>
           {shipperSelected.size > 0 && !shipperOpen ? (
             <div className="bg-[#ccdfff] content-stretch flex flex-col items-center justify-center relative rounded-[100px] shrink-0">
@@ -1026,11 +1026,14 @@ function BubbleFilter313() {
         )}
       </div>
 
-      {/* 화주사 업무그룹 bubble filter - 화주사 탭에서만 표시 */}
-      <ShipperGroupBubbleFilter313 hidden={isPartnerTab || isDriverTab} />
+      {/* 화주사/협력사 업무그룹 bubble filter */}
+      <ShipperGroupBubbleFilter313
+        hidden={isDriverTab}
+        label={activeTab === '협력사' ? '협력사 업무그룹' : '화주사 업무그룹'}
+      />
 
       {/* 협력사 bubble filter - 협력사 탭에서만 표시 */}
-      <div ref={partnerBtnRef} style={{ position: 'relative', display: (isPartnerTab || isDriverTab) ? undefined : 'none' }}>
+      <div ref={partnerBtnRef} style={{ position: 'relative', display: isDriverTab ? undefined : 'none' }}>
         <div
           className="content-stretch flex gap-[8px] h-[32px] items-center justify-center pl-[12px] pr-[10px] py-[6px] relative rounded-[30px] shrink-0 cursor-pointer select-none"
           style={{ background: partnerBg, border: partnerBorder }}
@@ -3093,7 +3096,6 @@ function Component11({ searchType, setSearchType }: { searchType: string; setSea
   }, [dropOpen]);
 
   const options = activeTab === '기사' ? SEARCH_TYPES_DRIVER
-                : activeTab === '협력사' ? SEARCH_TYPES_PARTNER
                 : SEARCH_TYPES_HWAJUSA;
 
   return (
@@ -3420,12 +3422,21 @@ const TABLE_COLS_313S_BASE: ColDef313S[] = [
 
 const TABLE_COLS_313S = TABLE_COLS_313S_BASE;
 
-// 협력사 탭: "화주사"→"협력사", "화주사 업무그룹"→"협력사 업무그룹", 주문번호 컬럼 제거
+// 협력사 탭용 업무그룹
+const PARTNER_GROUPS_313 = ['영남팀', '호남팀', '충청팀', '강원팀', '제주팀', '전국물류팀', '수도권팀'];
+
+// 협력사 탭: 라벨 변경, 주문번호 제거, 협력사/업무그룹 데이터 파트너 기준으로 교체
 const TABLE_COLS_313S_PARTNER: ColDef313S[] = TABLE_COLS_313S_BASE
   .filter(c => c.label !== '화주사 주문번호')
   .map(c => {
-    if (c.label === '화주사') return { ...c, label: '협력사' };
-    if (c.label === '화주사 업무그룹') return { ...c, label: '협력사 업무그룹' };
+    if (c.label === '화주사') return {
+      ...c, label: '협력사',
+      render: (_d: RowData313S, i: number) => <TextDataCell313S key={i} text={PARTNER_ROW_DATA_313[i % PARTNER_ROW_DATA_313.length]} rowIdx={i} />,
+    };
+    if (c.label === '화주사 업무그룹') return {
+      ...c, label: '협력사 업무그룹',
+      render: (_d: RowData313S, i: number) => <TextDataCell313S key={i} text={PARTNER_GROUPS_313[i % PARTNER_GROUPS_313.length]} rowIdx={i} />,
+    };
     return c;
   });
 
@@ -3436,7 +3447,12 @@ function DynamicTable313S({ pageRows, overrides, cancelledIdxSet, handlers }: {
   handlers: RowHandlers313S;
 }) {
   const { activeTab } = useContext(SubTabCtx);
-  const cols = activeTab === '협력사' ? TABLE_COLS_313S_PARTNER : TABLE_COLS_313S;
+  const cols = activeTab === '협력사'
+    ? TABLE_COLS_313S_BASE.map(c =>
+        c.label === '화주사' ? { ...c, label: '협력사' } :
+        c.label === '화주사 업무그룹' ? { ...c, label: '협력사 업무그룹' } : c
+      )
+    : TABLE_COLS_313S;
   return (
     <>
       <div className="relative shrink-0">
@@ -3489,7 +3505,7 @@ const SHIPPER_GROUP_OPTIONS_313: { shipper: string; group: string }[] = SHIPPER_
 
 function Con() {
   const { activeTab } = useContext(SubTabCtx);
-  const isPartnerTab = activeTab === '협력사';
+  const isPartnerTab = false;
   const isDriverTab = activeTab === '기사';
   const [selected, setSelected] = useState<Set<number>>(new Set([0]));
   const [shipperSelected, setShipperSelected] = useState<Set<number>>(new Set());
