@@ -16,6 +16,12 @@ export type SettleSchedule = {
   taxEmail: string;       // 세금계산서 이메일
   account: string;        // 계좌정보
   settleMemo: string;     // 정산 메모
+  // 아래는 거래처 상세 > 거래처 업무그룹 아코디언에서 지정하는 값 — 미지정이면 화면에서 기본값으로 표시
+  groupId?: string;        // 담당업무그룹(내 회사 업무그룹 id) — 미지정 시 거래처의 대표 업무그룹
+  payMethod?: string;      // 결제방법 (후불/선불/현장결제, 기본 후불)
+  payMeans?: string;       // 결제수단 (기본 현금)
+  statementDays?: number;  // 거래명세서 작성일 — 정산 종료일 N일 후 (기본 1)
+  collectDays?: number;    // 수금예정일 — 정산 종료일 N일 후 (기본 30)
 };
 
 export type PartnerContact = {
@@ -44,20 +50,22 @@ export type TradePartner = {
   bizType: string;       // 업태
   bizItem: string;       // 종목
   ceoName: string;       // 대표자명
-  contact: string;       // 연락처
+  contact: string;       // 대표자 연락처
+  fax?: string;          // 팩스번호
   taxEmail: string;      // 세금계산서 이메일
+  bizLicenseFile?: string; // 사업자등록증 첨부 파일명
   memo: string;          // 배차운영메모
   registeredAt: string;  // 등록일시
-  tTrucker: boolean;     // T 트럭커 시스템 가입 여부 — 공유그룹 노출 기준
+  tTrucker: boolean;     // T 트럭커 운송관리시스템 가입 여부 — 공유그룹 노출 기준
   sharedGroups: SharedGroupMapping[]; // 가입인 경우 상대방 업무그룹 목록(+매핑)
   settleSchedules: SettleSchedule[];  // 우리가 만든 정산스케줄
-  contacts: PartnerContact[];         // 거래처 직원정보
+  contacts: PartnerContact[];         // 거래처 직원 정보 (첫 번째 직원이 거래처 정보의 담당자)
   // 이 거래처를 담당하는 우리 업무그룹(회사 > 업무그룹 관리에서 등록한 그룹).
   // 업무그룹 자체엔 격리/공유 개념이 없고 멤버 구성이 곧 접근 범위이므로, 여러 회사가 같이 봐야 하면 관련자를
   // 모두 포함하는 그룹을 만들어 지정하고 특정 담당자만 봐야 하면 그 담당자만 포함하는 그룹을 만들어 지정한다.
   // 배차관리에서 화주사/요청 거래처 입력 권한 판단 기준으로 쓰인다.
-  mainGroupId: string;       // 메인 담당 업무그룹 — 거래처당 반드시 1개
-  assignedGroupIds: string[]; // 담당 업무그룹 — 여러 개 지정 가능(메인 담당 업무그룹 포함)
+  mainGroupId: string;       // 대표 업무그룹 — 담당 업무그룹 중 1개
+  assignedGroupIds: string[]; // 거래 담당 업무그룹 — 여러 개 지정 가능(대표 업무그룹 포함)
 };
 
 const ALIASES = [

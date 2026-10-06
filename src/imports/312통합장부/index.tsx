@@ -27,7 +27,7 @@ const PurchaseFilterCtx = createContext<FilterCtxType>(DEFAULT_CTX);
 interface DateFilterCtxType { dateType: string; rangeStart: Date|null; rangeEnd: Date|null; periodRange: string; setDateType: (t: string) => void; setRangeStart: (d: Date|null) => void; setRangeEnd: (d: Date|null) => void; setPeriodRange: (t: string) => void; }
 const DateFilterCtx = createContext<DateFilterCtxType>({ dateType:'상차일', rangeStart:null, rangeEnd:null, periodRange:'오늘', setDateType:()=>{}, setRangeStart:()=>{}, setRangeEnd:()=>{}, setPeriodRange:()=>{} });
 
-const SEARCH_TYPE_OPTIONS_312 = ['차량번호', '기사명', '사업자명', '화주사 별칭', '요청협력사 별칭', '화주사주문번호', '오더ID'] as const;
+const SEARCH_TYPE_OPTIONS_312 = ['차량번호', '기사명', '사업자명', '화주사 별칭', '요청협력사 별칭', '화주주문번호', '오더ID'] as const;
 interface SearchCtxType312 { searchType: string; searchText: string; appliedSearch: { type: string; text: string } | null; setSearchType: (t: string) => void; setSearchText: (t: string) => void; runSearch: () => void; clearSearch: () => void; }
 const SearchCtx312 = createContext<SearchCtxType312>({ searchType: '차량번호', searchText: '', appliedSearch: null, setSearchType: () => {}, setSearchText: () => {}, runSearch: () => {}, clearSearch: () => {} });
 
@@ -2105,7 +2105,7 @@ function TaxInvoiceModal({ type, rowIdx, onClose }: { type: 'sale' | 'purchase';
           <ModalRow label={isSale ? '화주사' : '요청협력사'} value={isSale ? (d.shipper || '-') : (d.partner || '-')} />
           <ModalRow label="계산서 작성일" value={isSale ? d.saleTaxDate : d.purchaseTaxDate} />
           <ModalRow label={isSale ? '청구금액' : '배차금액'} value={`${(isSale ? d.billingAmt : d.dispatchAmt).toLocaleString()}원`} />
-          <ModalRow label="화주사주문번호" value={d.shipperOrderNum} />
+          <ModalRow label="화주주문번호" value={d.shipperOrderNum} />
         </div>
         <div
           className="flex items-center justify-center cursor-pointer"
@@ -3144,7 +3144,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                 </div>
                 {/* Date/time row */}
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <Sel options={['당상','기사','화주사']} width={67} />
+                  <Sel options={['당상','기사','화주']} width={67} />
                   <DateField value={loadingDate} bg="#E8F3FE" />
                   <div style={{ height:28, border:'1px solid #DFDFDF', borderRadius:2, background:'#FFFFFF', display:'flex', alignItems:'center', padding:'0 8px', boxSizing:'border-box', flexShrink:0 }}>
                     <span style={{ fontSize:15, color: loadTimeStr ? '#1A1A1A' : '#999', letterSpacing:'-0.02em', fontFamily:"'Pretendard GOV', sans-serif" }}>{loadTimeStr || 'hh : mm'}</span>
@@ -3178,7 +3178,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                 </div>
                 {/* Date/time row */}
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <Sel options={['당착','기사','화주사']} width={67} />
+                  <Sel options={['당착','기사','화주']} width={67} />
                   <DateField value={unloadDateStr} bg="#E8F3FE" />
                   <input defaultValue={unloadTimeStr} placeholder="hh : mm" style={{ width:67, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
                   <Chk checked={unloadNoTime} label="시간 상관없음" onChange={() => setUnloadNoTime(p=>!p)} />
@@ -3359,7 +3359,7 @@ function Con() {
           '사업자명': row.shipper,
           '화주사 별칭': row.shipper,
           '요청협력사 별칭': row.partner,
-          '화주사주문번호': row.shipperOrderNum,
+          '화주주문번호': row.shipperOrderNum,
           '오더ID': row.orderId,
         };
         const field = FIELD_BY_TYPE[appliedSearch.type] ?? '';

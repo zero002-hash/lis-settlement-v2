@@ -42,7 +42,30 @@ function Header() {
             <path d="M0.447192 9.17532C0.282075 9.17532 0.162365 9.14474 0.0880625 9.08357C0.0220156 9.0224 -0.00687989 8.91317 0.00137598 8.75588L0.806322 0.524305C0.839345 0.174768 1.02097 0 1.35121 0H3.8032C4.76913 0 5.46262 0.187876 5.88367 0.563628C6.30472 0.93064 6.51525 1.41562 6.51525 2.01857C6.51525 2.40306 6.44507 2.74823 6.30472 3.05407C6.17263 3.35118 5.991 3.60459 5.75984 3.81431C5.52867 4.0153 5.26448 4.18133 4.96727 4.3124V4.36483C5.19018 4.41726 5.39245 4.50465 5.57408 4.62698C5.75571 4.74058 5.90844 4.88477 6.03228 5.05954C6.16437 5.2343 6.26344 5.42655 6.32949 5.63627C6.40379 5.84599 6.44094 6.06445 6.44094 6.29165C6.44094 7.20918 6.15612 7.92136 5.58646 8.42819C5.02506 8.92628 4.1871 9.17532 3.07255 9.17532H0.447192ZM2.01993 7.45823H3.23354C3.6711 7.45823 3.98895 7.35773 4.1871 7.15675C4.38524 6.94703 4.48431 6.65429 4.48431 6.27854C4.48431 5.9727 4.37698 5.7455 4.16233 5.59695C3.95593 5.44839 3.65046 5.37412 3.24593 5.37412H2.23046L2.01993 7.45823ZM2.40383 3.65702H3.25831C3.66285 3.65702 3.97244 3.56527 4.1871 3.38176C4.40175 3.18952 4.50907 2.90552 4.50907 2.52977C4.50907 1.97925 4.16646 1.70399 3.48122 1.70399H2.60197L2.40383 3.65702Z" fill="white"/>
           </svg>
         </button>
-        <button style={{ padding:'0 16px', height:44, borderRadius:34, background:'#FFFFFF', border:'1px solid #E4E5E9', cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, color:'#2E3238', letterSpacing:'-0.02em' }}>기사 스케줄</button>
+        {/* AI 자동배차 — 플로우 모듈은 클릭 시점에 동적 로드 */}
+        <button
+          data-name="ai-auto-dispatch"
+          onClick={() => {
+            import('./aiDispatchFlow')
+              .then(m => m.open())
+              .catch(err => { console.error(err); alert('AI 자동배차 화면을 불러오지 못했습니다.'); });
+          }}
+          style={{ display:'flex', alignItems:'center', gap:6, padding:'0 16px', height:44, borderRadius:34, background:'#FFFFFF', border:'1px solid #E4E5E9', cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}
+        >
+          <span style={{ width:20, height:20, borderRadius:'50%', background:'linear-gradient(135deg, #337FFF 0%, #9966FF 100%)', color:'#FFFFFF', fontSize:9, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, letterSpacing:0 }}>AI</span>
+          자동배차
+        </button>
+        {/* 기사 스케줄 — 헤더 아래 우측 패널로 열림 (클릭한 버튼 기준으로 위치 계산) */}
+        <button
+          data-name="gs-schedule"
+          onClick={(e) => {
+            const anchor = e.currentTarget;
+            import('./aiDispatchFlow')
+              .then(m => m.openSchedule(anchor))
+              .catch(err => { console.error(err); alert('기사 스케줄 화면을 불러오지 못했습니다.'); });
+          }}
+          style={{ padding:'0 16px', height:44, borderRadius:34, background:'#FFFFFF', border:'1px solid #E4E5E9', cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, color:'#2E3238', letterSpacing:'-0.02em' }}
+        >기사 스케줄</button>
       </div>
     </div>
   );
@@ -219,7 +242,7 @@ function genRows(page: number, count = 20) {
 }
 
 // ── Tab Module ──
-const TABS_LIST = ['기본','쿠팡CLS','세라젬','대상청정원','한샘','일반화주사','(설정한 이름)'];
+const TABS_LIST = ['기본','쿠팡CLS','세라젬','대상청정원','한샘','일반화주','(설정한 이름)'];
 
 function TabModule({ activeTab, setActiveTab }: { activeTab: number; setActiveTab: (i: number) => void }) {
   const EditIcon = () => (
@@ -749,8 +772,8 @@ function OrderTable({ page, selectedIdx, onSelectRow, checkedIdxs, onToggleCheck
           <Th label="오더ID" width={COL_WIDTHS.orderId}/>
           <Th label="오더 상태" width={COL_WIDTHS.status}/>
           <Th label="기사 응답" width={COL_WIDTHS.resp}/>
-          <Th label="화주사" width={COL_WIDTHS.shipper}/>
-          <Th label="화주사 업무그룹" width={COL_WIDTHS.shipperGrp}/>
+          <Th label="화주" width={COL_WIDTHS.shipper}/>
+          <Th label="화주 업무그룹" width={COL_WIDTHS.shipperGrp}/>
           <Th label="요청협력사" width={COL_WIDTHS.partner}/>
           <Th label="요청협력사 업무그룹" width={COL_WIDTHS.partnerGrp}/>
           <Th label="상차일시(요청)" width={COL_WIDTHS.reqDate}/>
