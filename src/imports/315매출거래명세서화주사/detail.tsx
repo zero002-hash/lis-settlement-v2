@@ -942,7 +942,7 @@ function TaxInvoiceModal() {
             <div style={{ border:'1px solid #E4E5E9', borderRadius:8, padding:16, display:'flex', flexDirection:'column', gap:8 }}>
               {invoiceType === '매입' ? (
                 <>
-                  <InfoRow label="지급기한" value={dueDate} lw={140} />
+                  <InfoRow label="지급예정일" value={dueDate} lw={140} />
                   <SplitRow lw={140}
                     left={{ label:'세금계산서 발행일자', value: writeDate }}
                     right={{ label:'세금계산서 작성일자', value: writeDate }}
@@ -954,7 +954,7 @@ function TaxInvoiceModal() {
                 </>
               ) : (
                 <>
-                  <InfoRow label="수금기한" value={dueDate} lw={140} />
+                  <InfoRow label="수금예정일" value={dueDate} lw={140} />
                   <SplitRow lw={140}
                     left={{ label:'세금계산서 작성일자', value: writeDate }}
                     right={{ label:'세금계산서 발행일자', value: writeDate }}
@@ -1162,7 +1162,7 @@ function ConfirmInvoiceModal() {
   const fmt = (ms: number) => { const d = new Date(ms); return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; };
   const todayMs = new Date(2026, 5, 26).getTime(); // 2026-06-26 고정 (현재 날짜)
   const writeDate = fmt(todayMs);
-  const dueDate   = fmt(todayMs + 30 * 86400000);  // 수금기한 = 작성일 + 30일
+  const dueDate   = fmt(todayMs + 30 * 86400000);  // 수금예정일 = 작성일 + 30일
 
   // 사업자번호: shipper 문자열을 시드로 결정론적 생성
   const bizNum = (() => {
@@ -1182,7 +1182,7 @@ function ConfirmInvoiceModal() {
     { label: '총 오더 수',     w: 100, value: `${activeCount}건` },
     { label: '정산기간',        w: 160, value: period },
     { label: '계산서 작성일자', w: 140, value: writeDate },
-    { label: '수금기한',        w: 140, value: dueDate },
+    { label: '수금예정일',        w: 140, value: dueDate },
     { label: invoiceType === '매입' ? '배차금액 합계' : '청구금액 합계', w: 140, value: totalAmount.toLocaleString() + '원' },
     { label: '조정금액 합계',   w: 140, value: (adjTotal >= 0 ? '+' : '') + adjTotal.toLocaleString() + '원' },
     { label: '공급가액',        w: 140, value: supplyAmount.toLocaleString() + '원' },
@@ -2020,7 +2020,7 @@ function Input02Selectbox7() {
   const { invoiceType } = useContext(DetailCtx);
   return (
     <div className="content-stretch flex items-center relative shrink-0 w-full" data-name="Input / 02. Selectbox">
-      <p className="[word-break:break-word] font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] w-[120px]">{invoiceType === '매입' ? '지급기한' : '수금기한'}</p>
+      <p className="[word-break:break-word] font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] w-[120px]">{invoiceType === '매입' ? '지급예정일' : '수금예정일'}</p>
       <div className="content-stretch flex flex-col gap-[4px] items-start justify-end relative shrink-0 w-[300px]" data-name="Input / 02. Selectbox">
         <TypeStatusDisabled1 />
       </div>
@@ -2036,7 +2036,7 @@ function DatePickerRows() {
 
   const rows = [
     { label: '계산서 작성일자', key: '작성' as const },
-    { label: invoiceType === '매입' ? '지급기한' : '수금기한', key: '기한' as const },
+    { label: invoiceType === '매입' ? '지급예정일' : '수금예정일', key: '기한' as const },
   ];
 
   return (
@@ -9447,7 +9447,7 @@ const MEMO_CONVERSATIONS: MemoMsg[][] = [
     { sender: '김담당:', text: '거래명세서 확정 전에 합계금액 한 번 더 검토해 주세요.', time: '26.05.09 11:00' },
     { sender: '최담당:', text: '공급가액이 청구금액 + 조정금액이 맞나요?', time: '26.05.09 11:08' },
     { sender: '김담당:', text: '네 맞습니다. 확정 처리했습니다.', time: '26.05.09 11:15' },
-    { sender: '최담당:', text: '수금기한 확인 부탁드립니다. 이번 달 말일로 설정됐나요?', time: '26.05.09 11:22' },
+    { sender: '최담당:', text: '수금예정일 확인 부탁드립니다. 이번 달 말일로 설정됐나요?', time: '26.05.09 11:22' },
   ],
   [
     { sender: '이담당:', text: '세금계산서 발행 요청드립니다.', time: '26.05.11 16:00' },

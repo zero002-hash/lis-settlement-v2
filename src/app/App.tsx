@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { SubTabCtx, type MaeChulSubTab, MaeIpSubTabCtx, type MaeIpSubTab, MaeChulMyeongseSubTabCtx, type MaeChulMyeongseSubTab, MaeIpMyeongseSubTabCtx, type MaeIpMyeongseSubTab, NavCtx } from "@/imports/shared/subTabCtx";
+import AiHelpWidget from "./AiHelpWidget";
 import BaechaManagement from "@/imports/배차관리/index";
 import TonghapJangbu from "@/imports/312통합장부/index";
 import MaeChulJangbuHwaju from "@/imports/313매출장부화주사/index";
@@ -7,6 +8,14 @@ import MaeChulJangbuHyeop from "@/imports/313매출장부협력사/index";
 import MaeIpJangbu from "@/imports/314매입장부정보망배차/index";
 import MaeChulMyeongse from "@/imports/315매출거래명세서화주사/index";
 import MaeIpMyeongse from "@/imports/316매입거래명세서소속기사/index";
+import GeoraecheoManagement from "@/imports/거래처관리/index";
+import WitaksaManagement from "@/imports/위탁사관리/index";
+import YeondongHwajuManagement from "@/imports/연동화주사관리/index";
+import PartnerGisaManagement from "@/imports/파트너기사관리/index";
+import YongchaGisaManagement from "@/imports/용차기사관리/index";
+import ContractRateManagement from "@/imports/계약운임표관리/index";
+import EopmuGroupManagement from "@/imports/업무그룹관리/index";
+import JikwonManagement from "@/imports/직원관리/index";
 
 function MaeChulJangbu() {
   const [activeTab, setActiveTab] = useState<MaeChulSubTab>("화주사");
@@ -59,6 +68,14 @@ const TABS = [
   { Component: MaeChulMyeongseWrapper, label: "매출 거래명세서" },
   { Component: MaeIpMyeongseWrapper, label: "매입 거래명세서" },
   { Component: BaechaManagement, label: "배차 관리" },
+  { Component: GeoraecheoManagement, label: "거래처 관리" },
+  { Component: YeondongHwajuManagement, label: "연동화주사 관리" },
+  { Component: PartnerGisaManagement, label: "파트너기사 관리" },
+  { Component: YongchaGisaManagement, label: "용차 기사 관리" },
+  { Component: ContractRateManagement, label: "계약운임표 관리" },
+  { Component: EopmuGroupManagement, label: "업무그룹 관리" },
+  { Component: JikwonManagement, label: "직원 관리" },
+  { Component: WitaksaManagement, label: "위탁사 관리" },
 ];
 
 /**
@@ -150,6 +167,7 @@ export default function App() {
         />
       ))}
     </div>
+    <AiHelpWidget />
     </div>
     </NavCtx.Provider>
   );

@@ -130,7 +130,7 @@ function StatusCardRowLarge({ items }: { items: { label: string; amount: string 
 function Frame() {
   return (
     <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col gap-px items-start min-w-px not-italic relative">
-      <p className="font-['Pretendard_GOV:Bold'] leading-[22px] overflow-hidden relative shrink-0 text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] w-full whitespace-nowrap">쿠팡로지스틱스</p>
+      <p className="font-['Pretendard_GOV:Bold'] leading-[22px] overflow-hidden relative shrink-0 text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] w-full whitespace-nowrap">케이드라이브</p>
       <p className="font-['Pretendard_GOV:Regular'] leading-[19px] relative shrink-0 text-[#5c6370] text-[13px] tracking-[-0.26px] w-full">김카모</p>
     </div>
   );
@@ -1957,7 +1957,7 @@ function CreateInvoiceModal({ onClose, preSelectedIndices = [], onSuccess }: { o
                     <div className="shrink-0 w-[160px]"><ModalCalendarBtn label="25.08.13" /></div>
                   </div>
                   <div className="content-stretch flex items-center justify-between relative shrink-0 w-full">
-                    <p className="font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] whitespace-nowrap">수금기한</p>
+                    <p className="font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] whitespace-nowrap">수금예정일</p>
                     <div className="shrink-0 w-[160px]"><ModalCalendarBtn label="25.08.13" /></div>
                   </div>
                 </div>
@@ -2404,8 +2404,8 @@ const TABLE_COLS_313C: ColDef313C[] = [
   { label: '매출 거래명세서ID', width: 140, renderHeader: () => <HeaderCell313C label="매출 거래명세서ID" width={140} />, renderCell: (row, ri) => <TextCell313C key={ri} rowIdx={ri} width={140} value={row.statementId} /> },
   { label: '계산서 작성일자', width: 140, renderHeader: () => <HeaderCell313C label="계산서 작성일자" width={140} />, renderCell: (row, ri) => <TextCell313C key={ri} rowIdx={ri} width={140} value={row.billDate1} /> },
   { label: '계산서 작성일자 2', width: 140, renderHeader: () => <HeaderCell313C label="계산서 작성일자 2" width={140} />, renderCell: (row, ri) => <TextCell313C key={ri} rowIdx={ri} width={140} value={row.billDate2} /> },
-  { label: '수금기한', width: 140, renderHeader: () => <HeaderCell313C label="수금기한" width={140} />, renderCell: (row, ri) => <TextCell313C key={ri} rowIdx={ri} width={140} value={row.collectDeadline} /> },
-  { label: '수금일', width: 140, renderHeader: () => <HeaderCell313C label="수금일" width={140} />, renderCell: (row, ri) => <TextCell313C key={ri} rowIdx={ri} width={140} value={row.collectDate} /> },
+  { label: '수금예정일', width: 140, renderHeader: () => <HeaderCell313C label="수금예정일" width={140} />, renderCell: (row, ri) => <TextCell313C key={ri} rowIdx={ri} width={140} value={row.collectDeadline} /> },
+  { label: '수금완료일', width: 140, renderHeader: () => <HeaderCell313C label="수금완료일" width={140} />, renderCell: (row, ri) => <TextCell313C key={ri} rowIdx={ri} width={140} value={row.collectDate} /> },
   { label: '증빙서류', width: 100, renderHeader: () => <HeaderCell313C label="증빙서류" width={100} />, renderCell: (_, ri) => <ButtonCell313C key={ri} rowIdx={ri} width={100} /> },
 ];
 

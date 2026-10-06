@@ -7,7 +7,15 @@ import ORDER_IDS from "../shared/orderIds";
 import { MaeIpSubTabCtx, type MaeIpSubTab } from "../shared/subTabCtx";
 import SharedLnb from "../shared/SharedLnb";
 import { getCancelledOrders, subscribeCancelledOrders, CancelledOrderEntry } from "../shared/cancelledOrdersStore";
+import { modalSvg, emptySvg } from "../313매출장부화주사/svg-modal";
 
+// ── 매입 상태 전환 조건 ────────────────────────────────────────────────────
+// 마감필요: 배차 정보 미입력 또는 배차금액 미확인
+// 정산대기: 배차 정보 입력 그리고 배차금액 확인
+// 지급대기: 수기계산서 등록 또는 매입 거래명세서 페이지에서 수기계산서 또는 전자 세금계산서 발행
+// 지급완료: 지급완료 처리 또는 매입 거래명세서 페이지에서 지급완료 처리
+// 정산보류: 마감필요/정산대기/지급대기 오더를 정산보류로 전환, 지급완료 처리를 막음
+//           정보망배차(바로선지급)/(픽커) 탭은 지급예정일에 자동 지급승인되는 것도 함께 막음
 const ROW_STATUSES_314 = ["마감필요","정산대기","정산대기","정산대기","지급대기","지급대기","지급대기","지급대기","지급완료","정산보류"];
 const STATUS_PRIORITY_314_SORT: Record<string, number> = { '마감필요': 0, '정산대기': 1, '지급대기': 2, '지급완료': 3, '정산보류': 4, '정산제외': 5 };
 
@@ -22,7 +30,7 @@ const getLoadingDate314 = (i: number) => LOADING_DATES_314[getLoadingDateIdx314(
 const BUBBLE_SHIPPERS_314 = ['(주)글로벌로지스', '(주)케이로지스틱스', '(주)판교물류솔루션', '(주)수원익스프레스', '(주)동탄스마트물류'];
 const SHIPPER_ROW_DATA_314 = ['(주)글로벌로지스', '(주)케이로지스틱스', '(주)판교물류솔루션', '(주)수원익스프레스', '(주)동탄스마트물류'];
 
-// ── 요청협력사 bubble filter ──────────────────────────────────────────────────
+// ── 요청협력사 bubble filter (실제로는 거래처 메뉴에 등록된 협력사 리스트를 조회) ──────────
 const PARTNERS_314 = [
   '카모로지스틱스', '(주)글로벌로지스', '(주)케이로지스틱스', '(주)판교물류솔루션', '(주)수원익스프레스',
   '(주)동탄스마트물류', '(주)한국물류', '(주)대한통운파트너스', '(주)신세계물류', '(주)롯데로지스',
@@ -36,6 +44,18 @@ const PARTNERS_314 = [
   '(주)부산물류솔루션', '(주)제주물류', '(주)강원로지스', '(주)울산물류파트너', '(주)창원스마트물류',
 ];
 const PARTNER_ROW_DATA_314 = PARTNERS_314;
+
+// ── 소속기사배차 매입 거래명세서 생성 모달: 기사 검색 후보 (실제로는 파트너 기사 관리에 등록된 소속기사 리스트를 조회) ──
+const DRIVERS_314 = [
+  { name: '김카모', plate: '12아3456', phone: '010-1234-5678' },
+  { name: '이운송', plate: '34나7890', phone: '010-2345-6789' },
+  { name: '박배차', plate: '56다1234', phone: '010-3456-7890' },
+  { name: '최트럭', plate: '78라5678', phone: '010-4567-8901' },
+  { name: '정화물', plate: '90마9012', phone: '010-5678-9012' },
+  { name: '강물류', plate: '11바3456', phone: '010-6789-0123' },
+  { name: '조배송', plate: '22사7890', phone: '010-7890-1234' },
+  { name: '윤기사', plate: '33아1234', phone: '010-8901-2345' },
+];
 
 interface DateFilterCtxType314 { rangeStart: Date|null; rangeEnd: Date|null; setRangeStart: (d: Date|null) => void; setRangeEnd: (d: Date|null) => void; }
 const DateFilterCtx314 = createContext<DateFilterCtxType314>({ rangeStart: null, rangeEnd: null, setRangeStart: () => {}, setRangeEnd: () => {} });
@@ -1457,7 +1477,7 @@ function MaeipManualInvoiceModal({ onClose, onSuccess }: { onClose: () => void; 
   const grandTotal = chargeTotal + taxTotal;
   const fmt314 = (n: number) => n.toLocaleString('ko-KR') + '원';
   const [taxType, setTaxType] = useState<'과세'|'면세'>('과세');
-  const [dateValues, setDateValues] = useState({ 작성일: todayYYMMDD(), 확인일: '26.07.01', 지급기한: '26.08.13' });
+  const [dateValues, setDateValues] = useState({ 작성일: todayYYMMDD(), 확인일: '26.07.01', 지급예정일: '26.08.13' });
   const [openCal, setOpenCal] = useState<string | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const F: React.CSSProperties = { fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em' };
@@ -1562,7 +1582,7 @@ function MaeipManualInvoiceModal({ onClose, onSuccess }: { onClose: () => void; 
               {([
                 { label:'계산서 작성일자', key:'작성일' },
                 { label:'계산서 확인일자', key:'확인일' },
-                { label:'지급기한', key:'지급기한' },
+                { label:'지급예정일', key:'지급예정일' },
               ] as { label: string; key: keyof typeof dateValues }[]).map(({ label, key }) => (
                 <div key={key} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', height:36 }}>
                   <span style={{ fontSize:15, color:'#5C6370', lineHeight:'22px', flexShrink:0 }}>{label}</span>
@@ -1628,7 +1648,7 @@ function MaeipManualInvoiceModal({ onClose, onSuccess }: { onClose: () => void; 
 
 function MaeipManualDetailModal({ onClose }: { onClose: () => void }) {
   const F: React.CSSProperties = { fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em' };
-  const [dateValues, setDateValues] = useState({ 수금기한: '26.08.13', 작성일: todayYYMMDD(), 확인일: '26.07.01' });
+  const [dateValues, setDateValues] = useState({ 수금예정일: '26.08.13', 작성일: todayYYMMDD(), 확인일: '26.07.01' });
   const [openCal, setOpenCal] = useState<string | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const calIcon = (
@@ -1684,7 +1704,7 @@ function MaeipManualDetailModal({ onClose }: { onClose: () => void }) {
             {/* Date pickers */}
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {([
-                { label:'수금기한', key:'수금기한' },
+                { label:'수금예정일', key:'수금예정일' },
                 { label:'계산서 작성일자', key:'작성일' },
                 { label:'계산서 확인일자', key:'확인일' },
               ] as { label: string; key: keyof typeof dateValues }[]).map(({ label, key }) => (
@@ -1750,14 +1770,715 @@ function MaeipManualDetailModal({ onClose }: { onClose: () => void }) {
   )}{openCal && anchorRect && <CalendarDropdown314 anchorRect={anchorRect} value={dateValues[openCal as keyof typeof dateValues]} onChange={v => setDateValues(prev => ({...prev, [openCal]: v}))} onClose={() => setOpenCal(null)} />}</>;
 }
 
+interface MaeipAdjItem314 { id: number; amount: number; sign: '+' | '-'; note: string; }
+
+function MaeipClearIcon314({ onClick }: { onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="shrink-0 flex items-center justify-center" style={{ padding: 0, background: "none", border: "none", cursor: "pointer" }}>
+      <svg width="14" height="14" fill="none" viewBox="0 0 14 14">
+        <circle cx="7" cy="7" r="7" fill="#9197A1" />
+        <path d="M9.46 4.54C9.206 4.286 8.794 4.286 8.54 4.54L7 6.08L5.46 4.54C5.206 4.286 4.794 4.286 4.54 4.54C4.286 4.794 4.286 5.206 4.54 5.46L6.08 7L4.54 8.54C4.286 8.794 4.286 9.206 4.54 9.46C4.794 9.714 5.206 9.714 5.46 9.46L7 7.92L8.54 9.46C8.794 9.714 9.206 9.714 9.46 9.46C9.714 9.206 9.714 8.794 9.46 8.54L7.92 7L9.46 5.46C9.714 5.206 9.714 4.794 9.46 4.54Z" fill="white" />
+      </svg>
+    </button>
+  );
+}
+
+function MaeipAdjustmentItem314({ item, index, onChange, onRemove }: {
+  item: MaeipAdjItem314; index: number;
+  onChange: (updated: MaeipAdjItem314) => void;
+  onRemove: () => void;
+}) {
+  const [amountFocused, setAmountFocused] = useState(false);
+  const [noteFocused, setNoteFocused] = useState(false);
+  return (
+    <div className="bg-white relative rounded-[8px] shrink-0 w-full">
+      <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-[8px]" />
+      <div className="content-stretch flex flex-col gap-[12px] items-start p-[16px] relative size-full">
+        <div className="content-stretch flex items-center justify-between relative shrink-0 w-full">
+          <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] whitespace-nowrap">조정금액 {index + 1}</p>
+          <button onClick={onRemove} className="relative shrink-0 rounded-[4px] hover:bg-[#f6f7f8] transition-colors" style={{ width: '12.8px', height: '12.8px' }}>
+            <svg className="absolute inset-0 size-full" fill="none" viewBox="0 0 12.17 12.17">
+              <path d="M0.75 0.75L11.4167 11.4167" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5" />
+              <path d={modalSvg.p3a8dbd00} stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5" />
+            </svg>
+          </button>
+        </div>
+        <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+          <div className="content-stretch flex items-center relative shrink-0">
+            <div className="bg-white h-[36px] min-w-[51px] relative rounded-bl-[4px] rounded-tl-[4px] shrink-0">
+              <button onClick={() => onChange({ ...item, sign: '+' })} className="w-full h-full flex items-center justify-center px-[10px]">
+                <div aria-hidden className={`absolute inset-0 pointer-events-none border ${item.sign === '+' ? "border-[#005fff] rounded-[4px]" : "border-[#e3e5e9] rounded-tl-[4px] rounded-bl-[4px] border-r-0"}`} />
+                <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d={modalSvg.p918e800} fill={item.sign === '+' ? "#005FFF" : "#9197A1"} /></svg>
+              </button>
+            </div>
+            <div className="bg-white h-[36px] min-w-[50px] relative rounded-br-[4px] rounded-tr-[4px] shrink-0">
+              <button onClick={() => onChange({ ...item, sign: '-' })} className="flex items-center justify-center size-full px-[12px]">
+                <svg width="14" height="1.3" fill="none" viewBox="0 0 14 1.3"><line stroke={item.sign === '-' ? "#005FFF" : "#9197A1"} strokeLinecap="round" strokeWidth="1.3" x1="0.65" x2="13.35" y1="0.65" y2="0.65" /></svg>
+              </button>
+              <div aria-hidden className={`absolute inset-0 pointer-events-none border ${item.sign === '-' ? "border-[#005fff] rounded-[4px]" : "border-[#e3e5e9] rounded-tr-[4px] rounded-br-[4px] border-l-0"}`} />
+            </div>
+          </div>
+          <div className="flex-[1_0_0] min-w-px">
+            <div className="bg-white h-[36px] relative rounded-[4px] shrink-0 w-full group">
+              <div aria-hidden className={`absolute border inset-0 pointer-events-none rounded-[4px] transition-colors ${amountFocused ? "border-[#005fff]" : "border-[#e3e5e9] group-hover:border-[#adb1b9]"}`} />
+              <div className="flex flex-row items-center overflow-hidden size-full px-[10px] py-[6px]">
+                <input type="text" inputMode="numeric"
+                  className={`min-w-0 flex-1 bg-transparent border-none outline-none font-['Pretendard_GOV:Regular'] text-[15px] tracking-[-0.3px] leading-[22px] text-right placeholder:text-[#767d8a] ${item.amount === 0 ? "text-[#767d8a]" : "text-[#2e3238]"}`}
+                  placeholder="0"
+                  value={item.amount === 0 ? "" : item.amount.toLocaleString("ko-KR")}
+                  onChange={e => { const v = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10); onChange({ ...item, amount: isNaN(v) ? 0 : Math.min(v, 999_999_999) }); }}
+                  onFocus={() => setAmountFocused(true)}
+                  onBlur={() => setAmountFocused(false)}
+                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                />
+                <span className={`font-['Pretendard_GOV:Regular'] text-[15px] tracking-[-0.3px] leading-[22px] shrink-0 ${item.amount === 0 ? "text-[#767d8a]" : "text-[#2e3238]"}`}>원</span>
+                {amountFocused && item.amount !== 0 && <div style={{ marginLeft: 4 }} onMouseDown={e => e.preventDefault()}><MaeipClearIcon314 onClick={() => onChange({ ...item, amount: 0 })} /></div>}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="content-stretch flex flex-col items-start justify-end relative shrink-0 w-full">
+          <div className="bg-white h-[36px] relative rounded-[4px] shrink-0 w-full group">
+            <div aria-hidden className={`absolute border inset-0 pointer-events-none rounded-[4px] transition-colors ${noteFocused ? "border-[#005fff]" : "border-[#e3e5e9] group-hover:border-[#adb1b9]"}`} />
+            <div className="flex flex-row items-center size-full px-[10px] py-[6px]">
+              <input
+                className="flex-1 min-w-0 bg-transparent border-none outline-none font-['Pretendard_GOV:Regular'] text-[15px] tracking-[-0.3px] leading-[22px] text-[#2e3238] placeholder:text-[#767d8a]"
+                placeholder="조정 사유를 입력해 주세요."
+                maxLength={100}
+                value={item.note}
+                onChange={e => onChange({ ...item, note: e.target.value })}
+                onFocus={() => setNoteFocused(true)}
+                onBlur={() => setNoteFocused(false)}
+                onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+              />
+              {noteFocused && item.note && <span onMouseDown={e => e.preventDefault()}><MaeipClearIcon314 onClick={() => onChange({ ...item, note: "" })} /></span>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MaeipModalCalendarBtn314({ label }: { label: string }) {
+  return (
+    <div className="bg-white h-[36px] relative rounded-[4px] shrink-0 w-full">
+      <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-[4px]" />
+      <div className="flex flex-row items-center size-full">
+        <div className="content-stretch flex gap-[4px] items-center px-[10px] py-[6px] relative size-full">
+          <div className="content-stretch flex items-center justify-center relative shrink-0 size-[16px]">
+            <div className="h-[14.4px] relative shrink-0 w-[14px]">
+              <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 14 14.4004">
+                <path d={modalSvg.p31eb2f00} fill="#9197A1" />
+              </svg>
+            </div>
+          </div>
+          <div className="[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] h-[26px] justify-center leading-[0] min-w-px not-italic relative text-[#2e3238] text-[15px] tracking-[-0.3px]">
+            <p className="leading-[22px]">{label}</p>
+          </div>
+          <div className="content-stretch flex items-center justify-center relative shrink-0 size-[16px]">
+            <div className="flex items-center justify-center"><div className="-scale-y-100 flex-none">
+              <div className="h-[4px] relative w-[10px]">
+                <div className="absolute inset-[-17.5%_-7%]">
+                  <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 11.4001 5.40003">
+                    <path d={modalSvg.p609440} stroke="#9197A1" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.4" />
+                  </svg>
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MaeipModalPeriodCalendar314({ anchorRect, start, end, onChange, onClose }: { anchorRect: DOMRect; start: string; end: string; onChange: (s: string, e: string) => void; onClose: () => void }) {
+  const F = "'Pretendard GOV:Regular'";
+  const ref = useRef<HTMLDivElement>(null);
+  const today = new Date(2026, 5, 29);
+  const parse = (s: string) => { const [yy, mm, dd] = s.split('.').map(Number); return new Date(2000 + yy, mm - 1, dd); };
+  const fmt = (d: Date | null) => { if (!d) return ''; const yy = String(d.getFullYear()).slice(2); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0'); return `${yy}.${mm}.${dd}`; };
+  const clr = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const isSame = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+  const [rangeStart, setRangeStart] = useState<Date | null>(start ? parse(start) : null);
+  const [rangeEnd, setRangeEnd] = useState<Date | null>(end ? parse(end) : null);
+  const [hoverDate, setHoverDate] = useState<Date | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [viewYear, setViewYear] = useState(start ? parse(start).getFullYear() : today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(start ? parse(start).getMonth() : today.getMonth());
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  const handleDay = (date: Date) => {
+    const d = clr(date);
+    if (!selecting) { setRangeStart(d); setRangeEnd(null); setSelecting(true); }
+    else { const s = clr(rangeStart!); if (d < s) { setRangeStart(d); setRangeEnd(s); } else { setRangeEnd(d); } setSelecting(false);
+      const finalS = d < clr(rangeStart!) ? d : clr(rangeStart!);
+      const finalE = d < clr(rangeStart!) ? clr(rangeStart!) : d;
+      onChange(fmt(finalS), fmt(finalE)); onClose(); }
+  };
+
+  const isInRange = (date: Date) => {
+    const d = clr(date), s = rangeStart ? clr(rangeStart) : null;
+    const e = selecting && hoverDate ? clr(hoverDate) : (rangeEnd ? clr(rangeEnd) : null);
+    if (!s || !e) return false;
+    const lo = s <= e ? s : e, hi = s <= e ? e : s;
+    return d > lo && d < hi;
+  };
+  const isS = (date: Date) => !!rangeStart && isSame(clr(date), clr(rangeStart));
+  const isE = (date: Date) => { const e = selecting && hoverDate ? hoverDate : rangeEnd; return !!e && isSame(clr(date), clr(e)); };
+
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+  const cells: { date: Date; inMonth: boolean }[] = [];
+  for (let i = firstDay - 1; i >= 0; i--) cells.push({ date: new Date(viewYear, viewMonth - 1, daysInPrev - i), inMonth: false });
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ date: new Date(viewYear, viewMonth, d), inMonth: true });
+  while (cells.length % 7 !== 0) cells.push({ date: new Date(viewYear, viewMonth + 1, cells.length - daysInMonth - firstDay + 1), inMonth: false });
+
+  return createPortal(
+    <div ref={ref} style={{ position: 'fixed', top: anchorRect.bottom + 4, left: anchorRect.left, width: 276, background: '#FFFFFF', border: '1px solid #E4E5E9', borderRadius: 8, boxShadow: '0px 2px 6px 1px rgba(34,34,34,0.06)', zIndex: 99999, display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 12px 0', boxSizing: 'border-box' }}>
+      <div style={{ width: 252, height: 36, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 4px', boxSizing: 'border-box' }}>
+        <span style={{ fontFamily: "'Pretendard GOV:Bold'", fontSize: 18, fontWeight: 700, color: '#2E3238', letterSpacing: '-0.02em' }}>{viewYear}년 {viewMonth + 1}월</span>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {([[-1, 'M4.5 1L0.5 5L4.5 9'], [1, 'M0.5 1L4.5 5L0.5 9']] as [number, string][]).map(([dir, d]) => (
+            <button key={dir} onClick={() => { const dt = new Date(viewYear, viewMonth + dir, 1); setViewYear(dt.getFullYear()); setViewMonth(dt.getMonth()); }} style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={e => (e.currentTarget.style.background = '#F6F7F8')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <svg width="5" height="10" viewBox="0 0 5 10" fill="none"><path d={d} stroke="#2E3238" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ display: 'flex', width: 252, paddingTop: 12, boxSizing: 'border-box' }}>
+        {['일','월','화','수','목','금','토'].map(d => (
+          <div key={d} style={{ width: 36, height: 19, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontFamily: F, fontSize: 13, fontWeight: 600, color: '#454B55', letterSpacing: '-0.02em' }}>{d}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', width: 252, gap: '2px 0' }}>
+        {cells.map((cell, i) => {
+          const inR = isInRange(cell.date), isSt = isS(cell.date), isEd = isE(cell.date);
+          const effEnd = selecting && hoverDate ? hoverDate : rangeEnd;
+          const sameDay = rangeStart && effEnd && isSame(clr(rangeStart), clr(effEnd));
+          let halfBg: React.CSSProperties = {};
+          if (effEnd && !sameDay) { if (isSt) halfBg = { background: 'linear-gradient(to right, transparent 50%, #E6EFFF 50%)' }; else if (isEd) halfBg = { background: 'linear-gradient(to left, transparent 50%, #E6EFFF 50%)' }; }
+          const isT = isSame(cell.date, today);
+          return (
+            <div key={i} style={{ width: 36, height: 36, cursor: cell.inMonth ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', ...(inR && !isSt && !isEd ? { background: '#E6EFFF' } : {}), ...((isSt || isEd) ? halfBg : {}) }}
+              onMouseEnter={() => { if (selecting && cell.inMonth) setHoverDate(cell.date); }}
+              onMouseLeave={() => { if (selecting) setHoverDate(null); }}
+              onClick={() => { if (cell.inMonth) handleDay(cell.date); else { setViewYear(cell.date.getFullYear()); setViewMonth(cell.date.getMonth()); } }}>
+              <div style={{ width: 36, height: 36, borderRadius: (isSt || isEd) ? 20 : isT ? 100 : 0, background: (isSt || isEd) ? '#005FFF' : isT ? '#F6F7F8' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontFamily: F, fontSize: 14, fontWeight: (isSt || isEd) ? 600 : 400, color: (isSt || isEd) ? '#FFFFFF' : cell.inMonth ? '#2E3238' : '#9197A1', letterSpacing: '-0.02em' }}>{cell.date.getDate()}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ width: 252, display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 0 8px', boxSizing: 'border-box' }}>
+        {[{ label: '시작일', val: rangeStart }, { label: '종료일', val: rangeEnd }].map(({ label, val }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', padding: '0 0 0 4px', gap: 24 }}>
+            <span style={{ fontFamily: F, fontSize: 13, fontWeight: 600, color: '#5C6370', letterSpacing: '-0.02em', lineHeight: '19px', width: 34 }}>{label}</span>
+            <div style={{ flex: 1, height: 36, border: '1px solid #E4E5E9', borderRadius: 4, display: 'flex', alignItems: 'center', padding: '6px 10px', gap: 4, boxSizing: 'border-box', background: '#FFFFFF' }}>
+              <svg width="14" height="14" viewBox="0 0 14 14.4" fill="none" style={{ flexShrink: 0 }}><path d="M1 2.5h12v10a1 1 0 01-1 1H2a1 1 0 01-1-1V2.5zm0 3.5h12M4.5 1v3M9.5 1v3" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/></svg>
+              <span style={{ fontFamily: F, fontSize: 15, color: val ? '#2E3238' : '#767D8A', lineHeight: '22px', letterSpacing: '-0.02em' }}>{val ? fmt(val) : '날짜 선택'}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function MaeipModalTableHeaderCell314({ label }: { label: string }) {
+  return (
+    <div className="bg-[#f6f7f8] h-[40px] relative shrink-0 w-full">
+      <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
+      <div className="flex flex-row items-center size-full">
+        <div className="content-stretch flex items-center p-[8px] relative size-full">
+          <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic overflow-hidden relative shrink-0 text-[#5c6370] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
+            <p className="leading-[22px] overflow-hidden text-ellipsis">{label}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MaeipModalTableDataCell314({ children, underline = false }: { children: React.ReactNode; underline?: boolean }) {
+  return (
+    <div className="bg-white h-[40px] relative shrink-0 w-full">
+      <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+        <div className="content-stretch flex gap-[6px] items-center px-[8px] py-[10px] relative size-full">
+          <div className={`[word-break:break-word] flex flex-[1_0_0] flex-col font-['Pretendard_GOV:Regular'] justify-center leading-[0] min-w-px not-italic overflow-hidden relative text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap ${underline ? "text-[0px]" : ""}`}>
+            {underline ? <p className="[text-decoration-skip-ink:none] decoration-from-font decoration-solid leading-[22px] overflow-hidden text-[15px] text-ellipsis underline">{children}</p>
+              : <p className="leading-[22px] overflow-hidden text-ellipsis">{children}</p>}
+          </div>
+        </div>
+      </div>
+      <div aria-hidden className="absolute border-[#e3e5e9] border-b border-solid inset-0 pointer-events-none" />
+    </div>
+  );
+}
+
+function MaeipModalTableColumn314({ width, header, rows, underline = false }: { width: number; header: string; rows: React.ReactNode[]; underline?: boolean }) {
+  return (
+    <div className="relative shrink-0" style={{ width }}>
+      <div className="content-stretch flex flex-col items-center overflow-clip relative rounded-[inherit] w-full">
+        <MaeipModalTableHeaderCell314 label={header} />
+        {rows.map((cell, i) => <MaeipModalTableDataCell314 key={i} underline={underline}>{cell}</MaeipModalTableDataCell314>)}
+      </div>
+      <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
+    </div>
+  );
+}
+
+const MAEIP_INVOICE_ORDER_COUNT_314 = 24;
+function makeMaeipInvoiceOrders314() {
+  return Array.from({ length: MAEIP_INVOICE_ORDER_COUNT_314 }, (_, i) => ({
+    id: ORDER_IDS[i],
+    baseDate: getLoadingDate314(i),
+    loadDate: getLoadingDate314(i + 1),
+    unloadDate: getLoadingDate314(i + 2),
+    loadPlace: '판교테크노밸리',
+    loadAddr: '경기 성남시 삼평동',
+    unloadPlace: '광교물류',
+    unloadAddr: '경기 수원시 이의동',
+    amount: getRowChargeAmount314(i),
+    amountFmt: getRowChargeAmount314(i).toLocaleString('ko-KR'),
+  }));
+}
+const MAEIP_INVOICE_COLS_314 = ['오더ID', '매입 명세서 기준일', '상차일', '하차일', '상차지명', '상차지주소', '하차지명', '하차지주소', '배차금액 합계'];
+
+function MaeipInvoiceCreateModal({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) {
+  const { activeTab } = useContext(MaeIpSubTabCtx);
+  const isPartnerTab = activeTab === '협력사위탁';
+
+  // 대상 검색 (소속기사배차=기사 자동완성 검색, 협력사위탁=협력사 자동완성 검색)
+  const [driverQuery, setDriverQuery] = useState('');
+  const [selectedDriver, setSelectedDriver] = useState<typeof DRIVERS_314[0] | null>(null);
+  const [driverOpen, setDriverOpen] = useState(false);
+  const driverRef = useRef<HTMLDivElement>(null);
+  const filteredDrivers = driverQuery ? DRIVERS_314.filter(d => d.name.includes(driverQuery) || d.plate.includes(driverQuery) || d.phone.includes(driverQuery)) : [];
+
+  const [partnerQuery, setPartnerQuery] = useState('');
+  const [selectedPartner, setSelectedPartner] = useState<string | null>(null);
+  const [partnerOpen, setPartnerOpen] = useState(false);
+  const partnerRef = useRef<HTMLDivElement>(null);
+  const filteredPartners = partnerQuery ? PARTNERS_314.filter(p => p.includes(partnerQuery)) : [];
+
+  const [periodStart, setPeriodStart] = useState('26.06.01');
+  const [periodEnd, setPeriodEnd] = useState(todayYYMMDD());
+  const [openPeriodCal, setOpenPeriodCal] = useState(false);
+  const [periodCalPos, setPeriodCalPos] = useState<DOMRect | null>(null);
+  const periodBtnRef = useRef<HTMLDivElement>(null);
+
+  const [writeDate, setWriteDate] = useState(todayYYMMDD());
+  const [openWriteCal, setOpenWriteCal] = useState(false);
+  const [writeCalPos, setWriteCalPos] = useState<DOMRect | null>(null);
+  const writeBtnRef = useRef<HTMLDivElement>(null);
+  const [dueDate, setDueDate] = useState('26.08.13');
+  const [openDueCal, setOpenDueCal] = useState(false);
+  const [dueCalPos, setDueCalPos] = useState<DOMRect | null>(null);
+  const dueBtnRef = useRef<HTMLDivElement>(null);
+
+  const [hasData, setHasData] = useState(false);
+  const [adjItems, setAdjItems] = useState<MaeipAdjItem314[]>([]);
+
+  const target = isPartnerTab ? selectedPartner : selectedDriver;
+  const canSearch = !!target;
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (driverRef.current && !driverRef.current.contains(e.target as Node)) setDriverOpen(false);
+      if (partnerRef.current && !partnerRef.current.contains(e.target as Node)) setPartnerOpen(false);
+    }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, []);
+
+  function selectDriver(d: typeof DRIVERS_314[0]) {
+    setSelectedDriver(d); setDriverQuery(d.name); setDriverOpen(false); setHasData(false);
+  }
+  function selectPartner(p: string) {
+    setSelectedPartner(p); setPartnerQuery(p); setPartnerOpen(false); setHasData(false);
+  }
+
+  const orders = hasData ? makeMaeipInvoiceOrders314() : [];
+  const billing = hasData ? orders.reduce((s, o) => s + o.amount, 0) : 0;
+  const adjTotal = hasData ? adjItems.reduce((s, it) => s + (it.sign === '+' ? it.amount : -it.amount), 0) : 0;
+  const supply = billing + adjTotal;
+  const tax = Math.round(supply * 0.1);
+  const total = supply + tax;
+  const fmt = (n: number) => n.toLocaleString('ko-KR') + '원';
+
+  const noResultsIcon = (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" fill="#9197A1"/>
+      <line x1="12" y1="7" x2="12" y2="14" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="12" cy="17.5" r="1" fill="white"/>
+    </svg>
+  );
+  const searchIcon = (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M7.07129 1C10.4245 1 13.1434 3.71863 13.1436 7.07227L13.1357 7.38477C13.0688 8.70557 12.5786 9.91398 11.7998 10.8799L14.8066 13.8867C15.0604 14.1405 15.0602 14.5528 14.8066 14.8066C14.5528 15.0605 14.1405 15.0605 13.8867 14.8066L10.8799 11.7998C9.83804 12.6401 8.51389 13.1445 7.07129 13.1445C3.71817 13.1443 1 10.4258 1 7.07227C1.0001 3.71877 3.71823 1.00023 7.07129 1ZM7.07129 2.2998C4.43635 2.30004 2.29991 4.43659 2.2998 7.07227C2.2998 9.70803 4.43629 11.8445 7.07129 11.8447C9.70649 11.8447 11.8438 9.70817 11.8438 7.07227C11.8436 4.43645 9.70642 2.2998 7.07129 2.2998Z" fill="#9197A1"/>
+    </svg>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[rgba(46,50,56,0.4)]" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-[rgba(46,50,56,0.04)] flex flex-col items-start overflow-clip relative rounded-[12px]" style={{ width: 1600, height: 800, fontSize: 15, fontFamily: "'Pretendard GOV', sans-serif" }}>
+        {/* Header */}
+        <div className="bg-white h-[74px] relative rounded-tl-[12px] rounded-tr-[12px] shrink-0 w-full">
+          <div className="content-stretch flex flex-col gap-[12px] items-start pb-[16px] pt-[24px] px-[24px] relative size-full">
+            <div className="content-stretch flex items-center justify-between relative shrink-0 w-full">
+              <p className="font-['Pretendard_GOV:Bold'] leading-[32px] not-italic text-[#2e3238] text-[22px] tracking-[-0.44px] whitespace-nowrap">매입 거래명세서 생성</p>
+              <button onClick={onClose} className="content-stretch flex flex-col items-center justify-center relative rounded-[4px] shrink-0 size-[26px] hover:bg-[#f6f7f8]">
+                <svg width="17.5" height="17.5" fill="none" viewBox="0 0 17.5 17.5">
+                  <path d="M0.75 0.75L16.75 16.75" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5" />
+                  <path d={modalSvg.p2e842600} stroke="#9197A1" strokeLinecap="round" strokeWidth="1.5" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div className="absolute bg-[#e3e5e9] bottom-0 h-px left-0 right-0" />
+        </div>
+
+        {/* Body */}
+        <div className="bg-white content-stretch flex flex-[1_0_0] items-start min-h-px relative w-full overflow-hidden">
+          {/* Left */}
+          <div className="flex-[1_0_0] h-full min-w-px relative">
+            <div className="overflow-clip rounded-[inherit] size-full">
+              <div className="content-stretch flex flex-col gap-[16px] items-start pb-[20px] pt-[12px] px-[24px] relative size-full">
+                {/* Filters */}
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  {/* 대상 검색 */}
+                  <div className="content-stretch flex items-start relative shrink-0 w-full" style={{ flexDirection: 'column', gap: 2 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', width: '100%', height: 36 }}>
+                      <p className="font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] w-[120px]">{isPartnerTab ? '협력사' : '기사'}</p>
+                      {isPartnerTab ? (
+                        <div style={{ flex: 1, position: 'relative' }} ref={partnerRef}>
+                          <div style={{ height: 36, background: '#fff', border: `1px solid ${partnerOpen && partnerQuery ? '#005FFF' : '#E4E5E9'}`, borderRadius: 4, display: 'flex', alignItems: 'center', padding: '6px 10px', gap: 4, boxSizing: 'border-box' }}>
+                            {searchIcon}
+                            <input
+                              style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#2E3238', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px', background: 'transparent' }}
+                              placeholder="협력사 별칭을 검색하세요"
+                              value={partnerQuery}
+                              onChange={e => { setPartnerQuery(e.target.value); setPartnerOpen(true); setSelectedPartner(null); setHasData(false); }}
+                              onFocus={() => setPartnerOpen(true)}
+                            />
+                            {partnerQuery && (
+                              <div onClick={() => { setPartnerQuery(''); setPartnerOpen(false); setSelectedPartner(null); setHasData(false); }} style={{ cursor: 'pointer', flexShrink: 0, width: 16, height: 16, borderRadius: '50%', background: '#9197A1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                  <path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="white" strokeWidth="1.3" strokeLinecap="round"/>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          {partnerOpen && (
+                            <div style={{ position: 'absolute', top: 38, left: 0, right: 0, background: '#fff', border: '1px solid #E4E5E9', boxShadow: '0 2px 6px 1px rgba(34,34,34,0.06)', borderRadius: 8, zIndex: 200, boxSizing: 'border-box', overflow: 'hidden' }}>
+                              {!partnerQuery || filteredPartners.length === 0 ? (
+                                <div style={{ height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                  {noResultsIcon}
+                                  <span style={{ fontSize: 15, color: '#5C6370', textAlign: 'center', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px' }}>{partnerQuery ? '검색 결과가 없습니다.' : '검색어를 입력하세요.'}</span>
+                                </div>
+                              ) : (
+                                <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 0, maxHeight: 234, overflowY: 'auto' }}>
+                                  {filteredPartners.map(p => {
+                                    const isSelected = selectedPartner === p;
+                                    return (
+                                      <div key={p} onClick={() => selectPartner(p)}
+                                        style={{ padding: '9px 8px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', borderRadius: 4, height: 40, boxSizing: 'border-box' }}
+                                        onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#F6F7F8'; }}
+                                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}>
+                                        <span style={{ flex: 1, fontSize: 15, color: isSelected ? '#005FFF' : '#2E3238', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px' }}>{p}</span>
+                                        {isSelected && (
+                                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                                            <path d="M3 8L6.5 11.5L13 4.5" stroke="#005FFF" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                                          </svg>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ flex: 1, position: 'relative' }} ref={driverRef}>
+                          <div style={{ height: 36, background: '#fff', border: `1px solid ${driverOpen && driverQuery ? '#005FFF' : '#E4E5E9'}`, borderRadius: 4, display: 'flex', alignItems: 'center', padding: '6px 10px', gap: 4, boxSizing: 'border-box' }}>
+                            {searchIcon}
+                            <input
+                              style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#2E3238', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px', background: 'transparent' }}
+                              placeholder="차량번호 또는 기사명 또는 기사 전화번호를 검색하세요"
+                              value={driverQuery}
+                              onChange={e => { setDriverQuery(e.target.value); setDriverOpen(true); setSelectedDriver(null); setHasData(false); }}
+                              onFocus={() => setDriverOpen(true)}
+                            />
+                            {driverQuery && (
+                              <div onClick={() => { setDriverQuery(''); setDriverOpen(false); setSelectedDriver(null); setHasData(false); }} style={{ cursor: 'pointer', flexShrink: 0, width: 16, height: 16, borderRadius: '50%', background: '#9197A1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                  <path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="white" strokeWidth="1.3" strokeLinecap="round"/>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          {driverOpen && (
+                            <div style={{ position: 'absolute', top: 38, left: 0, right: 0, background: '#fff', border: '1px solid #E4E5E9', boxShadow: '0 2px 6px 1px rgba(34,34,34,0.06)', borderRadius: 8, zIndex: 200, boxSizing: 'border-box', overflow: 'hidden' }}>
+                              {!driverQuery || filteredDrivers.length === 0 ? (
+                                <div style={{ height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                  {noResultsIcon}
+                                  <span style={{ fontSize: 15, color: '#5C6370', textAlign: 'center', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px' }}>{driverQuery ? '검색 결과가 없습니다.' : '검색어를 입력하세요.'}</span>
+                                </div>
+                              ) : (
+                                <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 0, maxHeight: 234, overflowY: 'auto' }}>
+                                  {filteredDrivers.map(d => {
+                                    const isSelected = selectedDriver?.name === d.name && selectedDriver?.plate === d.plate;
+                                    return (
+                                      <div key={`${d.name}-${d.plate}`} onClick={() => selectDriver(d)}
+                                        style={{ padding: '9px 8px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', borderRadius: 4, height: 40, boxSizing: 'border-box' }}
+                                        onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#F6F7F8'; }}
+                                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}>
+                                        <span style={{ flex: 1, fontSize: 15, color: isSelected ? '#005FFF' : '#2E3238', fontFamily: "'Pretendard GOV', sans-serif", letterSpacing: '-0.02em', lineHeight: '22px' }}>{d.name} · {d.plate} · {d.phone}</span>
+                                        {isSelected && (
+                                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                                            <path d="M3 8L6.5 11.5L13 4.5" stroke="#005FFF" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                                          </svg>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* 정산기간 */}
+                  <div className="content-stretch flex h-[36px] items-center relative shrink-0 w-full">
+                    <div className="content-stretch flex gap-[4px] items-center relative shrink-0 w-[120px]">
+                      <p className="font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] whitespace-nowrap">정산기간</p>
+                      <div className="relative shrink-0 size-[16px]">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 14 14" className="absolute left-px top-px">
+                          <circle cx="7" cy="7" r="6.35" stroke="#9197A1" strokeWidth="1.3" />
+                          <path d="M7 7L7 9.5" stroke="#9197A1" strokeLinecap="round" strokeWidth="1.3" />
+                          <ellipse cx="7.00001" cy="4.8" fill="#9197A1" rx="0.8" ry="0.8" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0">
+                      <div ref={periodBtnRef} className="relative shrink-0 w-[198px]" style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          const r = periodBtnRef.current!.getBoundingClientRect();
+                          setPeriodCalPos(r);
+                          setOpenPeriodCal(o => !o);
+                        }}>
+                        <MaeipModalCalendarBtn314 label={`${periodStart} ~ ${periodEnd}`} />
+                      </div>
+                      {openPeriodCal && periodCalPos && (
+                        <MaeipModalPeriodCalendar314
+                          anchorRect={periodCalPos}
+                          start={periodStart}
+                          end={periodEnd}
+                          onChange={(s, e) => { setPeriodStart(s); setPeriodEnd(e); setOpenPeriodCal(false); setHasData(false); }}
+                          onClose={() => setOpenPeriodCal(false)}
+                        />
+                      )}
+                      <button onClick={() => { if (!canSearch) return; setHasData(true); }} disabled={!canSearch}
+                        className={`h-[36px] relative rounded-[4px] shrink-0 transition-colors ${canSearch ? "bg-white hover:bg-[#f6f7f8] cursor-pointer" : "bg-white cursor-not-allowed opacity-50"}`}>
+                        <div className="content-stretch flex gap-[4px] items-center justify-center overflow-clip px-[12px] relative rounded-[inherit] size-full">
+                          <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] not-italic text-[#2e3238] text-[15px] tracking-[-0.3px] whitespace-nowrap">오더 조회하기</p>
+                        </div>
+                        <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-[4px]" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="content-stretch flex flex-[1_0_0] items-start min-h-px overflow-x-auto overflow-y-hidden relative w-full">
+                  {hasData ? (
+                    <div className="flex items-start h-full">
+                      <MaeipModalTableColumn314 width={120} header="오더ID" rows={orders.map(o => o.id)} underline />
+                      <MaeipModalTableColumn314 width={140} header="매입 명세서 기준일" rows={orders.map(o => o.baseDate)} />
+                      <MaeipModalTableColumn314 width={140} header="상차일" rows={orders.map(o => o.loadDate)} />
+                      <MaeipModalTableColumn314 width={140} header="하차일" rows={orders.map(o => o.unloadDate)} />
+                      <MaeipModalTableColumn314 width={140} header="상차지명" rows={orders.map(o => o.loadPlace)} />
+                      <MaeipModalTableColumn314 width={140} header="상차지주소" rows={orders.map(o => o.loadAddr)} />
+                      <MaeipModalTableColumn314 width={140} header="하차지명" rows={orders.map(o => o.unloadPlace)} />
+                      <MaeipModalTableColumn314 width={140} header="하차지주소" rows={orders.map(o => o.unloadAddr)} />
+                      <MaeipModalTableColumn314 width={140} header="배차금액 합계" rows={orders.map(o => o.amountFmt)} />
+                    </div>
+                  ) : (
+                    <div className="flex items-start w-full relative h-full">
+                      {MAEIP_INVOICE_COLS_314.map((col, i) => (
+                        <div key={i} className="relative shrink-0" style={{ width: i === 0 ? 120 : 140 }}>
+                          <div className="content-stretch flex flex-col items-center overflow-clip relative rounded-[inherit] w-full">
+                            <MaeipModalTableHeaderCell314 label={col} />
+                          </div>
+                          <div aria-hidden className="absolute border-[#e3e5e9] border-l border-solid inset-[0_0_0_-1px] pointer-events-none" />
+                        </div>
+                      ))}
+                      <div className="absolute inset-0 flex flex-col gap-[8px] items-center justify-center">
+                        <div className="relative shrink-0 size-[48px]">
+                          <svg className="absolute block inset-0 size-full" fill="none" viewBox="0 0 42.9532 34">
+                            <circle cx="30.3484" cy="18.1448" fill="#8D9199" fillOpacity="0.12" r="6.75" transform="rotate(3 30.3484 18.1448)" />
+                            <path d={emptySvg.p2168fa80} fill="url(#mi0)" />
+                            <path d={emptySvg.paab9200} fill="url(#mi1)" />
+                            <path d={emptySvg.p2cf4e300} fill="url(#mi2)" />
+                            <path d={emptySvg.p19a0f280} fill="url(#mi3)" />
+                            <path clipRule="evenodd" d={emptySvg.p3030be80} fill="#93979F" fillOpacity="0.67" fillRule="evenodd" />
+                            <defs>
+                              {["mi0","mi1","mi2","mi3"].map(id => (
+                                <linearGradient key={id} gradientUnits="userSpaceOnUse" id={id} x1="17.5" x2="17.5" y1="0" y2="29.7331">
+                                  <stop stopColor="#AEB1B7" stopOpacity="0.2" />
+                                  <stop offset="1" stopColor="#ADAFB3" stopOpacity="0.32" />
+                                </linearGradient>
+                              ))}
+                            </defs>
+                          </svg>
+                        </div>
+                        <p className="font-['Pretendard_GOV:Regular'] text-[#767d8a] text-[15px] tracking-[-0.3px] leading-[22px] text-center whitespace-nowrap">
+                          {isPartnerTab ? '협력사를 선택한 후 오더를 조회해 주세요.' : '기사를 선택한 후 오더를 조회해 주세요.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="flex h-full items-center justify-center relative shrink-0 w-px" style={{ containerType: "size" }}>
+            <div className="flex-none rotate-90 w-[100cqh]"><div className="bg-[#e3e5e9] h-px relative w-full" /></div>
+          </div>
+
+          {/* Right panel */}
+          <div className="h-full relative shrink-0 w-[400px]">
+            <div className="overflow-y-auto flex flex-col items-center size-full">
+              <div className="content-stretch flex flex-col gap-[16px] items-center pb-[20px] pt-[12px] px-[24px] relative w-full">
+                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+                  <div className="content-stretch flex items-center justify-between relative shrink-0 w-full">
+                    <p className="font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] whitespace-nowrap">계산서 작성일자</p>
+                    <div ref={writeBtnRef} className="shrink-0 w-[160px]" style={{ cursor: 'pointer' }}
+                      onClick={() => { const r = writeBtnRef.current!.getBoundingClientRect(); setWriteCalPos(r); setOpenWriteCal(o => !o); }}>
+                      <MaeipModalCalendarBtn314 label={writeDate} />
+                    </div>
+                    {openWriteCal && writeCalPos && (
+                      <CalendarDropdown314 anchorRect={writeCalPos} value={writeDate} onChange={v => { setWriteDate(v); setOpenWriteCal(false); }} onClose={() => setOpenWriteCal(false)} />
+                    )}
+                  </div>
+                  <div className="content-stretch flex items-center justify-between relative shrink-0 w-full">
+                    <p className="font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] whitespace-nowrap">지급예정일</p>
+                    <div ref={dueBtnRef} className="shrink-0 w-[160px]" style={{ cursor: 'pointer' }}
+                      onClick={() => { const r = dueBtnRef.current!.getBoundingClientRect(); setDueCalPos(r); setOpenDueCal(o => !o); }}>
+                      <MaeipModalCalendarBtn314 label={dueDate} />
+                    </div>
+                    {openDueCal && dueCalPos && (
+                      <CalendarDropdown314 anchorRect={dueCalPos} value={dueDate} onChange={v => { setDueDate(v); setOpenDueCal(false); }} onClose={() => setOpenDueCal(false)} />
+                    )}
+                  </div>
+                </div>
+                <div className="bg-[#f6f7f8] relative rounded-[8px] shrink-0 w-full">
+                  <div className="content-stretch flex flex-col gap-[12px] items-start p-[16px] relative size-full">
+                    <div className="content-stretch flex font-['Pretendard_GOV:SemiBold'] items-center justify-between leading-[22px] not-italic relative shrink-0 text-[15px] tracking-[-0.3px] w-full whitespace-nowrap">
+                      <p className="relative shrink-0 text-[#5c6370]">배차금액 합계</p>
+                      <p className="relative shrink-0 text-[#2e3238]">{fmt(billing)}</p>
+                    </div>
+                    <div className="bg-[#e3e5e9] h-px relative shrink-0 w-full" />
+                    <div className="content-stretch flex font-['Pretendard_GOV:SemiBold'] items-center justify-between leading-[22px] not-italic relative shrink-0 text-[15px] tracking-[-0.3px] w-full whitespace-nowrap">
+                      <p className="relative shrink-0 text-[#5c6370]">조정금액 합계</p>
+                      <p className="relative shrink-0 text-[#2e3238]">{fmt(adjTotal)}</p>
+                    </div>
+                    {adjItems.map((item, idx) => (
+                      <MaeipAdjustmentItem314
+                        key={item.id}
+                        item={item}
+                        index={idx}
+                        onChange={updated => setAdjItems(prev => prev.map(it => it.id === item.id ? updated : it))}
+                        onRemove={() => setAdjItems(prev => prev.filter(it => it.id !== item.id))}
+                      />
+                    ))}
+                    {adjItems.length < 10 && (
+                      <div className="bg-white h-[36px] relative rounded-[4px] shrink-0 w-full">
+                        <button
+                          onClick={() => setAdjItems(prev => [...prev, { id: Date.now(), amount: 0, sign: '+', note: '' }])}
+                          className="flex flex-row items-center justify-center overflow-clip rounded-[inherit] size-full w-full hover:bg-[#f6f7f8] transition-colors"
+                        >
+                          <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] not-italic text-[#2e3238] text-[15px] tracking-[-0.3px] whitespace-nowrap">조정금액 추가하기 ({adjItems.length}/10)</p>
+                        </button>
+                        <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-[4px]" />
+                      </div>
+                    )}
+                    <div className="bg-[#e3e5e9] h-px relative shrink-0 w-full" />
+                    <div className="content-stretch flex font-['Pretendard_GOV:SemiBold'] items-center justify-between leading-[22px] not-italic relative shrink-0 text-[15px] tracking-[-0.3px] w-full whitespace-nowrap">
+                      <p className="relative shrink-0 text-[#5c6370]">공급가액</p>
+                      <p className="relative shrink-0 text-[#2e3238]">{fmt(supply)}</p>
+                    </div>
+                    <div className="content-stretch flex font-['Pretendard_GOV:SemiBold'] items-center justify-between leading-[22px] not-italic relative shrink-0 text-[15px] tracking-[-0.3px] w-full whitespace-nowrap">
+                      <p className="relative shrink-0 text-[#5c6370]">세액</p>
+                      <p className="relative shrink-0 text-[#2e3238]">{fmt(tax)}</p>
+                    </div>
+                    <div className="bg-[#e3e5e9] h-px relative shrink-0 w-full" />
+                    <div className="content-stretch flex items-center justify-between not-italic relative shrink-0 w-full whitespace-nowrap">
+                      <p className="font-['Pretendard_GOV:SemiBold'] leading-[22px] relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px]">합계 금액</p>
+                      <p className="font-['Pretendard_GOV:Bold'] leading-[32px] relative shrink-0 text-[#2e3238] text-[22px] tracking-[-0.44px]">{fmt(total)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="bg-white relative rounded-bl-[12px] rounded-br-[12px] shrink-0 w-full">
+          <div className="absolute bg-[#e3e5e9] h-px left-0 right-0 top-0" />
+          <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+            <div className="content-stretch flex gap-[8px] items-center pb-[24px] pt-[20px] px-[24px] relative size-full">
+              <div className="flex-[1_0_0] min-w-px" />
+              <div className="content-stretch flex gap-[8px] items-center justify-end relative shrink-0">
+                <button onClick={onClose}
+                  className="bg-white content-stretch flex gap-[4px] h-[52px] items-center justify-center overflow-clip px-[20px] relative rounded-[4px] shrink-0 hover:bg-[#f6f7f8] transition-colors">
+                  <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-[4px]" />
+                  <p className="font-['Pretendard_GOV:SemiBold'] leading-[26px] not-italic text-[#2e3238] text-[18px] tracking-[-0.36px] whitespace-nowrap">닫기</p>
+                </button>
+                <button disabled={!hasData}
+                  onClick={() => { if (hasData) { onSuccess?.(); onClose(); } }}
+                  className={`content-stretch flex h-[52px] items-center justify-center overflow-clip px-[20px] relative rounded-[4px] shrink-0 transition-colors ${hasData ? "bg-[#005FFF] hover:bg-[#0052e0] cursor-pointer" : "bg-[#e3e5e9] cursor-not-allowed"}`}>
+                  <p className={`font-['Pretendard_GOV:SemiBold'] leading-[26px] not-italic text-[18px] tracking-[-0.36px] whitespace-nowrap ${hasData ? "text-white" : "text-[#9197a1]"}`}>생성하기</p>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Frame681() {
   const { activeTab } = useContext(MaeIpSubTabCtx);
   const isPayTab = activeTab === '정보망배차(바로선지급)' || activeTab === '정보망배차(픽커)';
+  const showInvoiceCreate = activeTab === '소속기사배차' || activeTab === '협력사위탁';
   const { selectedCount, selectedRows } = useContext(TableCtrlCtx);
   const [manualOpen, setManualOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [errorToast, setErrorToast] = useState(false);
   const [successToast, setSuccessToast] = useState(false);
+  const [invoiceSuccessToast, setInvoiceSuccessToast] = useState(false);
   const [statusErrorToast, setStatusErrorToast] = useState(false);
   useEffect(() => {
     const handler = () => setDetailOpen(true);
@@ -1779,6 +2500,11 @@ function Frame681() {
     const t = setTimeout(() => setStatusErrorToast(false), 4000);
     return () => clearTimeout(t);
   }, [statusErrorToast]);
+  useEffect(() => {
+    if (!invoiceSuccessToast) return;
+    const t = setTimeout(() => setInvoiceSuccessToast(false), 4000);
+    return () => clearTimeout(t);
+  }, [invoiceSuccessToast]);
   const handleManualOpen = () => {
     if (selectedCount === 0) { setErrorToast(true); return; }
     const indices = [...selectedRows];
@@ -1790,6 +2516,7 @@ function Frame681() {
     <>
       {manualOpen && <MaeipManualInvoiceModal onClose={() => setManualOpen(false)} onSuccess={() => setSuccessToast(true)} />}
       {detailOpen && <MaeipManualDetailModal onClose={() => setDetailOpen(false)} />}
+      {invoiceOpen && <MaeipInvoiceCreateModal onClose={() => setInvoiceOpen(false)} onSuccess={() => setInvoiceSuccessToast(true)} />}
       {errorToast && createPortal(<>
         <style>{TOAST_ANIMATION_314}</style>
         <div style={{ ...TOAST_STYLE_314, background:'#E13838' }}>
@@ -1811,6 +2538,13 @@ function Frame681() {
           <ToastCloseBtn314 onClose={() => setStatusErrorToast(false)} />
         </div>
       </>, document.body)}
+      {invoiceSuccessToast && createPortal(<>
+        <style>{TOAST_ANIMATION_314}</style>
+        <div style={{ ...TOAST_STYLE_314, background:'#222222' }}>
+          <span style={{ color:'#fff', fontSize:15, fontWeight:400, letterSpacing:'-0.3px', lineHeight:'22px', flex:1 }}>매입 거래명세서가 생성되었습니다.</span>
+          <ToastCloseBtn314 onClose={() => setInvoiceSuccessToast(false)} />
+        </div>
+      </>, document.body)}
     <div className="content-stretch flex gap-[4px] h-[36px] items-center relative shrink-0">
       {isPayTab ? (
         /* 정보망배차(바로선지급) / 정보망배차(픽커) 탭: 지급 승인 + 정산 보류 */
@@ -1830,13 +2564,31 @@ function Frame681() {
           </div>
         </>
       ) : (
-        /* 정보망배차 탭: 기존 버튼 */
+        /* 정보망배차 / 소속기사배차 / 협력사위탁 탭: 기존 버튼 (소속기사배차·협력사위탁은 매입 거래명세서 생성 버튼 추가) */
         <>
-          <div className="bg-[#005fff] content-stretch flex gap-[4px] h-[36px] items-center justify-center overflow-clip px-[12px] relative rounded-[4px] shrink-0" data-name="Button" onClick={handleManualOpen} style={{ cursor:'pointer' }}>
-            <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[15px] text-white tracking-[-0.3px] whitespace-nowrap">
-              <p className="leading-[22px]">수기계산서 등록</p>
+          {showInvoiceCreate && (
+            <div className="bg-[#005fff] content-stretch flex gap-[4px] h-[36px] items-center justify-center overflow-clip px-[12px] relative rounded-[4px] shrink-0" data-name="Button" onClick={() => setInvoiceOpen(true)} style={{ cursor:'pointer' }}>
+              <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[15px] text-white tracking-[-0.3px] whitespace-nowrap">
+                <p className="leading-[22px]">매입 거래명세서 생성</p>
+              </div>
             </div>
-          </div>
+          )}
+          {showInvoiceCreate ? (
+            <div className="bg-white h-[36px] relative rounded-[4px] shrink-0" data-name="Button" onClick={handleManualOpen} style={{ cursor:'pointer' }}>
+              <div className="content-stretch flex gap-[4px] items-center justify-center overflow-clip px-[12px] relative rounded-[inherit] size-full">
+                <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#2e3238] text-[15px] tracking-[-0.3px] whitespace-nowrap">
+                  <p className="leading-[22px]">수기계산서 등록</p>
+                </div>
+              </div>
+              <div aria-hidden className="absolute border border-[#e3e5e9] border-solid inset-0 pointer-events-none rounded-[4px]" />
+            </div>
+          ) : (
+            <div className="bg-[#005fff] content-stretch flex gap-[4px] h-[36px] items-center justify-center overflow-clip px-[12px] relative rounded-[4px] shrink-0" data-name="Button" onClick={handleManualOpen} style={{ cursor:'pointer' }}>
+              <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[15px] text-white tracking-[-0.3px] whitespace-nowrap">
+                <p className="leading-[22px]">수기계산서 등록</p>
+              </div>
+            </div>
+          )}
           <div className="bg-white h-[36px] relative rounded-[4px] shrink-0" data-name="Button">
             <div className="content-stretch flex gap-[4px] items-center justify-center overflow-clip px-[12px] relative rounded-[inherit] size-full">
               <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic relative shrink-0 text-[#2e3238] text-[15px] tracking-[-0.3px] whitespace-nowrap">
@@ -2287,8 +3039,8 @@ const TABLE_COLS_314: ColDef314[] = [
   { label: '합계 금액 (산재 포함)', width: 140, render: (d) => <NumberDataCell314 value={d.totalWithInsurance} /> },
   { label: '계산서 작성일자', width: 140, render: (d) => <InvoiceDateDataCell314 row={d} /> },
   { label: '계산서 확인일자', width: 140, render: (d) => <TextDataCell314 text={`${d.invoiceCheckDate} `} /> },
-  { label: '지급기한', width: 140, render: (d) => <TextDataCell314 text={`${d.payDeadline} `} /> },
-  { label: '지급일', width: 140, render: (d) => <LinkDataCell314 text={`${d.payDate} `} /> },
+  { label: '지급예정일', width: 140, render: (d) => <TextDataCell314 text={`${d.payDeadline} `} /> },
+  { label: '지급완료일', width: 140, render: (d) => <LinkDataCell314 text={`${d.payDate} `} /> },
   { label: '증빙서류', width: 100, render: (d) => <EvidenceDataCell314 docCount={d.docCount} /> },
   { label: '화주사 주문번호', width: 120, render: (d) => <TextDataCell314 text={d.shipperOrderNum} /> },
 ];

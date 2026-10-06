@@ -1,11 +1,11 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import svgPaths from "../315매출거래명세서화주사/svg-pmm7rwile2";
 import { NavCtx } from "./subTabCtx";
 
 function LnbFrame() {
   return (
     <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col gap-px items-start min-w-px not-italic relative">
-      <p className="font-['Pretendard_GOV:Bold'] leading-[22px] overflow-hidden relative shrink-0 text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] w-full whitespace-nowrap">쿠팡로지스틱스</p>
+      <p className="font-['Pretendard_GOV:Bold'] leading-[22px] overflow-hidden relative shrink-0 text-[#2e3238] text-[15px] text-ellipsis tracking-[-0.3px] w-full whitespace-nowrap">케이드라이브</p>
       <p className="font-['Pretendard_GOV:Regular'] leading-[19px] relative shrink-0 text-[#5c6370] text-[13px] tracking-[-0.26px] w-full">김카모</p>
     </div>
   );
@@ -335,20 +335,36 @@ function Title6() {
   );
 }
 
-function Component5() {
+function Chevron({ open }: { open: boolean }) {
   return (
-    <div className="content-stretch flex gap-[4px] items-center relative shrink-0" data-name="우측">
-      <div className="content-stretch flex items-center justify-center relative shrink-0 size-[16px]" data-name="Icon_16/arrow_down">
-        <div className="flex items-center justify-center relative shrink-0">
-          <div className="-scale-y-100 flex-none">
-            <div className="h-[4px] relative w-[10px]" data-name="arr">
-              <div className="absolute inset-[-17.5%_-7%]">
-                <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 11.4001 5.40003">
-                  <path d={svgPaths.p609440} id="arr" stroke="var(--stroke-0, #9197A1)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.4" />
-                </svg>
-              </div>
+    <div className="content-stretch flex items-center justify-center relative shrink-0 size-[16px]" data-name="Icon_16/arrow_down">
+      <div className="flex items-center justify-center relative shrink-0">
+        <div className={open ? "-scale-y-100 flex-none rotate-180" : "-scale-y-100 flex-none"}>
+          <div className="h-[4px] relative w-[10px]" data-name="arr">
+            <div className="absolute inset-[-17.5%_-7%]">
+              <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 11.4001 5.40003">
+                <path d={svgPaths.p609440} id="arr" stroke="var(--stroke-0, #9197A1)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.4" />
+              </svg>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubMenuRow({ label, tabIndex, activeTabIndex, goTo }: { label: string; tabIndex: number; activeTabIndex: number; goTo: (i: number) => void }) {
+  const active = tabIndex === activeTabIndex;
+  return (
+    <div
+      onClick={() => goTo(tabIndex)}
+      className={`${active ? 'bg-[#ebedef]' : 'bg-[#f6f7f8]'} relative rounded-[4px] shrink-0 w-full cursor-pointer select-none`}
+      style={{ height: 34 }}
+      data-name="menu_list"
+    >
+      <div className="flex flex-row items-center size-full">
+        <div className="content-stretch flex items-center pl-[36px] pr-[8px] py-[6px] relative size-full">
+          <p className="[word-break:break-word] font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#2e3238] text-[15px] tracking-[-0.3px] whitespace-nowrap">{label}</p>
         </div>
       </div>
     </div>
@@ -371,6 +387,28 @@ function LnbMenuSection({ activeTabIndex, onBeforeNavigate }: { activeTabIndex: 
     { label: '매출 거래명세서', tabIndex: 3 },
     { label: '매입 거래명세서', tabIndex: 4 },
   ];
+
+  // tabIndex: 6=거래처 관리, 13=위탁사 관리, 7=연동화주사 관리, 10=계약운임표 관리
+  const GEORAECHEO_ITEMS = [
+    { label: '거래처 관리',       tabIndex: 6 },
+    { label: '위탁사 관리',       tabIndex: 13 },
+    { label: '연동화주사 관리',   tabIndex: 7 },
+    { label: '계약운임표 관리',   tabIndex: 10 },
+  ];
+  // tabIndex: 8=파트너기사 관리, 9=용차 기사 관리
+  const GISA_ITEMS = [
+    { label: '파트너기사 관리', tabIndex: 8 },
+    { label: '용차 기사 관리',  tabIndex: 9 },
+  ];
+  // tabIndex: 11=업무그룹 관리, 12=직원 관리
+  const HOESA_ITEMS = [
+    { label: '업무그룹 관리', tabIndex: 11 },
+    { label: '직원 관리',    tabIndex: 12 },
+  ];
+
+  const [georaecheoOpen, setGeoraecheoOpen] = useState(() => GEORAECHEO_ITEMS.some(i => i.tabIndex === activeTabIndex));
+  const [gisaOpen, setGisaOpen] = useState(() => GISA_ITEMS.some(i => i.tabIndex === activeTabIndex));
+  const [hoesaOpen, setHoesaOpen] = useState(() => HOESA_ITEMS.some(i => i.tabIndex === activeTabIndex));
 
   return (
     <div className="content-stretch flex flex-col gap-[6px] items-start relative shrink-0">
@@ -416,35 +454,56 @@ function LnbMenuSection({ activeTabIndex, onBeforeNavigate }: { activeTabIndex: 
           </div>
         </div>
       </div>
-      <div className="content-stretch flex flex-col items-start relative shrink-0 w-[184px]" data-name="menu_set">
-        <div className="bg-[#f6f7f8] h-[40px] relative rounded-[4px] shrink-0 w-full" data-name="menu_list">
+      <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-[184px]" data-name="menu_set">
+        <div
+          onClick={() => setGeoraecheoOpen(o => !o)}
+          className="bg-[#f6f7f8] h-[40px] relative rounded-[4px] shrink-0 w-full cursor-pointer select-none"
+          data-name="menu_list"
+        >
           <div className="flex flex-row items-center justify-center overflow-clip rounded-[inherit] size-full">
             <div className="content-stretch flex items-center justify-between pl-[4px] pr-[8px] py-[8px] relative size-full">
               <Title4 />
-              <Component3 />
+              <Chevron open={georaecheoOpen} />
             </div>
           </div>
         </div>
+        {georaecheoOpen && GEORAECHEO_ITEMS.map(item => (
+          <SubMenuRow key={item.label} label={item.label} tabIndex={item.tabIndex} activeTabIndex={activeTabIndex} goTo={goTo} />
+        ))}
       </div>
-      <div className="content-stretch flex flex-col items-start relative shrink-0 w-[184px]" data-name="menu_set">
-        <div className="bg-[#f6f7f8] h-[40px] relative rounded-[4px] shrink-0 w-full" data-name="menu_list">
+      <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-[184px]" data-name="menu_set">
+        <div
+          onClick={() => setGisaOpen(o => !o)}
+          className="bg-[#f6f7f8] h-[40px] relative rounded-[4px] shrink-0 w-full cursor-pointer select-none"
+          data-name="menu_list"
+        >
           <div className="flex flex-row items-center justify-center overflow-clip rounded-[inherit] size-full">
             <div className="content-stretch flex items-center justify-between pl-[4px] pr-[8px] py-[8px] relative size-full">
               <Title5 />
-              <Component4 />
+              <Chevron open={gisaOpen} />
             </div>
           </div>
         </div>
+        {gisaOpen && GISA_ITEMS.map(item => (
+          <SubMenuRow key={item.label} label={item.label} tabIndex={item.tabIndex} activeTabIndex={activeTabIndex} goTo={goTo} />
+        ))}
       </div>
-      <div className="content-stretch flex flex-col items-start relative shrink-0 w-[184px]" data-name="menu_set">
-        <div className="bg-[#f6f7f8] h-[40px] relative rounded-[4px] shrink-0 w-full" data-name="menu_list">
+      <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-[184px]" data-name="menu_set">
+        <div
+          onClick={() => setHoesaOpen(o => !o)}
+          className="bg-[#f6f7f8] h-[40px] relative rounded-[4px] shrink-0 w-full cursor-pointer select-none"
+          data-name="menu_list"
+        >
           <div className="flex flex-row items-center justify-center overflow-clip rounded-[inherit] size-full">
             <div className="content-stretch flex items-center justify-between pl-[4px] pr-[8px] py-[8px] relative size-full">
               <Title6 />
-              <Component5 />
+              <Chevron open={hoesaOpen} />
             </div>
           </div>
         </div>
+        {hoesaOpen && HOESA_ITEMS.map(item => (
+          <SubMenuRow key={item.label} label={item.label} tabIndex={item.tabIndex} activeTabIndex={activeTabIndex} goTo={goTo} />
+        ))}
       </div>
     </div>
   );

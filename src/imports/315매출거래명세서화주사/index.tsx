@@ -1328,7 +1328,7 @@ function ConfirmInvoiceListModal({ onClose, onSuccess, selectedIndices }: { onCl
     { label: '총 오더 수', w: 80, key: 'orderCount' },
     { label: '정산기간', w: 140, key: 'period' },
     { label: '계산서 작성일자', w: 110, key: 'creationDate' },
-    { label: '수금기한', w: 90, key: 'payDeadline' },
+    { label: '수금예정일', w: 90, key: 'payDeadline' },
     { label: '청구금액 합계', w: 110, key: 'chargeAmt' },
     { label: '조정금액 합계', w: 110, key: 'adjAmt' },
     { label: '공급가액', w: 100, key: 'supplyAmt' },
@@ -1473,7 +1473,7 @@ function TaxInvoiceListModal({ onClose, onSuccess, selectedIndices }: { onClose:
     { label: '총 오더 수', w: 80, key: 'orderCount' },
     { label: '정산기간', w: 140, key: 'period' },
     { label: '계산서 작성일자', w: 110, key: 'creationDate' },
-    { label: '수금기한', w: 90, key: 'payDeadline' },
+    { label: '수금예정일', w: 90, key: 'payDeadline' },
     { label: '청구금액 합계', w: 110, key: 'chargeAmt' },
     { label: '조정금액 합계', w: 110, key: 'adjAmt' },
     { label: '공급가액', w: 100, key: 'supplyAmt' },
@@ -1839,7 +1839,7 @@ function ManualInvoiceRegisterModal315({ onClose, selectedIdx, onSuccess }: { on
               {([
                 { label: '계산서 작성일자', key: '작성' },
                 { label: '계산서 확인일자', key: '확인' },
-                { label: '수금기한', key: '수금' },
+                { label: '수금예정일', key: '수금' },
               ] as { label: string; key: keyof typeof dateValues }[]).map(({ label, key }) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 36 }}>
                   <span style={{ fontSize: 15, color: '#5C6370', lineHeight: '22px', flexShrink: 0 }}>{label}</span>
@@ -3070,7 +3070,7 @@ function Title23() {
   return (
     <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative" data-name="title">
       <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic overflow-hidden relative shrink-0 text-[#5c6370] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">수금기한</p>
+        <p className="leading-[22px] overflow-hidden text-ellipsis">수금예정일</p>
       </div>
     </div>
   );
@@ -3116,7 +3116,7 @@ function Title24() {
   return (
     <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative" data-name="title">
       <div className="[word-break:break-word] flex flex-col font-['Pretendard_GOV:SemiBold'] justify-center leading-[0] not-italic overflow-hidden relative shrink-0 text-[#5c6370] text-[15px] text-ellipsis tracking-[-0.3px] whitespace-nowrap">
-        <p className="leading-[22px] overflow-hidden text-ellipsis">수금일</p>
+        <p className="leading-[22px] overflow-hidden text-ellipsis">수금완료일</p>
       </div>
     </div>
   );

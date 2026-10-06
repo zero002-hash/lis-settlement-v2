@@ -1933,7 +1933,7 @@ function ManualInvoiceRegisterModal316({ idx, onClose, onSuccess }: { idx: numbe
             {([
               { label: '계산서 작성일자', key: '작성' },
               { label: '계산서 확인일자', key: '확인' },
-              { label: '지급기한', key: '지급' },
+              { label: '지급예정일', key: '지급' },
             ] as { label: string; key: keyof typeof dateValues }[]).map(dp => (
               <div key={dp.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 36 }}>
                 <span style={{ fontSize: 15, color: '#5C6370', lineHeight: '22px', whiteSpace: 'nowrap', flexShrink: 0 }}>{dp.label}</span>
@@ -2046,7 +2046,7 @@ function ConfirmInvoiceListModal316({ onClose, onSuccess, selectedIndices }: { o
     { label: '총 오더 수', w: 90, key: 'orderCount' },
     { label: '정산기간', w: 160, key: 'period' },
     { label: '계산서 작성일자', w: 140, key: 'writeDate' },
-    { label: '지급기한', w: 110, key: 'payDate' },
+    { label: '지급예정일', w: 110, key: 'payDate' },
     { label: '배차금액 합계', w: 130, key: 'chargeAmt' },
     { label: '조정금액 합계', w: 130, key: 'adjAmt' },
     { label: '공급가액', w: 120, key: 'supplyAmt' },
@@ -2182,7 +2182,7 @@ function TaxInvoiceListModal316({ onClose, onSuccess, selectedIndices }: { onClo
     { label: '총 오더 수', w: 90, key: 'orderCount' },
     { label: '정산기간', w: 160, key: 'period' },
     { label: '계산서 작성일자', w: 140, key: 'writeDate' },
-    { label: '지급기한', w: 110, key: 'payDate' },
+    { label: '지급예정일', w: 110, key: 'payDate' },
     { label: '배차금액 합계', w: 130, key: 'chargeAmt' },
     { label: '조정금액 합계', w: 130, key: 'adjAmt' },
     { label: '공급가액', w: 120, key: 'supplyAmt' },
@@ -2601,8 +2601,8 @@ const STATIC_COLS_316: StaticColSpec316[] = [
   { label: '합계 금액 (산재 포함)', width: 140, value: '328,120', underline: true },
   { label: '계산서 작성일자', width: 140, value: '25.10.20 ', underline: true },
   { label: '계산서 발행일자', width: 140, value: '25.10.20 ' },
-  { label: '지급기한', width: 140, value: '25.10.20 ' },
-  { label: '지급일', width: 140, value: '25.10.20 ', underline: true },
+  { label: '지급예정일', width: 140, value: '25.10.20 ' },
+  { label: '지급완료일', width: 140, value: '25.10.20 ', underline: true },
 ];
 
 function Frame375() { const c = STATIC_COLS_316[0]; return <StaticDataColumn316 {...c} />; }

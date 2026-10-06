@@ -4,6 +4,9 @@ import svgPaths from "./svg-3fbcisli1b";
 import ORDER_IDS from "../shared/orderIds";
 import SharedLnb from "../shared/SharedLnb";
 import { getCancelledOrders, subscribeCancelledOrders, CancelledOrderEntry } from "../shared/cancelledOrdersStore";
+import { getPartners, type PartnerContact } from "../shared/geoRaecheoStore";
+import PartnerAutocomplete from "../shared/PartnerAutocomplete";
+import { getCurrentEmployee, getEmployeesInGroup, getGroups } from "../shared/companyStore";
 
 // ─── 매출/매입 상태 대시보드 필터 + 테이블 필터링 ──────────────────────────
 
@@ -24,7 +27,7 @@ const PurchaseFilterCtx = createContext<FilterCtxType>(DEFAULT_CTX);
 interface DateFilterCtxType { dateType: string; rangeStart: Date|null; rangeEnd: Date|null; periodRange: string; setDateType: (t: string) => void; setRangeStart: (d: Date|null) => void; setRangeEnd: (d: Date|null) => void; setPeriodRange: (t: string) => void; }
 const DateFilterCtx = createContext<DateFilterCtxType>({ dateType:'상차일', rangeStart:null, rangeEnd:null, periodRange:'오늘', setDateType:()=>{}, setRangeStart:()=>{}, setRangeEnd:()=>{}, setPeriodRange:()=>{} });
 
-const SEARCH_TYPE_OPTIONS_312 = ['차량번호', '기사명', '사업자명', '화주사 별칭', '요청협력사 별칭', '화주주문번호', '오더ID'] as const;
+const SEARCH_TYPE_OPTIONS_312 = ['차량번호', '기사명', '사업자명', '화주사 별칭', '요청협력사 별칭', '화주사주문번호', '오더ID'] as const;
 interface SearchCtxType312 { searchType: string; searchText: string; appliedSearch: { type: string; text: string } | null; setSearchType: (t: string) => void; setSearchText: (t: string) => void; runSearch: () => void; clearSearch: () => void; }
 const SearchCtx312 = createContext<SearchCtxType312>({ searchType: '차량번호', searchText: '', appliedSearch: null, setSearchType: () => {}, setSearchText: () => {}, runSearch: () => {}, clearSearch: () => {} });
 
@@ -72,6 +75,13 @@ const SHIPPER_GROUPS_312: Record<string, string[]> = {
   '(주)판교물류솔루션': ['기본그룹', '판교팀'],
   '(주)수원익스프레스': ['기본그룹', '수원팀'],
   '(주)동탄스마트물류': ['기본그룹', '동탄팀', 'C그룹'],
+};
+const SHIPPER_SETTLE_312: Record<string, string[]> = {
+  '(주)글로벌로지스': ['기본스케줄', '월정산'],
+  '(주)케이로지스틱스': ['기본스케줄'],
+  '(주)판교물류솔루션': ['기본스케줄', '판교정산'],
+  '(주)수원익스프레스': ['기본스케줄'],
+  '(주)동탄스마트물류': ['기본스케줄', '동탄정산'],
 };
 
 const PARTNERS = [
@@ -2095,7 +2105,7 @@ function TaxInvoiceModal({ type, rowIdx, onClose }: { type: 'sale' | 'purchase';
           <ModalRow label={isSale ? '화주사' : '요청협력사'} value={isSale ? (d.shipper || '-') : (d.partner || '-')} />
           <ModalRow label="계산서 작성일" value={isSale ? d.saleTaxDate : d.purchaseTaxDate} />
           <ModalRow label={isSale ? '청구금액' : '배차금액'} value={`${(isSale ? d.billingAmt : d.dispatchAmt).toLocaleString()}원`} />
-          <ModalRow label="화주주문번호" value={d.shipperOrderNum} />
+          <ModalRow label="화주사주문번호" value={d.shipperOrderNum} />
         </div>
         <div
           className="flex items-center justify-center cursor-pointer"
@@ -2155,12 +2165,12 @@ const TABLE_COLS: ColDef[] = [
   { label: '자사 보험료', width: 140, render: (d, i) => <NumberDataCell key={i} value={d.selfInsurance} rowIdx={i} /> },
   { label: '매출 명세서 기준일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.saleBaseDate} rowIdx={i} /> },
   { label: '매출 계산서 작성일', width: 140, render: (d, i, h) => <LinkDataCell key={i} text={d.saleTaxDate} rowIdx={i} onClick={() => h.onTaxInvoiceClick('sale', i)} /> },
-  { label: '수금기한', width: 140, render: (d, i) => <TextDataCell key={i} text={d.saleDeadline} rowIdx={i} /> },
-  { label: '수금일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.salePayDate || '-'} rowIdx={i} /> },
+  { label: '수금예정일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.saleDeadline} rowIdx={i} /> },
+  { label: '수금완료일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.salePayDate || '-'} rowIdx={i} /> },
   { label: '매입 명세서 기준일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.purchaseBaseDate} rowIdx={i} /> },
   { label: '매입 계산서 작성일', width: 140, render: (d, i, h) => <LinkDataCell key={i} text={d.purchaseTaxDate} rowIdx={i} onClick={() => h.onTaxInvoiceClick('purchase', i)} /> },
-  { label: '지급기한', width: 140, render: (d, i) => <TextDataCell key={i} text={d.purchaseDeadline} rowIdx={i} /> },
-  { label: '지급일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.purchasePayDate} rowIdx={i} /> },
+  { label: '지급예정일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.purchaseDeadline} rowIdx={i} /> },
+  { label: '지급완료일', width: 140, render: (d, i) => <TextDataCell key={i} text={d.purchasePayDate} rowIdx={i} /> },
   { label: '화주사 주문번호', width: 120, render: (d, i) => <TextDataCell key={i} text={d.shipperOrderNum} rowIdx={i} /> },
   { label: '증빙서류', width: 100, render: (_d, i) => <ButtonDataCell key={i} rowIdx={i} /> },
 ];
@@ -2198,7 +2208,102 @@ function DynamicTable312({ pageRows, handlers }: {
   );
 }
 
-export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaStatus: _baechaStatus, cancelCloseState, onStatusChange }: { orderId: string; rowIdx: number; onClose: () => void; __pageMode?: boolean; baechaStatus?: string; cancelCloseState?: { closeSale: boolean; closePurchase: boolean }; onStatusChange?: (status: string) => void }) {
+type ExtraFareItem = { id: string; name: string; billingAmt: number; dispatchAmt: number; reason: string };
+
+// "운임 추가하기" 모달 — 원하는 만큼 추가운임 항목(이름/청구금액/배차금액/사유)을 등록
+function ExtraFareModal({ initialItems, onClose, onSave }: { initialItems: ExtraFareItem[]; onClose: () => void; onSave: (items: ExtraFareItem[]) => void }) {
+  const ff = "'Pretendard GOV:Regular'";
+  const SB = "'Pretendard GOV:SemiBold'";
+  const genId = () => `extra-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const [items, setItems] = useState<ExtraFareItem[]>(
+    initialItems.length > 0 ? initialItems : [{ id: genId(), name: '', billingAmt: 0, dispatchAmt: 0, reason: '' }]
+  );
+
+  const addRow = () => setItems(prev => [...prev, { id: genId(), name: '', billingAmt: 0, dispatchAmt: 0, reason: '' }]);
+  const removeRow = (id: string) => setItems(prev => prev.filter(it => it.id !== id));
+  const updateRow = (id: string, patch: Partial<ExtraFareItem>) => setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it));
+
+  const handleSave = () => {
+    onSave(items.filter(it => it.name.trim() !== '' || it.billingAmt > 0 || it.dispatchAmt > 0));
+    onClose();
+  };
+
+  const amountInputStyle: React.CSSProperties = { width: 140, height: 36, padding: '0 10px', fontSize: 15, fontFamily: ff, letterSpacing: '-0.02em', color: '#2E3238', background: '#FFFFFF', border: '1px solid #DFDFDF', borderRadius: 4, outline: 'none', boxSizing: 'border-box', textAlign: 'right' };
+
+  return createPortal(
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100000 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 800, maxHeight: '85vh', overflowY: 'auto', background: '#FFFFFF', borderRadius: 12, display: 'flex', flexDirection: 'column', fontFamily: ff }}>
+        <div style={{ padding: '20px 24px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E4E5E9', flexShrink: 0 }}>
+          <span style={{ fontSize: 20, fontWeight: 700, color: '#2E3238', fontFamily: "'Pretendard GOV:Bold', sans-serif" }}>운임 추가하기</span>
+          <div onClick={onClose} style={{ cursor: 'pointer', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <line x1="2" y1="2" x2="14" y2="14" stroke="#9197A1" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="14" y1="2" x2="2" y2="14" stroke="#9197A1" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#767D8A' }}>
+            <span style={{ width: 180 }}>항목명</span>
+            <span style={{ width: 140 }}>청구금액</span>
+            <span style={{ width: 140 }}>배차금액</span>
+            <span style={{ flex: 1 }}>사유</span>
+            <span style={{ width: 32 }} />
+          </div>
+          {items.map(it => (
+            <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                value={it.name}
+                onChange={e => updateRow(it.id, { name: e.target.value })}
+                placeholder="추가운임 항목명"
+                style={{ width: 180, height: 36, padding: '0 10px', fontSize: 15, fontFamily: ff, letterSpacing: '-0.02em', color: '#2E3238', background: '#FFFFFF', border: '1px solid #DFDFDF', borderRadius: 4, outline: 'none', boxSizing: 'border-box' }}
+              />
+              <input
+                value={it.billingAmt === 0 ? '' : it.billingAmt.toLocaleString('ko-KR')}
+                onChange={e => { const v = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10); updateRow(it.id, { billingAmt: isNaN(v) ? 0 : v }); }}
+                placeholder="0원"
+                inputMode="numeric"
+                style={amountInputStyle}
+              />
+              <input
+                value={it.dispatchAmt === 0 ? '' : it.dispatchAmt.toLocaleString('ko-KR')}
+                onChange={e => { const v = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10); updateRow(it.id, { dispatchAmt: isNaN(v) ? 0 : v }); }}
+                placeholder="0원"
+                inputMode="numeric"
+                style={amountInputStyle}
+              />
+              <input
+                value={it.reason}
+                onChange={e => updateRow(it.id, { reason: e.target.value })}
+                placeholder="추가운임 발생 사유"
+                style={{ flex: 1, minWidth: 0, height: 36, padding: '0 10px', fontSize: 15, fontFamily: ff, letterSpacing: '-0.02em', color: '#2E3238', background: '#FFFFFF', border: '1px solid #DFDFDF', borderRadius: 4, outline: 'none', boxSizing: 'border-box' }}
+              />
+              <button
+                onClick={() => removeRow(it.id)}
+                disabled={items.length === 1}
+                style={{ width: 32, height: 36, flexShrink: 0, background: 'none', border: 'none', cursor: items.length === 1 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: items.length === 1 ? 0.3 : 1 }}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#ADB1B9" /><path d="M5.5 5.5L10.5 10.5M10.5 5.5L5.5 10.5" stroke="white" strokeWidth="1.3" strokeLinecap="round" /></svg>
+              </button>
+            </div>
+          ))}
+          <button onClick={addRow} style={{ alignSelf: 'flex-start', fontSize: 14, fontWeight: 600, fontFamily: SB, color: '#005FFF', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0' }}>
+            + 추가운임 항목 추가
+          </button>
+        </div>
+
+        <div style={{ padding: '16px 24px 20px', display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: '1px solid #E4E5E9', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ padding: '0 20px', height: 44, background: '#FFFFFF', border: '1px solid #E4E5E9', borderRadius: 4, cursor: 'pointer', fontFamily: SB, fontWeight: 600, fontSize: 15, color: '#2E3238' }}>취소</button>
+          <button onClick={handleSave} style={{ padding: '0 20px', height: 44, background: '#005FFF', border: 'none', borderRadius: 4, cursor: 'pointer', fontFamily: SB, fontWeight: 600, fontSize: 15, color: '#FFFFFF' }}>저장</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaStatus: _baechaStatus, cancelCloseState, onStatusChange, isNew }: { orderId: string; rowIdx: number; onClose: () => void; __pageMode?: boolean; baechaStatus?: string; cancelCloseState?: { closeSale: boolean; closePurchase: boolean }; onStatusChange?: (status: string) => void; isNew?: boolean }) {
   const ff = "'Pretendard GOV:Regular'";
 
   // 취소 스토어에 있는 오더면 baechaStatus를 '거래취소'로 자동 처리
@@ -2232,9 +2337,13 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   const saleStatus     = _pair.sale;
   const purchaseStatus = _pair.purchase;
   const rowStatus = isSaleRow ? saleStatus : purchaseStatus;
-  const shipper = SHIPPER_ROW_DATA[rowIdx % SHIPPER_ROW_DATA.length];
-  const partner = PARTNER_ROW_DATA[rowIdx % PARTNER_ROW_DATA.length];
-  const loadingDate = getLoadingDate312(rowIdx);
+  const shipper = isNew ? '' : SHIPPER_ROW_DATA[rowIdx % SHIPPER_ROW_DATA.length];
+  const partner = isNew ? '' : PARTNER_ROW_DATA[rowIdx % PARTNER_ROW_DATA.length];
+  // 신규등록: 오늘 날짜를 기본값으로 사용 (yy.mm.dd)
+  const _pad2 = (n: number) => String(n).padStart(2, '0');
+  const _today = new Date();
+  const todayYYDate = `${_pad2(_today.getFullYear() % 100)}.${_pad2(_today.getMonth() + 1)}.${_pad2(_today.getDate())}`;
+  const loadingDate = isNew ? todayYYDate : getLoadingDate312(rowIdx);
 
   // Deterministic generated data
   const SHIPPER_PERSONS = ['김민준','이서준','박도윤','최예준','정시우','강주원','윤하준'];
@@ -2245,27 +2354,49 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   const CARGO_FEATURES    = ['상온','냉장','냉동'];
   const TON_TYPES = ['1톤','2.5톤','3.5톤','5톤','8톤'];
   const BILLING_METHODS = ['후불','선착불'];
-  const GROUPS = ['기본그룹','A그룹','B그룹','판교팀','수원팀'];
 
-  const shipperPerson = pick(SHIPPER_PERSONS, 1);
-  const shipperContact = `${pick(PHONE_PREFIXES, 2)}-${String(Math.floor(rnd(0, 3)*9000+1000))}`;
-  const partnerPerson = pick(SHIPPER_PERSONS, 4);
-  const partnerContact = `${pick(PHONE_PREFIXES, 5)}-${String(Math.floor(rnd(0, 6)*9000+1000))}`;
-  const driverName = pick(DRIVER_NAMES, 7);
-  const plate = pick(PLATES, 8);
-  const driverContact = `${pick(PHONE_PREFIXES, 9)}-${String(Math.floor(rnd(0,10)*9000+1000))}`;
-  const tonType = pick(TON_TYPES, 12);
-  const cargoTypeModal   = pick(CARGO_TYPES_MODAL, 11);
-  const cargoFeature     = pick(CARGO_FEATURES, 84);
-  const assignGroup = pick(GROUPS, 13);
-  const billingMethod = pick(BILLING_METHODS, 14);
-  const settlementType = billingMethod === '후불' ? pick(['별도정산', '예치금', '한도'], 15) : '현장결제';
+  const shipperPerson = isNew ? '' : pick(SHIPPER_PERSONS, 1);
+  const shipperContact = isNew ? '' : `${pick(PHONE_PREFIXES, 2)}-${String(Math.floor(rnd(0, 3)*9000+1000))}`;
+  const partnerPerson = isNew ? '' : pick(SHIPPER_PERSONS, 4);
+  const partnerContact = isNew ? '' : `${pick(PHONE_PREFIXES, 5)}-${String(Math.floor(rnd(0, 6)*9000+1000))}`;
+  // 배차요청자 이름/전화번호 — 거래처 상세에 등록된 담당자 선택 또는 직접 입력
+  const [shipperReqName, setShipperReqName] = useState(shipperPerson);
+  const [shipperReqPhone, setShipperReqPhone] = useState(shipperContact);
+  const [partnerReqName, setPartnerReqName] = useState(partnerPerson);
+  const [partnerReqPhone, setPartnerReqPhone] = useState(partnerContact);
+  // 화주사/요청 거래처 이름 입력 — 실제 등록된 거래처명을 입력하면 그 거래처의 공유그룹/정산스케줄이 노출됨
+  const [shipperInput, setShipperInput] = useState(shipper);
+  const [partnerInput, setPartnerInput] = useState(partner);
+  // 현재 로그인한 담당자가 담당하는 업무그룹 — 화주사/요청 거래처는 이 업무그룹이 담당하는 거래처만 입력 가능
+  const currentEmployee = getCurrentEmployee();
+  const myGroups = getGroups().filter(g => currentEmployee.groupIds.includes(g.id));
+  const myGroupIds = myGroups.map(g => g.id);
+  const allPartners = getPartners();
+  const visiblePartners = allPartners.filter(p => p.assignedGroupIds.some(gid => myGroupIds.includes(gid)));
+  const shipperPartnerRecord = visiblePartners.find(p => p.bizName === shipperInput);
+  const partnerPartnerRecord = visiblePartners.find(p => p.bizName === partnerInput);
+  const shipperPartnerContacts = shipperPartnerRecord?.contacts ?? [];
+  const partnerPartnerContacts = partnerPartnerRecord?.contacts ?? [];
+  // 공유그룹/정산스케줄: 입력된 거래처명으로 등록된 실제 거래처를 찾아 그 목록을 노출 (없으면 플레이스홀더만 노출)
+  const shipperGroupOptions = shipperPartnerRecord?.sharedGroups.map(g => g.groupName) ?? [];
+  const shipperSettleOptions = shipperPartnerRecord?.settleSchedules.map(s => s.name) ?? [];
+  const partnerGroupOptions = partnerPartnerRecord?.sharedGroups.map(g => g.groupName) ?? [];
+  const partnerSettleOptions = partnerPartnerRecord?.settleSchedules.map(s => s.name) ?? [];
+  const partnerSettle = pick(partnerSettleOptions, 42);
+  const driverName = isNew ? '' : pick(DRIVER_NAMES, 7);
+  const plate = isNew ? '' : pick(PLATES, 8);
+  const driverContact = isNew ? '' : `${pick(PHONE_PREFIXES, 9)}-${String(Math.floor(rnd(0,10)*9000+1000))}`;
+  const tonType = isNew ? '' : pick(TON_TYPES, 12);
+  const cargoTypeModal   = isNew ? '' : pick(CARGO_TYPES_MODAL, 11);
+  const cargoFeature     = isNew ? '' : pick(CARGO_FEATURES, 84);
+  const billingMethod = isNew ? '후불' : pick(BILLING_METHODS, 14);
+  const settlementType = isNew ? '별도정산' : (billingMethod === '후불' ? pick(['별도정산', '예치금', '한도'], 15) : '현장결제');
 
   // Generate unload date (loadingDate + 1-3 days)
   const parseDate = (s: string) => { const [yy,mm,dd]=s.split('.').map(Number); return new Date(2000+yy,mm-1,dd); };
   const fmtDate = (d: Date) => { const yy=String(d.getFullYear()).slice(2); const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${yy}.${mm}.${dd}`; };
   const loadDate = parseDate(loadingDate);
-  const unloadDate = new Date(loadDate.getTime() + (Math.floor(rnd(0,16)*3)+1)*86400000);
+  const unloadDate = isNew ? loadDate : new Date(loadDate.getTime() + (Math.floor(rnd(0,16)*3)+1)*86400000);
   const unloadDateStr = fmtDate(unloadDate);
 
   // Load/unload locations
@@ -2273,46 +2404,46 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   const UNLOAD_LOCS = ['광교물류','동탄물류','김포공항물류','인천항','부산항물류'];
   const LOAD_ADDRS = ['경기 성남시 삼평동','서울 강남구 역삼동','경기 성남시 정자동','경기 수원시 팔달구','경기 용인시 기흥구'];
   const UNLOAD_ADDRS = ['경기 수원시 영통구','경기 화성시 동탄','경기 김포시 걸포동','인천 중구 항동','부산 동구 초량동'];
-  const loadLoc = pick(LOAD_LOCS, 17);
-  const unloadLoc = pick(UNLOAD_LOCS, 18);
-  const loadAddr = pick(LOAD_ADDRS, 19);
-  const unloadAddr = pick(UNLOAD_ADDRS, 20);
+  const loadLoc = isNew ? '' : pick(LOAD_LOCS, 17);
+  const unloadLoc = isNew ? '' : pick(UNLOAD_LOCS, 18);
+  const loadAddr = isNew ? '' : pick(LOAD_ADDRS, 19);
+  const unloadAddr = isNew ? '' : pick(UNLOAD_ADDRS, 20);
 
   // 물품옵션 치수 (m)
-  const dimW = ((Math.floor(rnd(0,60)*25)+5)/10).toFixed(1);
-  const dimH = ((Math.floor(rnd(0,61)*20)+5)/10).toFixed(1);
-  const dimD = ((Math.floor(rnd(0,62)*25)+5)/10).toFixed(1);
+  const dimW = isNew ? '' : ((Math.floor(rnd(0,60)*25)+5)/10).toFixed(1);
+  const dimH = isNew ? '' : ((Math.floor(rnd(0,61)*20)+5)/10).toFixed(1);
+  const dimD = isNew ? '' : ((Math.floor(rnd(0,62)*25)+5)/10).toFixed(1);
 
   // 차량옵션 거리/시간
-  const distKm = Math.floor(rnd(0,63)*491)+10;
-  const distMin = Math.floor(distKm * (rnd(0,64)*1.5+1.5));
+  const distKm = isNew ? 0 : Math.floor(rnd(0,63)*491)+10;
+  const distMin = isNew ? 0 : Math.floor(distKm * (rnd(0,64)*1.5+1.5));
 
   // 상차/하차 시간
   const loadHour = Math.floor(rnd(0,65)*14)+7;
   const loadMinVal = ([0,15,30,45] as const)[Math.floor(rnd(0,66)*4)];
-  const loadTimeStr = `${String(loadHour).padStart(2,'0')} : ${String(loadMinVal).padStart(2,'0')}`;
+  const loadTimeStr = isNew ? '' : `${String(loadHour).padStart(2,'0')} : ${String(loadMinVal).padStart(2,'0')}`;
   const unloadHour = Math.floor(rnd(0,67)*12)+9;
   const unloadMinVal = ([0,15,30,45] as const)[Math.floor(rnd(0,68)*4)];
-  const unloadTimeStr = `${String(unloadHour).padStart(2,'0')} : ${String(unloadMinVal).padStart(2,'0')}`;
+  const unloadTimeStr = isNew ? '' : `${String(unloadHour).padStart(2,'0')} : ${String(unloadMinVal).padStart(2,'0')}`;
 
   // 상차/하차 담당자·연락처·메모
   const CONTACT_NAMES = ['이민수','김지영','박상호','최지현','정하윤','오승호','한수빈'];
-  const loadManager  = pick(CONTACT_NAMES, 70);
-  const loadContact2 = `${pick(PHONE_PREFIXES,71)}-${String(Math.floor(rnd(0,72)*9000+1000))}`;
-  const unloadManager  = pick(CONTACT_NAMES, 73);
-  const unloadContact2 = `${pick(PHONE_PREFIXES,74)}-${String(Math.floor(rnd(0,75)*9000+1000))}`;
+  const loadManager  = isNew ? '' : pick(CONTACT_NAMES, 70);
+  const loadContact2 = isNew ? '' : `${pick(PHONE_PREFIXES,71)}-${String(Math.floor(rnd(0,72)*9000+1000))}`;
+  const unloadManager  = isNew ? '' : pick(CONTACT_NAMES, 73);
+  const unloadContact2 = isNew ? '' : `${pick(PHONE_PREFIXES,74)}-${String(Math.floor(rnd(0,75)*9000+1000))}`;
   const LOAD_MEMOS   = ['냉동 유지 필수','취급주의 요망','팔렛트 반납 요망','지게차 대기 요청','포장 완료 후 상차'];
   const UNLOAD_MEMOS = ['입고 확인 필수','팔렛트 회수 요망','담당자 대기','2층 창고 하차','서명 후 하차'];
   const REQUESTS     = ['정시 도착 필수','문 앞 하차 부탁','기사님 연락 후 방문','운반 인원 지참','고객 서명 필요'];
   const OP_MEMOS     = ['기존 거래처 - 우선 처리','담당자 변경됨','월 정기 운송 건','단가 협의 완료','VIP 고객사'];
-  const loadMemo     = pick(LOAD_MEMOS, 76);
-  const unloadMemo   = pick(UNLOAD_MEMOS, 77);
-  const requestText  = pick(REQUESTS, 78);
-  const opMemoText   = pick(OP_MEMOS, 79);
+  const loadMemo     = isNew ? '' : pick(LOAD_MEMOS, 76);
+  const unloadMemo   = isNew ? '' : pick(UNLOAD_MEMOS, 77);
+  const requestText  = isNew ? '' : pick(REQUESTS, 78);
+  const opMemoText   = isNew ? '' : pick(OP_MEMOS, 79);
 
-  // 명세서 기준일
-  const saleDocDate     = fmtDate(new Date(loadDate.getTime() + Math.floor(rnd(0,80)*8)*86400000));
-  const purchaseDocDate = fmtDate(new Date(loadDate.getTime() + Math.floor(rnd(0,81)*8)*86400000));
+  // 명세서 기준일 (신규등록: 오늘 날짜)
+  const saleDocDate     = isNew ? todayYYDate : fmtDate(new Date(loadDate.getTime() + Math.floor(rnd(0,80)*8)*86400000));
+  const purchaseDocDate = isNew ? todayYYDate : fmtDate(new Date(loadDate.getTime() + Math.floor(rnd(0,81)*8)*86400000));
 
   // 물품정보 (미들마일 운송 품목)
   const GOODS_LIST = [
@@ -2322,13 +2453,13 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
     '자동차 부품 (범퍼)', '타이어 (승용차용)', '철강재 (각관)', '합판·목재', '시멘트 포대',
     '가구 (책상·의자)', '주방기기 (오븐)', '건강기능식품', '화학원료 (포장재)', '포장재 (골판지)',
   ];
-  const goodsName    = pick(GOODS_LIST, 82);
-  const palletCount  = Math.floor(rnd(0,83)*19)+2;  // 2~20 파렛트
+  const goodsName    = isNew ? '' : pick(GOODS_LIST, 82);
+  const palletCount: string | number = isNew ? '' : Math.floor(rnd(0,83)*19)+2;  // 2~20 파렛트
 
   // 작업장유형
   const WORK_TYPES = ['HUB','물류센터','배송센터','창고','공장','마트','편의점','아파트','오피스빌딩'];
-  const loadWorkType   = pick(WORK_TYPES, 85);
-  const unloadWorkType = pick(WORK_TYPES, 86);
+  const loadWorkType   = isNew ? '' : pick(WORK_TYPES, 85);
+  const unloadWorkType = isNew ? '' : pick(WORK_TYPES, 86);
 
   // 상세주소 (동·호수·층수)
   const DETAIL_ADDRS = [
@@ -2336,8 +2467,8 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
     '물류동 2층', '101호 앞', '하역장 B-3', '4층 물류팀', '지하1층 창고',
     '2층 입출고장', 'C동 1층', '101동 지상1층', '하역장 입구', '3층 냉장창고',
   ];
-  const loadDetailAddr   = pick(DETAIL_ADDRS, 87);
-  const unloadDetailAddr = pick(DETAIL_ADDRS, 88);
+  const loadDetailAddr   = isNew ? '' : pick(DETAIL_ADDRS, 87);
+  const unloadDetailAddr = isNew ? '' : pick(DETAIL_ADDRS, 88);
 
   // Status badge logic
   const isMagamPilyo = rowStatus === '마감필요';
@@ -2397,11 +2528,80 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   );
 
   const lbl: React.CSSProperties = { fontSize:13, fontWeight:700, color:'#666', letterSpacing:'-0.01em', width:60, flexShrink:0 };
+  const partyInputStyle: React.CSSProperties = { height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' };
+  const partySelectStyle: React.CSSProperties = { ...partyInputStyle, paddingRight:24, background:`${selArrow} no-repeat right 8px center, #FFFFFF`, cursor:'pointer', appearance:'none' as const };
+
+  // 배차요청자 이름 입력 — 거래처 상세에 등록된 담당자 목록에서 선택하거나 직접 입력
+  // 배차요청자 이름/전화번호 공용 자동완성 필드 — 이름/전화번호 어느 쪽을 입력해도 같은 담당자 목록에서 검색/선택 가능
+  const ContactPickerField = ({ field, value, onNameChange, onPhoneChange, contacts }: {
+    field: 'name' | 'phone'; value: string; onNameChange: (v: string) => void; onPhoneChange: (v: string) => void; contacts: PartnerContact[];
+  }) => {
+    const [focused, setFocused] = useState(false);
+    const q = value.trim();
+    const filtered = q === '' ? contacts : contacts.filter(c => (field === 'name' ? c.name : c.phone).includes(q));
+    return (
+      <div style={{ position:'relative' }}>
+        <input
+          value={value}
+          onChange={e => (field === 'name' ? onNameChange : onPhoneChange)(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 150)}
+          placeholder={field === 'name' ? '배차요청자 이름' : '배차요청자 전화번호'}
+          style={partyInputStyle}
+        />
+        {focused && filtered.length > 0 && (
+          <div style={{ position:'absolute', top:30, left:0, right:0, background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:4, boxShadow:'0 4px 12px rgba(0,0,0,0.12)', zIndex:50, maxHeight:180, overflowY:'auto' }}>
+            {filtered.map(c => (
+              <div
+                key={c.id}
+                onMouseDown={() => { onNameChange(c.name); onPhoneChange(c.phone); }}
+                style={{ padding:'6px 10px', cursor:'pointer', borderBottom:'1px solid #F1F2F4' }}
+              >
+                <div style={{ fontSize:13, fontWeight:700, color:'#1A1A1A' }}>{c.name}{c.department ? ` · ${c.department}` : ''}</div>
+                <div style={{ fontSize:12, color:'#767D8A' }}>{c.phone}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
   const row: React.CSSProperties = { display:'flex', alignItems:'center', gap:4, minHeight:28 };
   const divSep = <div style={{ width:1, height:16, background:'#DFDFDF', flexShrink:0 }} />;
 
   // State
   const [dispatchType, setDispatchType] = useState<'공유배차'|'직배차'|'협력사위탁'|'장부기록'>('공유배차');
+  const LEDGER_CHANNELS = ['협력사위탁(정보망 이용안함)', '전국24시콜화물', '원콜', '화물맨', '인성'] as const;
+  const [ledgerChannel, setLedgerChannel] = useState<typeof LEDGER_CHANNELS[number]>('전국24시콜화물');
+  const [dispatchPartnerName, setDispatchPartnerName] = useState('');
+  const [externalDispatchId, setExternalDispatchId] = useState('');
+  // 배차담당(담당그룹/배차담당자명/전화번호) — 담당그룹은 현재 로그인한 담당자가 속한 업무그룹 중에서만 선택 가능,
+  // 배차담당자명은 선택된 담당그룹에 속한 직원 중에서 선택 (회사 > 업무그룹/직원 관리에서 등록한 데이터를 참조)
+  const _defaultDispatchGroupId = (() => {
+    const candidateIds = [...(shipperPartnerRecord?.assignedGroupIds ?? []), ...(partnerPartnerRecord?.assignedGroupIds ?? [])];
+    return myGroupIds.find(id => candidateIds.includes(id)) ?? myGroupIds[0] ?? '';
+  })();
+  const [dispatchGroupId, setDispatchGroupId] = useState(_defaultDispatchGroupId);
+  const dispatchGroupEmployees = dispatchGroupId ? getEmployeesInGroup(dispatchGroupId) : [];
+  const [dispatchManagerId, setDispatchManagerId] = useState(() => {
+    const preferred = dispatchGroupEmployees.find(e => e.id === currentEmployee.id) ?? dispatchGroupEmployees[0];
+    return preferred?.id ?? '';
+  });
+  const [dispatchManagerPhone, setDispatchManagerPhone] = useState(() => {
+    const preferred = dispatchGroupEmployees.find(e => e.id === currentEmployee.id) ?? dispatchGroupEmployees[0];
+    return preferred?.phone ?? '';
+  });
+  const handleDispatchGroupChange = (groupId: string) => {
+    setDispatchGroupId(groupId);
+    const emps = getEmployeesInGroup(groupId);
+    const preferred = emps.find(e => e.id === currentEmployee.id) ?? emps[0];
+    setDispatchManagerId(preferred?.id ?? '');
+    setDispatchManagerPhone(preferred?.phone ?? '');
+  };
+  const handleDispatchManagerChange = (empId: string) => {
+    setDispatchManagerId(empId);
+    setDispatchManagerPhone(dispatchGroupEmployees.find(e => e.id === empId)?.phone ?? '');
+  };
   const _eqOpts = ['선택 안 함','지게차','수작업','호이스트','크레인','컨베이어'];
   const [cargoType, setCargoType] = useState<'독차'|'혼적'>(rnd(0,50) > 0.3 ? '독차' : '혼적');
   const [tripType, setTripType] = useState<'편도'|'왕복'>(rnd(0,51) > 0.35 ? '편도' : '왕복');
@@ -2425,14 +2625,17 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   const _initHwacheaBilling  = _initIsSaleMagam   ? Math.floor(rnd(0,30)*20+10)*1000 : 0;
   const _initHwacheaDispatch = _initIsPurchaseMagam ? Math.floor(rnd(0,31)*20+10)*1000 : 0;
   // 취소 오더: 스토어의 청구/배차금액>0 AND 정산대상='대상'이면 자동 체크
-  const _initCloseSale = isCancelledInStore
+  const _initCloseSale = isNew ? false : isCancelledInStore
     ? (!!_cancelEntryEarly && _cancelEntryEarly.hwaBilling > 0 && _cancelEntryEarly.saleCate === '대상')
     : cancelCloseState != null ? cancelCloseState.closeSale : (!_initIsSaleMagam && _initHasBilling);
-  const _initClosePurchase = isCancelledInStore
+  const _initClosePurchase = isNew ? false : isCancelledInStore
     ? (!!_cancelEntryEarly && _cancelEntryEarly.hwaDispatch > 0 && _cancelEntryEarly.purchaseCate === '대상')
     : cancelCloseState != null ? cancelCloseState.closePurchase : (!_initIsPurchaseMagam && _initHasDispatch);
   const [closeSale, setCloseSale] = useState(_initCloseSale);
   const [closePurchase, setClosePurchase] = useState(_initClosePurchase);
+  // 추가운임: "운임 추가하기"로 등록한 항목명/청구금액/배차금액/사유 목록
+  const [extraFares, setExtraFares] = useState<ExtraFareItem[]>([]);
+  const [showExtraFareModal, setShowExtraFareModal] = useState(false);
   // cancelCloseState가 변경될 때마다 state 동기화 (key 기반 remount 보완)
   useEffect(() => {
     if (isCancelledInStore) {
@@ -2488,22 +2691,67 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
             {/* Row 1: 화주사 */}
             <div style={row}>
               <span style={lbl}>화주사</span>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:6, flex:1, minWidth:0 }}>
-                <input defaultValue={shipper} style={{ height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' }} />
-                <input defaultValue={`ORD-${rowIdx.toString().padStart(5,'0')}`} style={{ height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' }} />
-                <input defaultValue={shipperPerson} style={{ height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' }} />
-                <input defaultValue={shipperContact} style={{ height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' }} />
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:6, flex:1, minWidth:0 }}>
+                <PartnerAutocomplete value={shipperInput} onChange={setShipperInput} onSelect={p => setShipperInput(p.bizName)} partners={visiblePartners} placeholder="화주사" inputStyle={partyInputStyle} />
+                <select key={`sg-${shipperInput}`} defaultValue={shipperGroupOptions[0] ?? ''} style={partySelectStyle}>
+                  <option value="" disabled hidden>공유그룹</option>
+                  {shipperGroupOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+                <select key={`ss-${shipperInput}`} defaultValue={shipperSettleOptions[0] ?? ''} style={partySelectStyle}>
+                  <option value="" disabled hidden>정산스케줄</option>
+                  {shipperSettleOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+                <ContactPickerField field="name" value={shipperReqName} onNameChange={setShipperReqName} onPhoneChange={setShipperReqPhone} contacts={shipperPartnerContacts} />
+                <ContactPickerField field="phone" value={shipperReqPhone} onNameChange={setShipperReqName} onPhoneChange={setShipperReqPhone} contacts={shipperPartnerContacts} />
+                <input defaultValue={isNew ? '' : `ORD-${rowIdx.toString().padStart(5,'0')}`} placeholder="오더ID" style={partyInputStyle} />
               </div>
             </div>
 
-            {/* Row 2: 요청협력사 */}
+            {/* Row 2: 요청 거래처 */}
             <div style={row}>
-              <span style={lbl}>요청협력사</span>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:6, flex:1, minWidth:0 }}>
-                <input defaultValue={partner} style={{ height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' }} />
-                <input defaultValue={partnerPerson} style={{ height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' }} />
-                <input defaultValue={partnerContact} style={{ height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' }} />
+              <span style={lbl}>요청 거래처</span>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:6, flex:1, minWidth:0 }}>
+                <PartnerAutocomplete value={partnerInput} onChange={setPartnerInput} onSelect={p => setPartnerInput(p.bizName)} partners={visiblePartners} placeholder="요청 거래처" inputStyle={partyInputStyle} />
+                <select key={`pg-${partnerInput}`} defaultValue={partnerGroupOptions[0] ?? ''} style={partySelectStyle}>
+                  <option value="" disabled hidden>공유그룹</option>
+                  {partnerGroupOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+                <select key={`ps-${partnerInput}`} defaultValue={partnerSettleOptions[0] ?? ''} style={partySelectStyle}>
+                  <option value="" disabled hidden>정산스케줄</option>
+                  {partnerSettleOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+                <ContactPickerField field="name" value={partnerReqName} onNameChange={setPartnerReqName} onPhoneChange={setPartnerReqPhone} contacts={partnerPartnerContacts} />
+                <ContactPickerField field="phone" value={partnerReqPhone} onNameChange={setPartnerReqName} onPhoneChange={setPartnerReqPhone} contacts={partnerPartnerContacts} />
                 <div />
+              </div>
+            </div>
+
+            {/* 배차담당: 담당그룹 → 배차담당자명 → 배차담당자전화번호 순 — 담당그룹은 내가 속한 업무그룹 중에서, 배차담당자명은 그 그룹 소속 직원 중에서 선택 */}
+            <div style={row}>
+              <span style={lbl}>배차담당</span>
+              <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                <select
+                  value={dispatchGroupId}
+                  onChange={e => handleDispatchGroupChange(e.target.value)}
+                  style={{ width:100, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}
+                >
+                  {myGroups.length === 0 && <option value="">담당그룹</option>}
+                  {myGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+                <select
+                  value={dispatchManagerId}
+                  onChange={e => handleDispatchManagerChange(e.target.value)}
+                  style={{ width:100, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}
+                >
+                  {dispatchGroupEmployees.length === 0 && <option value="">배차담당자명</option>}
+                  {dispatchGroupEmployees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                </select>
+                <input
+                  value={dispatchManagerPhone}
+                  onChange={e => setDispatchManagerPhone(e.target.value)}
+                  placeholder="배차담당자 전화번호"
+                  style={{ width:120, height:28, padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }}
+                />
               </div>
             </div>
 
@@ -2511,10 +2759,10 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
             <div style={row}>
               <span style={lbl}>상차지명</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1, minWidth:0 }}>
-                <input defaultValue={loadLoc} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={loadLoc} placeholder="상차지명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <input defaultValue={loadWorkType} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E6E6E6', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                <input defaultValue={loadAddr} style={{ flex:2, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                <input defaultValue={loadDetailAddr} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={loadAddr} placeholder="상차지 주소" style={{ flex:2, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={loadDetailAddr} placeholder="상세주소" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <svg width="20" height="28" viewBox="0 0 20 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, cursor:'pointer' }}><rect x="0.5" y="0.5" width="19" height="27" rx="1.5" fill="white"/><rect x="0.5" y="0.5" width="19" height="27" rx="1.5" stroke="#CCCCCC"/><path d="M9.85858 8.64142L6.34142 12.1586C6.21543 12.2846 6.30466 12.5 6.48284 12.5H13.5172C13.6953 12.5 13.7846 12.2846 13.6586 12.1586L10.1414 8.64142C10.0633 8.56332 9.93668 8.56332 9.85858 8.64142Z" fill="#2C6EDB" fillOpacity="0.8"/><path d="M10.1414 19.3586L13.6586 15.8414C13.7846 15.7154 13.6953 15.5 13.5172 15.5L6.48284 15.5C6.30466 15.5 6.21543 15.7154 6.34142 15.8414L9.85858 19.3586C9.93668 19.4367 10.0633 19.4367 10.1414 19.3586Z" fill="#2C6EDB" fillOpacity="0.8"/></svg>
                 {/* 경유 자리 spacer (하차지명과 정렬 맞춤) */}
                 <div style={{ width:44, flexShrink:0 }} />
@@ -2525,10 +2773,10 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
             <div style={row}>
               <span style={lbl}>하차지명</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1, minWidth:0 }}>
-                <input defaultValue={unloadLoc} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={unloadLoc} placeholder="하차지명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <input defaultValue={unloadWorkType} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E6E6E6', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                <input defaultValue={unloadAddr} style={{ flex:2, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                <input defaultValue={unloadDetailAddr} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={unloadAddr} placeholder="하차지 주소" style={{ flex:2, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={unloadDetailAddr} placeholder="상세주소" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <svg width="20" height="28" viewBox="0 0 20 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, cursor:'pointer' }}><rect x="0.5" y="0.5" width="19" height="27" rx="1.5" fill="white"/><rect x="0.5" y="0.5" width="19" height="27" rx="1.5" stroke="#CCCCCC"/><path d="M9.85858 8.64142L6.34142 12.1586C6.21543 12.2846 6.30466 12.5 6.48284 12.5H13.5172C13.6953 12.5 13.7846 12.2846 13.6586 12.1586L10.1414 8.64142C10.0633 8.56332 9.93668 8.56332 9.85858 8.64142Z" fill="#2C6EDB" fillOpacity="0.8"/><path d="M10.1414 19.3586L13.6586 15.8414C13.7846 15.7154 13.6953 15.5 13.5172 15.5L6.48284 15.5C6.30466 15.5 6.21543 15.7154 6.34142 15.8414L9.85858 19.3586C9.93668 19.4367 10.0633 19.4367 10.1414 19.3586Z" fill="#2C6EDB" fillOpacity="0.8"/></svg>
                 <button style={{ width:44, height:28, border:'1px solid #CCCCCC', borderRadius:2, background:'#FFFFFF', cursor:'pointer', fontSize:15, color:'#1A1A1A', flexShrink:0 }}>경유</button>
               </div>
@@ -2578,12 +2826,12 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
             <div style={row}>
               <span style={lbl}>물품정보</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1, minWidth:0 }}>
-                <input defaultValue={goodsName} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={goodsName} placeholder="물품명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <span style={{ fontSize:13, color:'#999', flexShrink:0 }}>총 갯수</span>
                 {/* 통합 갯수+단위 컴포넌트 (135px) - SVG 스펙 */}
                 <div style={{ width:135, height:28, border:'1px solid #CCCCCC', borderRadius:2, display:'flex', overflow:'hidden', flexShrink:0, boxSizing:'border-box' }}>
                   {/* 좌측: 숫자 입력 (흰 배경) */}
-                  <input defaultValue={palletCount} style={{ width:63, height:'100%', padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'none', outline:'none', boxSizing:'border-box', textAlign:'right' }} />
+                  <input defaultValue={palletCount} placeholder="수량" style={{ width:63, height:'100%', padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'none', outline:'none', boxSizing:'border-box', textAlign:'right' }} />
                   {/* 우측: 단위 드롭다운 (회색 #F9F9F9 + 커스텀 화살표) */}
                   <div style={{ width:1, height:'100%', background:'#CCCCCC', flexShrink:0 }} />
                   <select style={{ flex:1, height:'100%', padding:'0 24px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 6px center, #F9F9F9`, border:'none', outline:'none', cursor:'pointer', boxSizing:'border-box', appearance:'none' as const }}>
@@ -2603,11 +2851,45 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                     <Radio key={v} checked={dispatchType===v} label={v} onChange={() => setDispatchType(v)} />
                   ))}
                 </div>
+                {/* Row A-2: 협력사위탁/장부기록 전용 입력 */}
+                {(dispatchType === '협력사위탁' || dispatchType === '장부기록') && (
+                  <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                    {dispatchType === '장부기록' && (
+                      <select
+                        value={ledgerChannel}
+                        onChange={e => setLedgerChannel(e.target.value as typeof LEDGER_CHANNELS[number])}
+                        style={{ flex:1, minWidth:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #FFFFFF`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', appearance:'none' as const }}
+                      >
+                        {LEDGER_CHANNELS.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    )}
+                    {(dispatchType === '협력사위탁' || (dispatchType === '장부기록' && ledgerChannel === '협력사위탁(정보망 이용안함)')) && (
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <PartnerAutocomplete
+                          value={dispatchPartnerName}
+                          onChange={setDispatchPartnerName}
+                          onSelect={p => setDispatchPartnerName(p.alias)}
+                          partners={allPartners}
+                          placeholder="협력사명을 입력해 주세요"
+                          inputStyle={{ height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' }}
+                        />
+                      </div>
+                    )}
+                    {dispatchType === '장부기록' && ledgerChannel !== '협력사위탁(정보망 이용안함)' && (
+                      <input
+                        value={externalDispatchId}
+                        onChange={e => setExternalDispatchId(e.target.value)}
+                        placeholder="외부배차ID를 입력해 주세요"
+                        style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }}
+                      />
+                    )}
+                  </div>
+                )}
                 {/* Row B: inputs */}
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <input defaultValue={plate} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                  <input defaultValue={driverName} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                  <input defaultValue={driverContact} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                  <input defaultValue={plate} placeholder="차량번호" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                  <input defaultValue={driverName} placeholder="기사명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                  <input defaultValue={driverContact} placeholder="기사 연락처" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                   <select defaultValue={tonType} style={{ flex:1, minWidth:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #FFFFFF`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
                     {['1톤','2.5톤','3.5톤','5톤','8톤'].map(o => <option key={o}>{o}</option>)}
                   </select>
@@ -2652,27 +2934,27 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
 
             {/* Row 9: 기본운임 */}
             {(() => {
-              const isSaleMagam = saleStatus === '마감필요';
-              const isPurchaseMagam = purchaseStatus === '마감필요';
+              const isSaleMagam = !isNew && saleStatus === '마감필요';
+              const isPurchaseMagam = !isNew && purchaseStatus === '마감필요';
               // 배차관리에서 baechaStatus가 주입된 경우: 취소/거래취소=회차비 있음, 그 외=없음
-              const showHwachae = baechaStatus != null
+              const showHwachae = isNew ? false : (baechaStatus != null
                 ? (baechaStatus === '취소' || baechaStatus === '거래취소')
-                : (isSaleMagam || isPurchaseMagam);
+                : (isSaleMagam || isPurchaseMagam));
               // 기본운임 청구금액: 매출 상태가 청구 대상 목록에 있고, 회차비 없는 경우에만
-              const hasBilling  = SALE_BILLING_STATUSES.includes(saleStatus);
-              const hasDispatch = PURCHASE_DISPATCH_STATUSES.includes(purchaseStatus);
+              const hasBilling  = !isNew && SALE_BILLING_STATUSES.includes(saleStatus);
+              const hasDispatch = !isNew && PURCHASE_DISPATCH_STATUSES.includes(purchaseStatus);
               const billingAmt  = (!showHwachae && hasBilling)  ? Math.floor(rnd(0,21)*20+10)*10000 : 0;
               const dispatchAmt = (!showHwachae && hasDispatch) ? Math.floor(rnd(0,23)*20+10)*10000 : 0;
               const profitAmt = billingAmt - dispatchAmt;
               // 취소 스토어에서 실제 입력값 읽기
-              const _cancelEntry = getCancelledOrders().find(o => o.orderId === orderId);
+              const _cancelEntry = isNew ? undefined : getCancelledOrders().find(o => o.orderId === orderId);
               const hwacheaBilling  = _cancelEntry ? _cancelEntry.hwaBilling  : (isSaleMagam    ? Math.floor(rnd(0,30)*20+10)*1000 : 0);
               const hwacheaDispatch = _cancelEntry ? _cancelEntry.hwaDispatch : (isPurchaseMagam ? Math.floor(rnd(0,31)*20+10)*1000 : 0);
-              const hwacheaSaleCate     = _cancelEntry ? _cancelEntry.saleCate     : '대상';
+              const hwacheaSaleCate     = _cancelEntry ? _cancelEntry.saleCate     : '미대상';
               const hwacheaPurchaseCate = _cancelEntry ? _cancelEntry.purchaseCate : '미대상';
               const hwacheaProfit = hwacheaBilling - hwacheaDispatch;
-              const insureAmt = Math.floor(rnd(0,40)*5+1)*100;
-              const payAmt = Math.floor(rnd(0,41)*500+500)*100;
+              const insureAmt = isNew ? 0 : Math.floor(rnd(0,40)*5+1)*100;
+              const payAmt = isNew ? 0 : Math.floor(rnd(0,41)*500+500)*100;
               const profitRate = billingAmt > 0 ? Math.round((profitAmt / billingAmt) * 100) : 0;
               const fmt = (n:number) => n.toLocaleString() + '원';
               const inputSt = (bg:string):React.CSSProperties => ({ width:140, height:28, padding:'6px 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:bg, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', textAlign:'right' });
@@ -2695,9 +2977,23 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                       <input defaultValue={fmt(profitAmt)} disabled style={inputSt('#E6E6E6')} />
                     </div>
                   </div>
-                  <button style={{ fontSize:14, color:'#666666', background:'none', border:'none', cursor:'pointer', letterSpacing:'-0.02em', padding:'6px 0', whiteSpace:'nowrap', width:80 }}>운임 추가하기</button>
+                  <button onClick={() => setShowExtraFareModal(true)} style={{ fontSize:14, color:'#666666', background:'none', border:'none', cursor:'pointer', letterSpacing:'-0.02em', padding:'6px 0', whiteSpace:'nowrap', width:80 }}>운임 추가하기</button>
                 </div>
               );
+
+              /* 추가운임 목록 — "운임 추가하기"로 등록한 항목명/청구·배차금액/사유를 하단에 노출 */
+              const extraFareSummary = extraFares.length > 0 ? (
+                <div style={{ display:'flex', flexDirection:'column', gap:4, width:694 }}>
+                  {extraFares.map(it => (
+                    <div key={it.id} style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#1A1A1A', letterSpacing:'-0.02em' }}>
+                      <span style={{ fontWeight:700, flexShrink:0 }}>{it.name || '(이름없음)'}</span>
+                      <span style={{ color:'#666666', flexShrink:0 }}>청구 {fmt(it.billingAmt)}</span>
+                      <span style={{ color:'#666666', flexShrink:0 }}>배차 {fmt(it.dispatchAmt)}</span>
+                      {it.reason && <span style={{ color:'#999999', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>· {it.reason}</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : null;
 
               /* 기사정보 행 (초록색 텍스트) */
               const driverRow = (
@@ -2718,6 +3014,12 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                       <span style={{ width:60, height:28, fontSize:13, fontWeight:700, color:'#666666', letterSpacing:'-0.01em', display:'flex', alignItems:'center', flexShrink:0 }}>기본운임</span>
                       {fareRow}
                     </div>
+                    {extraFareSummary && (
+                      <div style={{ display:'flex', flexDirection:'row', alignItems:'flex-start', gap:4 }}>
+                        <span style={{ width:60, flexShrink:0 }} />
+                        {extraFareSummary}
+                      </div>
+                    )}
                     <div style={{ display:'flex', flexDirection:'row', alignItems:'center', gap:4 }}>
                       <span style={{ width:60, fontSize:14, fontWeight:700, color:'#666666', opacity:0, flexShrink:0 }}>기본운임</span>
                       {driverRow}
@@ -2744,7 +3046,13 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                     <span style={{ width:60, height:28, fontSize:13, fontWeight:700, color:'#666666', letterSpacing:'-0.01em', display:'flex', alignItems:'center', flexShrink:0 }}>기본운임</span>
                     {fareRow}
                   </div>
-                  {/* 추가운임 박스 — 60px spacer + 파란 박스 */}
+                  {extraFareSummary && (
+                    <div style={{ display:'flex', flexDirection:'row', alignItems:'flex-start', gap:4 }}>
+                      <span style={{ width:60, flexShrink:0 }} />
+                      {extraFareSummary}
+                    </div>
+                  )}
+                  {/* 회차비 박스 — 60px spacer + 파란 박스 */}
                   <div style={{ display:'flex', flexDirection:'row', alignItems:'flex-start', gap:4 }}>
                     <span style={{ width:60, flexShrink:0, opacity:0 }}>기본운임</span>
                   <div style={{ flex:1, background:'#EFF2F6', borderRadius:4, padding:'8px 12px', display:'flex', flexDirection:'column', gap:8, boxSizing:'border-box' }}>
@@ -2796,9 +3104,9 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
               <span style={lbl}>물품옵션</span>
               <div style={{ display:'flex', gap:8, alignItems:'center' }}>
                 <Radio checked={dimMode==='가로/세로/높이'} label="가로/세로/높이" onChange={() => setDimMode('가로/세로/높이')} />
-                <input defaultValue={`${dimW}m`} style={{ width:80, height:28, padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
-                <input defaultValue={`${dimH}m`} style={{ width:80, height:28, padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
-                <input defaultValue={`${dimD}m`} style={{ width:80, height:28, padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
+                <input defaultValue={dimW ? `${dimW}m` : ''} placeholder="가로" style={{ width:80, height:28, padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
+                <input defaultValue={dimH ? `${dimH}m` : ''} placeholder="세로" style={{ width:80, height:28, padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
+                <input defaultValue={dimD ? `${dimD}m` : ''} placeholder="높이" style={{ width:80, height:28, padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
                 <svg width="44" height="28" viewBox="0 0 44 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, cursor:'pointer' }}>
                   <path d="M2 0.5H42C42.8284 0.5 43.5 1.17157 43.5 2V26C43.5 26.8284 42.8284 27.5 42 27.5H2C1.17157 27.5 0.5 26.8284 0.5 26V2C0.5 1.17157 1.17157 0.5 2 0.5Z" fill="white"/>
                   <path d="M2 0.5H42C42.8284 0.5 43.5 1.17157 43.5 2V26C43.5 26.8284 42.8284 27.5 42 27.5H2C1.17157 27.5 0.5 26.8284 0.5 26V2C0.5 1.17157 1.17157 0.5 2 0.5Z" stroke="#CCCCCC"/>
@@ -2820,7 +3128,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                 <Radio checked={tripType==='편도'} label="편도" onChange={() => setTripType('편도')} />
                 <Radio checked={tripType==='왕복'} label="왕복" onChange={() => setTripType('왕복')} />
                 {divSep}
-                <span style={{ fontSize:14, color:'#666' }}>약 {distKm}km / {distMin}분 소요 예상</span>
+                {distKm > 0 && <span style={{ fontSize:14, color:'#666' }}>약 {distKm}km / {distMin}분 소요 예상</span>}
               </div>
             </div>
 
@@ -2836,10 +3144,10 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                 </div>
                 {/* Date/time row */}
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <Sel options={['당상','기사','화주']} width={67} />
+                  <Sel options={['당상','기사','화주사']} width={67} />
                   <DateField value={loadingDate} bg="#E8F3FE" />
                   <div style={{ height:28, border:'1px solid #DFDFDF', borderRadius:2, background:'#FFFFFF', display:'flex', alignItems:'center', padding:'0 8px', boxSizing:'border-box', flexShrink:0 }}>
-                    <span style={{ fontSize:15, color:'#1A1A1A', letterSpacing:'-0.02em', fontFamily:"'Pretendard GOV', sans-serif" }}>{loadTimeStr}</span>
+                    <span style={{ fontSize:15, color: loadTimeStr ? '#1A1A1A' : '#999', letterSpacing:'-0.02em', fontFamily:"'Pretendard GOV', sans-serif" }}>{loadTimeStr || 'hh : mm'}</span>
                   </div>
                   <Chk checked={loadNoTime} label="시간 상관없음" onChange={() => setLoadNoTime(p=>!p)} />
                   <div style={{ width:1, height:16, background:'#CCCCCC', flexShrink:0 }} />
@@ -2851,9 +3159,9 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                 </div>
                 {/* Input row */}
                 <div style={{ display:'flex', gap:6, alignItems:'center', marginRight:16 }}>
-                  <input defaultValue={loadManager} style={{ width:90, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
-                  <input defaultValue={loadContact2} style={{ width:120, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
-                  <input defaultValue={loadMemo} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                  <input defaultValue={loadManager} placeholder="담당자명" style={{ width:90, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
+                  <input defaultValue={loadContact2} placeholder="연락처" style={{ width:120, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
+                  <input defaultValue={loadMemo} placeholder="메모" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 </div>
               </div>
             </div>
@@ -2870,36 +3178,26 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                 </div>
                 {/* Date/time row */}
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <Sel options={['당착','기사','화주']} width={67} />
+                  <Sel options={['당착','기사','화주사']} width={67} />
                   <DateField value={unloadDateStr} bg="#E8F3FE" />
-                  <input defaultValue={unloadTimeStr} style={{ width:67, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
+                  <input defaultValue={unloadTimeStr} placeholder="hh : mm" style={{ width:67, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
                   <Chk checked={unloadNoTime} label="시간 상관없음" onChange={() => setUnloadNoTime(p=>!p)} />
                 </div>
                 {/* Input row */}
                 <div style={{ display:'flex', gap:6, alignItems:'center', marginRight:16 }}>
-                  <input defaultValue={unloadManager} style={{ width:90, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
-                  <input defaultValue={unloadContact2} style={{ width:120, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
-                  <input defaultValue={unloadMemo} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                  <input defaultValue={unloadManager} placeholder="담당자명" style={{ width:90, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
+                  <input defaultValue={unloadContact2} placeholder="연락처" style={{ width:120, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
+                  <input defaultValue={unloadMemo} placeholder="메모" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 </div>
-              </div>
-            </div>
-
-            {/* 배차담당 */}
-            <div style={row}>
-              <span style={lbl}>배차담당</span>
-              <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                <select defaultValue={driverName} style={{ width:100, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>{['이민호','박성준','최재원','정우진','한동현','오승기','강태풍','서준혁'].map(o=><option key={o}>{o}</option>)}</select>
-                <input defaultValue={driverContact} style={{ width:120, height:28, padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }} />
-                <select defaultValue={assignGroup} style={{ width:100, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>{['기본그룹','A그룹','B그룹','판교팀','수원팀'].map(o=><option key={o}>{o}</option>)}</select>
               </div>
             </div>
 
             {/* 요청사항 */}
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <span style={{ fontSize:13, fontWeight:700, color:'#666', letterSpacing:'-0.01em', flexShrink:0, width:60 }}>요청사항</span>
-              <input defaultValue={requestText} style={{ width:332, flexShrink:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+              <input defaultValue={requestText} placeholder="요청사항" style={{ width:332, flexShrink:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
               <span style={{ fontSize:13, fontWeight:700, color:'#666', letterSpacing:'-0.01em', flexShrink:0 }}>운영메모</span>
-              <input defaultValue={opMemoText} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', marginRight:16 }} />
+              <input defaultValue={opMemoText} placeholder="운영메모" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', marginRight:16 }} />
             </div>
 
             {/* 명세서 기준일 */}
@@ -2951,7 +3249,18 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
       </div>
     </div>
   );
-  return __pageMode ? modalContent : createPortal(modalContent, document.body);
+  return (
+    <>
+      {__pageMode ? modalContent : createPortal(modalContent, document.body)}
+      {showExtraFareModal && (
+        <ExtraFareModal
+          initialItems={extraFares}
+          onClose={() => setShowExtraFareModal(false)}
+          onSave={setExtraFares}
+        />
+      )}
+    </>
+  );
 }
 
 
@@ -3050,7 +3359,7 @@ function Con() {
           '사업자명': row.shipper,
           '화주사 별칭': row.shipper,
           '요청협력사 별칭': row.partner,
-          '화주주문번호': row.shipperOrderNum,
+          '화주사주문번호': row.shipperOrderNum,
           '오더ID': row.orderId,
         };
         const field = FIELD_BY_TYPE[appliedSearch.type] ?? '';

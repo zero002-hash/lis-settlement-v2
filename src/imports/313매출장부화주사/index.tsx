@@ -2378,7 +2378,7 @@ function CreateInvoiceModal({ onClose, preSelectedIndices = [], onSuccess }: { o
                     )}
                   </div>
                   <div className="content-stretch flex items-center justify-between relative shrink-0 w-full">
-                    <p className="font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] whitespace-nowrap">수금기한</p>
+                    <p className="font-['Pretendard_GOV:Regular'] leading-[22px] not-italic relative shrink-0 text-[#5c6370] text-[15px] tracking-[-0.3px] whitespace-nowrap">수금예정일</p>
                     <div ref={dueBtnRef} className="shrink-0 w-[160px]" style={{ cursor: 'pointer' }}
                       onClick={() => { const r = dueBtnRef.current!.getBoundingClientRect(); setDueCalPos(r); setOpenDueCal(o => !o); }}>
                       <ModalCalendarBtn label={dueDate} />
@@ -2579,13 +2579,13 @@ function ManualInvoiceModal({ onClose, onSuccess, selectedIndices }: { onClose: 
   }))];
   const groupsText = selectedGroups.length > 0 ? selectedGroups.join(', ') : '-';
   const firstLoadDate = selectedIndices.length > 0 ? getRowData313S(selectedIndices[0]).loadDate : todayYYMMDD();
-  const [dateValues, setDateValues] = useState({ 작성일자: firstLoadDate, 확인일자: todayYYMMDD(), 수금기한: addDays313(firstLoadDate, 60) });
+  const [dateValues, setDateValues] = useState({ 작성일자: firstLoadDate, 확인일자: todayYYMMDD(), 수금예정일: addDays313(firstLoadDate, 60) });
   const [openCal, setOpenCal] = useState<string | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const DATE_ROWS: { label: string; key: keyof typeof dateValues }[] = [
     { label: '계산서 작성일자', key: '작성일자' },
     { label: '계산서 확인일자', key: '확인일자' },
-    { label: '수금기한', key: '수금기한' },
+    { label: '수금예정일', key: '수금예정일' },
   ];
   return <>{createPortal(
     <div style={{
@@ -2722,13 +2722,13 @@ function ManualInvoiceModal({ onClose, onSuccess, selectedIndices }: { onClose: 
 }
 
 function ManualInvoiceDetailModal({ onClose }: { onClose: () => void }) {
-  const [dateValues, setDateValues] = useState({ 기준일: todayYYMMDD(), 발행일: todayYYMMDD(), 수금일: '26.07.27' });
+  const [dateValues, setDateValues] = useState({ 기준일: todayYYMMDD(), 발행일: todayYYMMDD(), 수금완료일: '26.07.27' });
   const [openCal, setOpenCal] = useState<string | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const DATE_ROWS: { label: string; key: keyof typeof dateValues }[] = [
     { label: '매출 명세서 기준일', key: '기준일' },
     { label: '세금계산서 발행일', key: '발행일' },
-    { label: '수금 예정일', key: '수금일' },
+    { label: '수금 예정일', key: '수금완료일' },
   ];
   return <>{createPortal(
     <div style={{
@@ -3415,8 +3415,8 @@ const TABLE_COLS_313S_BASE: ColDef313S[] = [
   { label: '계산서 발행일자', width: 140, render: (d, i, h) => d.invoiceIssueDate
     ? <TextDataCell313S key={i} text={d.invoiceIssueDate} rowIdx={i} underline onClick={h.onInvoiceDetailClick} />
     : <TextDataCell313S key={i} text="-" rowIdx={i} /> },
-  { label: '수금기한', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.collectDeadline || '-'} rowIdx={i} /> },
-  { label: '수금일', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.collectDate || '-'} rowIdx={i} /> },
+  { label: '수금예정일', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.collectDeadline || '-'} rowIdx={i} /> },
+  { label: '수금완료일', width: 140, render: (d, i) => <TextDataCell313S key={i} text={d.collectDate || '-'} rowIdx={i} /> },
   { label: '증빙서류', width: 100, render: (_d, i) => <ButtonDataCell313S key={i} rowIdx={i} text="1장" /> },
 ];
 

@@ -17,7 +17,9 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
-  base: './',
+  // km-deploy.onkakao.net 배포 슬러그(lis-settlement)에 맞춘 경로. 슬러그를 바꾸면 DEPLOY_BASE 환경변수로 덮어쓸 수 있음
+  // 예: DEPLOY_BASE=/p/다른슬러그/ npm run build
+  base: process.env.DEPLOY_BASE || '/p/lis-settlement/',
   build: {
     rollupOptions: {
       output: {
@@ -26,11 +28,11 @@ export default defineConfig({
         entryFileNames: '[name].js',
         manualChunks: {
           'vendor': ['react', 'react-dom'],
-          'tab-312': ['/Users/sue.su/lis-1/src/imports/312통합장부/index.tsx'],
-          'tab-313': ['/Users/sue.su/lis-1/src/imports/313매출장부화주사/index.tsx'],
-          'tab-314': ['/Users/sue.su/lis-1/src/imports/314매입장부정보망배차/index.tsx'],
-          'tab-315': ['/Users/sue.su/lis-1/src/imports/315매출거래명세서화주사/index.tsx'],
-          'tab-316': ['/Users/sue.su/lis-1/src/imports/316매입거래명세서소속기사/index.tsx'],
+          'tab-312': [path.resolve(__dirname, 'src/imports/312통합장부/index.tsx')],
+          'tab-313': [path.resolve(__dirname, 'src/imports/313매출장부화주사/index.tsx')],
+          'tab-314': [path.resolve(__dirname, 'src/imports/314매입장부정보망배차/index.tsx')],
+          'tab-315': [path.resolve(__dirname, 'src/imports/315매출거래명세서화주사/index.tsx')],
+          'tab-316': [path.resolve(__dirname, 'src/imports/316매입거래명세서소속기사/index.tsx')],
         },
       },
     },
@@ -46,6 +48,16 @@ export default defineConfig({
     alias: {
       // Alias @ to the src directory
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+
+  server: {
+    proxy: {
+      // AI 문의 백엔드(server/index.mjs, 기본 포트 8787)로 프록시
+      '/api': {
+        target: `http://localhost:${process.env.PORT || 8787}`,
+        changeOrigin: true,
+      },
     },
   },
 
