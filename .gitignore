@@ -3,3 +3,10 @@
 
 # VertexAI 서비스 계정 키 (절대 커밋 금지)
 server/*.json
+
+# 의존성 (npm install로 복원)
+node_modules/
+
+# macOS
+.DS_Store
+**/.DS_Store
