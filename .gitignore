@@ -10,3 +10,11 @@ node_modules/
 # macOS
 .DS_Store
 **/.DS_Store
+
+# 제출용 산출물, 보안 검토용 압축/명세 파일
+submission/
+wiki-writing.zip
+wiki-writing_기능명세서.md
+
+# Claude Code 개인 로컬 설정
+.claude/settings.local.json
