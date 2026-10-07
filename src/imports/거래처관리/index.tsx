@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import SharedLnb from "../shared/SharedLnb";
 import {
-  type TradeStatus, type SettleSchedule, type PartnerContact, type SharedGroupMapping, type TradePartner, type BizRecord,
+  type TradeStatus, type PartnerType, PARTNER_TYPES, type SettleSchedule, type PartnerContact, type SharedGroupMapping, type TradePartner, type BizRecord,
   MOCK_BIZ_REGISTRY, makeSchedule, genId,
   getPartners, addPartner, updatePartner, subscribePartners,
 } from "../shared/geoRaecheoStore";
@@ -205,6 +205,7 @@ const STATUS_BADGE: Record<TradeStatus, { label: string; bg: string; color: stri
 };
 
 type FilterOption = { v: string; l: string };
+const TYPE_FILTER_OPTIONS: FilterOption[] = [{ v: '', l: '전체' }, ...PARTNER_TYPES.map(t => ({ v: t, l: t }))];
 const STATUS_FILTER_OPTIONS: FilterOption[] = [{ v: '', l: '전체' }, { v: '정상', l: '거래중' }, { v: '거래중지', l: '배차금지' }];
 const JOIN_FILTER_OPTIONS: FilterOption[] = [{ v: '', l: '전체' }, { v: 'Y', l: '가입' }, { v: 'N', l: '미가입' }];
 const PAGE_SIZE_OPTIONS = [200, 100, 50];
@@ -271,12 +272,14 @@ function Header({ onRegisterClick }: { onRegisterClick: () => void }) {
 
 type SearchType = '거래처별칭' | '사업자명';
 
-function SearchBar({ searchType, setSearchType, keyword, setKeyword, onSearch, status, setStatus, join, setJoin }: {
+function SearchBar({ searchType, setSearchType, keyword, setKeyword, onSearch, partnerType, setPartnerType, status, setStatus, join, setJoin }: {
   searchType: SearchType;
   setSearchType: (t: SearchType) => void;
   keyword: string;
   setKeyword: (v: string) => void;
   onSearch: () => void;
+  partnerType: string;
+  setPartnerType: (v: string) => void;
   status: string;
   setStatus: (v: string) => void;
   join: string;
@@ -312,6 +315,7 @@ function SearchBar({ searchType, setSearchType, keyword, setKeyword, onSearch, s
         </button>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <FilterChip label="거래처 유형" options={TYPE_FILTER_OPTIONS} value={partnerType} onChange={setPartnerType} />
         <FilterChip label="거래상태" options={STATUS_FILTER_OPTIONS} value={status} onChange={setStatus} />
         <FilterChip label="시스템 가입 여부" options={JOIN_FILTER_OPTIONS} value={join} onChange={setJoin} />
       </div>
@@ -504,6 +508,29 @@ function FormSection({ title, children }: { title: string; children: React.React
   );
 }
 
+// 거래처 유형 선택 (화주사/협력사) — 등록 모달용 세그먼트 버튼
+function PartnerTypeField({ value, onChange }: { value: PartnerType; onChange: (v: PartnerType) => void }) {
+  return (
+    <div role="radiogroup" aria-label="거래처 유형" style={{ display: 'flex', gap: 8 }}>
+      {PARTNER_TYPES.map(t => {
+        const on = value === t;
+        return (
+          <button
+            key={t}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(t)}
+            style={{ flex: 1, height: 44, borderRadius: 4, border: `1px solid ${on ? '#005FFF' : BORDER}`, background: on ? '#F5F9FF' : '#FFFFFF', cursor: 'pointer', fontFamily: on ? ffSemiBold : ff, fontWeight: on ? 600 : 400, fontSize: 16, lineHeight: '24px', letterSpacing: ls, color: on ? '#005FFF' : '#2E3238' }}
+          >
+            {t}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── 거래 담당 업무그룹 선택 (등록 모달 / 상세 > 거래처 정보 수정에서 공용) ─────
 
 const GROUP_PICKER_CSS = '.pmg-opt:hover{background:#F6F7F8!important}.pmg-row:hover .pmg-del{opacity:1!important}.pmg-row.pmg-sub:hover{background:#F6F7F8!important}.pmg-search::placeholder{color:#767D8A}';
@@ -692,6 +719,7 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
   const [bizItem, setBizItem] = useState('');
   const [taxEmail, setTaxEmail] = useState('');
   const [bizLicense, setBizLicense] = useState<File | null>(null);
+  const [partnerType, setPartnerType] = useState<PartnerType>('화주사');
   const [alias, setAlias] = useState('');
   const [memo, setMemo] = useState('');
   const [ourGroups] = useState<WorkGroup[]>(() => getGroups());
@@ -727,6 +755,7 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
     onRegister({
       id: Date.now(),
       status: '정상',
+      partnerType,
       alias: alias.trim() || bizName.trim(),
       bizName: bizName.trim(),
       bizNumber,
@@ -846,6 +875,11 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
 
             <FormSection title="거래처 정보">
               <FormRow>
+                <FormField label="거래처 유형" required>
+                  <PartnerTypeField value={partnerType} onChange={setPartnerType} />
+                </FormField>
+              </FormRow>
+              <FormRow>
                 <FormField label="거래처별칭">
                   <TextField value={alias} onChange={setAlias} placeholder="거래처별칭 입력" />
                 </FormField>
@@ -872,22 +906,18 @@ const DETAIL_CSS = ".pmd-in{height:30px;border:1px solid #E3E5E9;border-radius:4
 
 // 정산스케줄 항목 라벨 옆 (i) 아이콘 툴팁 문구
 const FIELD_INFO: Record<string, string> = {
-  담당업무그룹: '이 정산 규칙을 담당하는 내 회사 업무그룹이에요.',
   종사업자번호: '거래처의 종사업장 번호가 있는 경우 입력해요.',
-  결제방법: '선불·후불 등 운임 결제 시점이에요.',
-  결제수단: '현금·카드 등 결제 수단이에요.',
-  정산기간: '한 번의 정산에 포함되는 기간이에요.',
+  결제수단: '현금·어음·카드 중 대금을 결제하는 수단이에요.',
+  정산기간: '한 번의 정산에 포함되는 기간이에요. 시작일이 종료일보다 크면 익월 종료일까지예요. (예: 26일~익월 25일)',
   '인수증 기본설정': '정산 시 필요한 인수증 기본값이에요.',
-  '거래명세서 작성일': '정산 종료일 기준으로 거래명세서를 작성하는 날이에요.',
-  수금예정일: '정산 종료일 기준으로 대금을 받을 예정일이에요.',
+  수금예정일: '계산서 발행일 기준으로 대금을 받을 예정일이에요.',
   '세금계산서 이메일': '세금계산서를 받을 이메일이에요.',
   계약운임표: '이 거래처와 계약한 운임표예요.',
-  계좌정보: '정산 대금을 주고받는 계좌예요.',
   정산메모: '정산 시 참고할 메모예요.',
   '거래처 직원 정보': '거래처의 정산·배차 담당 직원이에요.',
 };
 
-const PAY_METHOD_OPTIONS = ['후불', '선불', '현장결제'];
+const PAY_MEANS_OPTIONS = ['현금', '어음', '카드'];
 
 // 섹션 헤더/테이블 안에서 쓰는 작은 버튼 (수정/저장/취소/설정/삭제 등)
 function SmallButton({ children, onClick, primary, style }: { children: React.ReactNode; onClick: (e: React.MouseEvent) => void; primary?: boolean; style?: React.CSSProperties }) {
@@ -1009,6 +1039,67 @@ function InlineEdit({ value, display, onSave, placeholder, inputMode, format }: 
   );
 }
 
+// 값 + [수정] 버튼 → 클릭 시 셀렉트 + [저장][취소]로 바뀌는 셀 단위 선택 편집
+function InlineSelectEdit({ value, options, onSave }: { value: string; options: string[]; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  if (!editing) {
+    return (
+      <>
+        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
+        <SmallButton onClick={() => { setDraft(value); setEditing(true); }}>수정</SmallButton>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="pmd-in" style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+        <InlineSelect value={draft} options={options} onChange={setDraft} />
+      </div>
+      <SmallButton primary onClick={() => { onSave(draft); setEditing(false); }}>저장</SmallButton>
+      <SmallButton onClick={() => setEditing(false)}>취소</SmallButton>
+    </>
+  );
+}
+
+const DAY_OPTIONS: FilterOption[] = Array.from({ length: 31 }, (_, i) => ({ v: String(i + 1), l: `${i + 1}일` }));
+
+// 시작일 > 종료일이면 익월에 걸치는 기간 (예: 26일~익월 25일)
+function formatSettlePeriod(start: number, end: number) {
+  return start > end ? `${start}일~익월 ${end}일` : `${start}일~${end}일`;
+}
+
+// 정산기간 셀 — [수정] 클릭 시 시작일/종료일 셀렉트 + [저장][취소]
+function SettlePeriodEdit({ start, end, onSave }: { start: number; end: number; onSave: (start: number, end: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ start, end });
+
+  if (!editing) {
+    return (
+      <>
+        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatSettlePeriod(start, end)}</span>
+        <SmallButton onClick={() => { setDraft({ start, end }); setEditing(true); }}>수정</SmallButton>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="pmd-in" style={{ width: 80, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+        <InlineSelect value={String(draft.start)} options={DAY_OPTIONS} onChange={v => setDraft(d => ({ ...d, start: Number(v) }))} />
+      </div>
+      <span style={{ flexShrink: 0 }}>~</span>
+      {draft.start > draft.end && <span style={{ flexShrink: 0, color: '#5C6370' }}>익월</span>}
+      <div className="pmd-in" style={{ width: 80, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+        <InlineSelect value={String(draft.end)} options={DAY_OPTIONS} onChange={v => setDraft(d => ({ ...d, end: Number(v) }))} />
+      </div>
+      <span style={{ flex: 1 }} />
+      <SmallButton primary onClick={() => { onSave(draft.start, draft.end); setEditing(false); }}>저장</SmallButton>
+      <SmallButton onClick={() => setEditing(false)}>취소</SmallButton>
+    </>
+  );
+}
+
 function BizLicenseField({ fileName, onChange }: { fileName: string; onChange: (name: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   return (
@@ -1065,26 +1156,21 @@ function DraftInput({ value, onChange, placeholder, format, inputMode }: {
 
 // ─── 거래처 업무그룹(정산스케줄) 아코디언 ─────────────────────────────────────
 
-function ScheduleAccordion({ schedule, open, onToggle, groups, partner, onPatch, onRemove, canRemove, onToast }: {
+function ScheduleAccordion({ schedule, open, onToggle, partner, onPatch, onRemove, canRemove, onToast }: {
   schedule: SettleSchedule;
   open: boolean;
   onToggle: () => void;
-  groups: WorkGroup[];
   partner: TradePartner;
   onPatch: (patch: Partial<SettleSchedule>) => void;
   onRemove: () => void;
   canRemove: boolean;
   onToast: (msg: string) => void;
 }) {
-  const groupOptions: FilterOption[] = groups.length ? groups.map(g => ({ v: g.id, l: g.name })) : [{ v: '', l: '업무그룹 없음' }];
-  // 담당업무그룹 미지정이면 거래처의 대표 업무그룹을 기본값으로 표시
-  const groupId = schedule.groupId || partner.mainGroupId || groups[0]?.id || '';
   const hasRate = hasContractRate(partner.id, schedule.id);
   const contactSummary = (partner.contacts || [])
     .filter((c: PartnerContact) => c.name)
     .map(c => c.department ? `${c.name}(${c.department})` : c.name)
     .join(', ');
-  const statementDays = schedule.statementDays ?? 1;
   const collectDays = schedule.collectDays ?? 30;
   const taxEmail = schedule.taxEmail || partner.taxEmail;
 
@@ -1108,48 +1194,43 @@ function ScheduleAccordion({ schedule, open, onToggle, groups, partner, onPatch,
       {open && (
         <div>
           <InfoRow>
-            <InfoLabel label="담당업무그룹" info />
-            <InfoValue><InlineSelect value={groupId} options={groupOptions} onChange={v => onPatch({ groupId: v })} /></InfoValue>
             <InfoLabel label="종사업자번호" info />
-            <InfoValue>{schedule.subBizNumber && <Ellipsis>{schedule.subBizNumber}</Ellipsis>}</InfoValue>
-          </InfoRow>
-          <InfoRow>
-            <InfoLabel label="결제방법" info />
-            <InfoValue><InlineSelect value={schedule.payMethod || '후불'} options={PAY_METHOD_OPTIONS} onChange={v => onPatch({ payMethod: v })} /></InfoValue>
+            <InfoValue>
+              <InlineEdit
+                value={schedule.subBizNumber || ''}
+                inputMode="numeric"
+                placeholder="종사업자번호 4자리"
+                format={v => v.replace(/\D/g, '').slice(0, 4)}
+                onSave={v => onPatch({ subBizNumber: v })}
+              />
+            </InfoValue>
             <InfoLabel label="결제수단" info />
-            <InfoValue><Ellipsis>{schedule.payMeans || '현금'}</Ellipsis></InfoValue>
+            <InfoValue><InlineSelectEdit value={schedule.payMeans || '현금'} options={PAY_MEANS_OPTIONS} onSave={v => onPatch({ payMeans: v })} /></InfoValue>
           </InfoRow>
           <InfoRow>
             <InfoLabel label="정산기간" info />
-            <InfoValue><Ellipsis>{`${schedule.settlePeriodStart ?? 1}일~${schedule.settlePeriodEnd ?? 31}일`}</Ellipsis></InfoValue>
+            <InfoValue>
+              <SettlePeriodEdit
+                start={schedule.settlePeriodStart ?? 1}
+                end={schedule.settlePeriodEnd ?? 31}
+                onSave={(start, end) => onPatch({ settlePeriodStart: start, settlePeriodEnd: end })}
+              />
+            </InfoValue>
             <InfoLabel label="인수증 기본설정" info />
             <InfoValue><Ellipsis>{schedule.receiptDefault || '원본/사진 필수'}</Ellipsis></InfoValue>
           </InfoRow>
           <InfoRow>
-            <InfoLabel label="거래명세서 작성일" info />
-            <InfoValue>
-              <InlineEdit
-                value={String(statementDays)}
-                display={<Ellipsis>{`정산 종료일 ${statementDays}일 후`}</Ellipsis>}
-                inputMode="numeric"
-                placeholder="일수"
-                format={v => v.replace(/\D/g, '').slice(0, 2)}
-                onSave={v => onPatch({ statementDays: Number(v) || 0 })}
-              />
-            </InfoValue>
             <InfoLabel label="수금예정일" info />
             <InfoValue>
               <InlineEdit
                 value={String(collectDays)}
-                display={<Ellipsis>{`정산 종료일 ${collectDays}일 후`}</Ellipsis>}
+                display={<Ellipsis>{`계산서 발행 ${collectDays}일 후`}</Ellipsis>}
                 inputMode="numeric"
                 placeholder="일수"
                 format={v => v.replace(/\D/g, '').slice(0, 3)}
                 onSave={v => onPatch({ collectDays: Number(v) || 0 })}
               />
             </InfoValue>
-          </InfoRow>
-          <InfoRow>
             <InfoLabel label="세금계산서 이메일" info />
             {/* 스케줄별 이메일 미지정 시 사업자 정보의 세금계산서 이메일 */}
             <InfoValue>{taxEmail && <Ellipsis>{taxEmail}</Ellipsis>}</InfoValue>
@@ -1159,10 +1240,6 @@ function ScheduleAccordion({ schedule, open, onToggle, groups, partner, onPatch,
             <InfoValue>
               {hasRate ? <Ellipsis>등록됨</Ellipsis> : <span style={{ color: '#C7CBD1' }}>-</span>}
               <SmallButton onClick={() => onToast('계약운임표는 거래처 > 계약운임표 관리에서 설정할 수 있어요.')}>설정</SmallButton>
-            </InfoValue>
-            <InfoLabel label="계좌정보" info />
-            <InfoValue>
-              <InlineEdit value={schedule.account || ''} placeholder="은행명 계좌번호" onSave={v => onPatch({ account: v })} />
             </InfoValue>
           </InfoRow>
           <InfoRow>
@@ -1182,7 +1259,7 @@ function ScheduleAccordion({ schedule, open, onToggle, groups, partner, onPatch,
 // ─── 거래처 상세 모달 ────────────────────────────────────────────────────────
 
 type BizDraft = { bizName: string; bizNumber: string; ceoName: string; contact: string; address: string; addressDetail: string; fax: string; bizType: string; bizItem: string; taxEmail: string };
-type InfoDraft = { contactName: string; contactEmail: string; contactPhone: string; alias: string; memo: string; assignedGroupIds: string[]; mainGroupId: string };
+type InfoDraft = { partnerType: PartnerType; contactName: string; contactEmail: string; contactPhone: string; alias: string; memo: string; assignedGroupIds: string[]; mainGroupId: string };
 
 // 섹션별 [수정] → [저장]/[취소] 인라인 편집. 저장 즉시 스토어에 반영되므로 하단엔 [닫기]만 둔다.
 function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave }: { partner: TradePartner; onClose: () => void; onSave: (p: TradePartner) => void }) {
@@ -1231,6 +1308,7 @@ function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave }: { p
   // ── 거래처 정보 (담당자는 거래처 직원 정보의 첫 번째 직원)
   const primaryContact: Partial<PartnerContact> = partner.contacts?.[0] || {};
   const startInfoEdit = () => setInfoDraft({
+    partnerType: partner.partnerType || '화주사',
     contactName: primaryContact.name || '', contactEmail: primaryContact.email || '', contactPhone: primaryContact.phone || '',
     alias: partner.alias || '', memo: partner.memo || '',
     assignedGroupIds: [...(partner.assignedGroupIds || [])], mainGroupId: partner.mainGroupId || '',
@@ -1245,7 +1323,7 @@ function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave }: { p
     else if (edited.name || edited.email || edited.phone) contacts.push(edited);
     const assigned = infoDraft.assignedGroupIds;
     const main = assigned.includes(infoDraft.mainGroupId) ? infoDraft.mainGroupId : assigned[0] ?? '';
-    patchPartner({ contacts, alias: infoDraft.alias.trim() || partner.bizName, memo: infoDraft.memo.trim(), assignedGroupIds: assigned, mainGroupId: main });
+    patchPartner({ partnerType: infoDraft.partnerType, contacts, alias: infoDraft.alias.trim() || partner.bizName, memo: infoDraft.memo.trim(), assignedGroupIds: assigned, mainGroupId: main });
     setInfoDraft(null);
     setToast('거래처 정보가 저장되었어요.');
   };
@@ -1362,6 +1440,16 @@ function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave }: { p
               </DetailSectionTitle>
               <InfoTable>
                 <InfoRow>
+                  <InfoLabel label="거래처 유형" />
+                  <InfoValue>
+                    {infoDraft ? (
+                      <div className="pmd-in" style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                        <InlineSelect value={infoDraft.partnerType} options={PARTNER_TYPES} onChange={v => setInfoDraft(d => d && { ...d, partnerType: v as PartnerType })} />
+                      </div>
+                    ) : partner.partnerType && <Ellipsis>{partner.partnerType}</Ellipsis>}
+                  </InfoValue>
+                </InfoRow>
+                <InfoRow>
                   <InfoLabel label="담당자명" />
                   <InfoValue>{infoDraft ? <DraftInput value={infoDraft.contactName} onChange={setInfoField('contactName')} placeholder="담당자명" /> : primaryContact.name && <Ellipsis>{primaryContact.name}</Ellipsis>}</InfoValue>
                   <InfoLabel label="담당자 이메일" />
@@ -1414,7 +1502,6 @@ function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave }: { p
                     schedule={s}
                     open={openScheduleIds.has(s.id)}
                     onToggle={() => toggleSchedule(s.id)}
-                    groups={ourGroups}
                     partner={partner}
                     onPatch={patch => patchSchedule(s.id, patch)}
                     onRemove={() => removeSchedule(s.id)}
@@ -1478,6 +1565,7 @@ export default function GeoraecheoManagement() {
   const [appliedKeyword, setAppliedKeyword] = useState('');
   const [showRegister, setShowRegister] = useState(false);
   const [detailTarget, setDetailTarget] = useState<TradePartner | null>(null);
+  const [typeFilter, setTypeFilter] = useState('');     // '' | '화주사' | '협력사'
   const [statusFilter, setStatusFilter] = useState(''); // '' | '정상' | '거래중지'
   const [joinFilter, setJoinFilter] = useState('');     // '' | 'Y' | 'N'
   const [page, setPage] = useState(1);
@@ -1494,6 +1582,7 @@ export default function GeoraecheoManagement() {
       const target = appliedType === '거래처별칭' ? p.alias : p.bizName;
       if (!target.toLowerCase().includes(appliedKeyword.toLowerCase())) return false;
     }
+    if (typeFilter !== '' && p.partnerType !== typeFilter) return false;
     if (statusFilter !== '' && p.status !== statusFilter) return false;
     if (joinFilter !== '' && (joinFilter === 'Y') !== !!p.tTrucker) return false;
     return true;
@@ -1513,6 +1602,7 @@ export default function GeoraecheoManagement() {
             searchType={searchType} setSearchType={setSearchType}
             keyword={keyword} setKeyword={setKeyword}
             onSearch={handleSearch}
+            partnerType={typeFilter} setPartnerType={v => { setTypeFilter(v); setPage(1); }}
             status={statusFilter} setStatus={v => { setStatusFilter(v); setPage(1); }}
             join={joinFilter} setJoin={v => { setJoinFilter(v); setPage(1); }}
           />

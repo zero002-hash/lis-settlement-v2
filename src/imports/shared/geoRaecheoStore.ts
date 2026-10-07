@@ -4,6 +4,8 @@
 import { getGroups } from './companyStore';
 
 export type TradeStatus = '정상' | '거래중지';
+export type PartnerType = '화주사' | '협력사';
+export const PARTNER_TYPES: PartnerType[] = ['화주사', '협력사'];
 
 export type SettleSchedule = {
   id: string;
@@ -14,14 +16,10 @@ export type SettleSchedule = {
   receiptDefault: string; // 인수증 기본설정
   collectDueDate: string; // 수금예정일
   taxEmail: string;       // 세금계산서 이메일
-  account: string;        // 계좌정보
   settleMemo: string;     // 정산 메모
   // 아래는 거래처 상세 > 거래처 업무그룹 아코디언에서 지정하는 값 — 미지정이면 화면에서 기본값으로 표시
-  groupId?: string;        // 담당업무그룹(내 회사 업무그룹 id) — 미지정 시 거래처의 대표 업무그룹
-  payMethod?: string;      // 결제방법 (후불/선불/현장결제, 기본 후불)
-  payMeans?: string;       // 결제수단 (기본 현금)
-  statementDays?: number;  // 거래명세서 작성일 — 정산 종료일 N일 후 (기본 1)
-  collectDays?: number;    // 수금예정일 — 정산 종료일 N일 후 (기본 30)
+  payMeans?: string;       // 결제수단 (현금/어음/카드, 기본 현금)
+  collectDays?: number;    // 수금예정일 — 계산서 발행 N일 후 (기본 30)
 };
 
 export type PartnerContact = {
@@ -42,6 +40,7 @@ export type SharedGroupMapping = {
 export type TradePartner = {
   id: number;
   status: TradeStatus;
+  partnerType: PartnerType; // 거래처 유형 (화주사/협력사)
   alias: string;         // 거래처별칭
   bizName: string;       // 사업자명
   bizNumber: string;     // 사업자번호
@@ -130,7 +129,6 @@ export function makeSchedule(name: string, salt: number): SettleSchedule {
     receiptDefault: '필요 없음',
     collectDueDate: '매월 10일',
     taxEmail: '',
-    account: '',
     settleMemo: '',
   };
 }
@@ -190,6 +188,7 @@ function genPartners(): TradePartner[] {
     return {
       id: i + 1,
       status: r > 0.12 ? '정상' : '거래중지',
+      partnerType: i % 3 === 2 ? '협력사' : '화주사',
       alias,
       bizName: biz.bizName,
       bizNumber: biz.bizNumber,
