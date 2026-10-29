@@ -4,7 +4,8 @@ import svgPaths from "./svg-3fbcisli1b";
 import ORDER_IDS from "../shared/orderIds";
 import SharedLnb from "../shared/SharedLnb";
 import { getCancelledOrders, subscribeCancelledOrders, CancelledOrderEntry } from "../shared/cancelledOrdersStore";
-import { getPartners, type PartnerContact } from "../shared/geoRaecheoStore";
+import { getPartners, updatePartner, type PartnerContact, type TradePartner } from "../shared/geoRaecheoStore";
+import { GeoraecheoDetailModal } from "../거래처관리/index";
 import PartnerAutocomplete from "../shared/PartnerAutocomplete";
 import { getCurrentEmployee, getEmployeesInGroup, getGroups } from "../shared/companyStore";
 
@@ -2303,6 +2304,33 @@ function ExtraFareModal({ initialItems, onClose, onSave }: { initialItems: Extra
   );
 }
 
+// 화주/요청거래처/위탁 협력사명 — 등록된 거래처로 확정되면 [▶]로 거래처 상세를 연다
+function PartyNameField({ value, onChange, partners, placeholder, record, onOpen, inputStyle, useAlias }: {
+  value: string;
+  onChange: (v: string) => void;
+  partners: TradePartner[];
+  placeholder: string;
+  record?: TradePartner;
+  onOpen: (id: number) => void;
+  inputStyle: React.CSSProperties;
+  useAlias?: boolean;
+}) {
+  return (
+    <div style={{ display:'flex', minWidth:0 }}>
+      <div style={{ flex:1, minWidth:0 }}>
+        <PartnerAutocomplete value={value} onChange={onChange} onSelect={p => onChange(useAlias ? p.alias : p.bizName)} partners={partners} placeholder={placeholder}
+          inputStyle={{ ...inputStyle, borderRadius: record ? '2px 0 0 2px' : inputStyle.borderRadius }} />
+      </div>
+      {record && (
+        <button type="button" title="거래처 상세 보기" aria-label={`${record.alias} 거래처 상세`} onClick={() => onOpen(record.id)}
+          style={{ width:28, height:28, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', padding:0, border:'1px solid #DFDFDF', borderLeft:'none', borderRadius:'0 2px 2px 0', background:'#F9F9F9', cursor:'pointer', boxSizing:'border-box' }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="0.65" y="0.65" width="12.7" height="12.7" rx="3" stroke="#5C6370" strokeWidth="1.3"/><path d="M5.5 4.2L8.6 7L5.5 9.8" stroke="#5C6370" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaStatus: _baechaStatus, cancelCloseState, onStatusChange, isNew }: { orderId: string; rowIdx: number; onClose: () => void; __pageMode?: boolean; baechaStatus?: string; cancelCloseState?: { closeSale: boolean; closePurchase: boolean }; onStatusChange?: (status: string) => void; isNew?: boolean }) {
   const ff = "'Pretendard GOV:Regular'";
 
@@ -2378,10 +2406,25 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   const shipperPartnerContacts = shipperPartnerRecord?.contacts ?? [];
   const partnerPartnerContacts = partnerPartnerRecord?.contacts ?? [];
   // 공유그룹/정산스케줄: 입력된 거래처명으로 등록된 실제 거래처를 찾아 그 목록을 노출 (없으면 플레이스홀더만 노출)
-  const shipperGroupOptions = shipperPartnerRecord?.sharedGroups.map(g => g.groupName) ?? [];
+  // 미가입 거래처는 공유그룹이 없어 '기본그룹' 1개 + 기본스케줄 (거래처 상세 > 공유그룹별 설정과 같은 규칙)
+  const groupMappingsOf = (p?: TradePartner) => !p ? [] : (p.tTrucker && p.sharedGroups.length ? p.sharedGroups : [{ groupName: '기본그룹', scheduleId: p.settleSchedules[0]?.id ?? '' }]);
+  const shipperGroupOptions = groupMappingsOf(shipperPartnerRecord).map(g => g.groupName);
   const shipperSettleOptions = shipperPartnerRecord?.settleSchedules.map(s => s.name) ?? [];
-  const partnerGroupOptions = partnerPartnerRecord?.sharedGroups.map(g => g.groupName) ?? [];
+  const partnerGroupOptions = groupMappingsOf(partnerPartnerRecord).map(g => g.groupName);
   const partnerSettleOptions = partnerPartnerRecord?.settleSchedules.map(s => s.name) ?? [];
+  // 공유그룹을 고르면 그 그룹에 연결된 정산스케줄이 자동 선택된다 (이후 다른 스케줄로 변경 가능)
+  const linkedScheduleName = (p: TradePartner | undefined, groupName: string) => {
+    const m = groupMappingsOf(p).find(g => g.groupName === groupName);
+    return p?.settleSchedules.find(s => s.id === m?.scheduleId)?.name ?? p?.settleSchedules[0]?.name ?? '';
+  };
+  const [shipperGroupSel, setShipperGroupSel] = useState('');
+  const [shipperSettleSel, setShipperSettleSel] = useState('');
+  const [partnerGroupSel, setPartnerGroupSel] = useState('');
+  const [partnerSettleSel, setPartnerSettleSel] = useState('');
+  useEffect(() => { const g = shipperGroupOptions[0] ?? ''; setShipperGroupSel(g); setShipperSettleSel(linkedScheduleName(shipperPartnerRecord, g)); }, [shipperPartnerRecord?.id]);
+  useEffect(() => { const g = partnerGroupOptions[0] ?? ''; setPartnerGroupSel(g); setPartnerSettleSel(linkedScheduleName(partnerPartnerRecord, g)); }, [partnerPartnerRecord?.id]);
+  const [detailPartnerId, setDetailPartnerId] = useState<number | null>(null);
+  const detailPartner = detailPartnerId != null ? getPartners().find(p => p.id === detailPartnerId) : undefined;
   const partnerSettle = pick(partnerSettleOptions, 42);
   const driverName = isNew ? '' : pick(DRIVER_NAMES, 7);
   const plate = isNew ? '' : pick(PLATES, 8);
@@ -2530,6 +2573,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   const lbl: React.CSSProperties = { fontSize:13, fontWeight:700, color:'#666', letterSpacing:'-0.01em', width:60, flexShrink:0 };
   const partyInputStyle: React.CSSProperties = { height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' };
   const partySelectStyle: React.CSSProperties = { ...partyInputStyle, paddingRight:24, background:`${selArrow} no-repeat right 8px center, #FFFFFF`, cursor:'pointer', appearance:'none' as const };
+  const partyLinkedSelectStyle: React.CSSProperties = { ...partySelectStyle, background:`${selArrow} no-repeat right 8px center, #E8F3FE`, textOverflow:'ellipsis' };
 
   // 배차요청자 이름 입력 — 거래처 상세에 등록된 담당자 목록에서 선택하거나 직접 입력
   // 배차요청자 이름/전화번호 공용 자동완성 필드 — 이름/전화번호 어느 쪽을 입력해도 같은 담당자 목록에서 검색/선택 가능
@@ -2575,6 +2619,8 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   const [ledgerChannel, setLedgerChannel] = useState<typeof LEDGER_CHANNELS[number]>('전국24시콜화물');
   const [dispatchPartnerName, setDispatchPartnerName] = useState('');
   const [externalDispatchId, setExternalDispatchId] = useState('');
+  // 협력사위탁은 협력사가 배차를 완료하면 차량정보가 자동 입력되므로 직접 입력 불가
+  const vehicleLocked = dispatchType === '협력사위탁';
   // 배차담당(담당그룹/배차담당자명/전화번호) — 담당그룹은 현재 로그인한 담당자가 속한 업무그룹 중에서만 선택 가능,
   // 배차담당자명은 선택된 담당그룹에 속한 직원 중에서 선택 (회사 > 업무그룹/직원 관리에서 등록한 데이터를 참조)
   const _defaultDispatchGroupId = (() => {
@@ -2664,6 +2710,12 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
 
   const modalContent = (
     <div style={__pageMode ? { width:'100%', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' } : { position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:99999 }} onClick={__pageMode ? undefined : onClose}>
+      {detailPartner && createPortal(
+        <div onClick={e => e.stopPropagation()}>
+          <GeoraecheoDetailModal partner={detailPartner} onClose={() => setDetailPartnerId(null)} onSave={updatePartner} />
+        </div>,
+        document.body,
+      )}
       <div style={{ width: __pageMode ? '100%' : 1634, flex: __pageMode ? '1 1 0' : undefined, background:'#FFFFFF', borderRadius:__pageMode ? 0 : 12, display:'flex', flexDirection:'column', fontFamily:ff, maxHeight: __pageMode ? '100%' : '95vh', overflowY:'auto', boxShadow:'none' }} onClick={__pageMode ? undefined : (e=>e.stopPropagation())}>
 
         {/* HEADER — 배차관리 페이지(pageMode)에서는 숨김 */}
@@ -2688,76 +2740,46 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
           {/* LEFT SECTION */}
           <div style={{ width:758, display:'flex', flexDirection:'column', gap:8 }}>
 
-            {/* Row 1: 화주사 */}
+            {/* Row 1: 화주 — 거래처를 고르면 [▶ 거래처 상세] · 공유그룹 · 정산스케줄이 붙는다 */}
             <div style={row}>
-              <span style={lbl}>화주사</span>
+              <span style={lbl}>화주</span>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:6, flex:1, minWidth:0 }}>
-                <PartnerAutocomplete value={shipperInput} onChange={setShipperInput} onSelect={p => setShipperInput(p.bizName)} partners={visiblePartners} placeholder="화주사" inputStyle={partyInputStyle} />
-                <select key={`sg-${shipperInput}`} defaultValue={shipperGroupOptions[0] ?? ''} style={partySelectStyle}>
-                  <option value="" disabled hidden>공유그룹</option>
-                  {shipperGroupOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-                <select key={`ss-${shipperInput}`} defaultValue={shipperSettleOptions[0] ?? ''} style={partySelectStyle}>
-                  <option value="" disabled hidden>정산스케줄</option>
-                  {shipperSettleOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
+                <PartyNameField value={shipperInput} onChange={setShipperInput} partners={visiblePartners} placeholder="화주사명" record={shipperPartnerRecord} onOpen={setDetailPartnerId} inputStyle={partyInputStyle} />
+                {shipperPartnerRecord && <>
+                  <select value={shipperGroupSel} onChange={e => { setShipperGroupSel(e.target.value); setShipperSettleSel(linkedScheduleName(shipperPartnerRecord, e.target.value)); }} title="공유그룹" style={partyLinkedSelectStyle}>
+                    {shipperGroupOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                  <select value={shipperSettleSel} onChange={e => setShipperSettleSel(e.target.value)} title="정산스케줄" style={partyLinkedSelectStyle}>
+                    {shipperSettleOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </>}
+                <input defaultValue={isNew ? '' : `ORD-${rowIdx.toString().padStart(5,'0')}`} placeholder="화주주문번호" style={partyInputStyle} />
                 <ContactPickerField field="name" value={shipperReqName} onNameChange={setShipperReqName} onPhoneChange={setShipperReqPhone} contacts={shipperPartnerContacts} />
                 <ContactPickerField field="phone" value={shipperReqPhone} onNameChange={setShipperReqName} onPhoneChange={setShipperReqPhone} contacts={shipperPartnerContacts} />
-                <input defaultValue={isNew ? '' : `ORD-${rowIdx.toString().padStart(5,'0')}`} placeholder="오더ID" style={partyInputStyle} />
               </div>
             </div>
 
-            {/* Row 2: 요청 거래처 */}
+            {/* Row 2: 요청거래처 */}
             <div style={row}>
-              <span style={lbl}>요청 거래처</span>
+              <span style={lbl}>요청거래처</span>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:6, flex:1, minWidth:0 }}>
-                <PartnerAutocomplete value={partnerInput} onChange={setPartnerInput} onSelect={p => setPartnerInput(p.bizName)} partners={visiblePartners} placeholder="요청 거래처" inputStyle={partyInputStyle} />
-                <select key={`pg-${partnerInput}`} defaultValue={partnerGroupOptions[0] ?? ''} style={partySelectStyle}>
-                  <option value="" disabled hidden>공유그룹</option>
-                  {partnerGroupOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-                <select key={`ps-${partnerInput}`} defaultValue={partnerSettleOptions[0] ?? ''} style={partySelectStyle}>
-                  <option value="" disabled hidden>정산스케줄</option>
-                  {partnerSettleOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
+                <PartyNameField value={partnerInput} onChange={setPartnerInput} partners={visiblePartners} placeholder="협력사명" record={partnerPartnerRecord} onOpen={setDetailPartnerId} inputStyle={partyInputStyle} />
+                {partnerPartnerRecord && <>
+                  <select value={partnerGroupSel} onChange={e => { setPartnerGroupSel(e.target.value); setPartnerSettleSel(linkedScheduleName(partnerPartnerRecord, e.target.value)); }} title="공유그룹" style={partyLinkedSelectStyle}>
+                    {partnerGroupOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                  <select value={partnerSettleSel} onChange={e => setPartnerSettleSel(e.target.value)} title="정산스케줄" style={partyLinkedSelectStyle}>
+                    {partnerSettleOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </>}
                 <ContactPickerField field="name" value={partnerReqName} onNameChange={setPartnerReqName} onPhoneChange={setPartnerReqPhone} contacts={partnerPartnerContacts} />
                 <ContactPickerField field="phone" value={partnerReqPhone} onNameChange={setPartnerReqName} onPhoneChange={setPartnerReqPhone} contacts={partnerPartnerContacts} />
-                <div />
-              </div>
-            </div>
-
-            {/* 배차담당: 담당그룹 → 배차담당자명 → 배차담당자전화번호 순 — 담당그룹은 내가 속한 업무그룹 중에서, 배차담당자명은 그 그룹 소속 직원 중에서 선택 */}
-            <div style={row}>
-              <span style={lbl}>배차담당</span>
-              <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                <select
-                  value={dispatchGroupId}
-                  onChange={e => handleDispatchGroupChange(e.target.value)}
-                  style={{ width:100, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}
-                >
-                  {myGroups.length === 0 && <option value="">담당그룹</option>}
-                  {myGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
-                <select
-                  value={dispatchManagerId}
-                  onChange={e => handleDispatchManagerChange(e.target.value)}
-                  style={{ width:100, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}
-                >
-                  {dispatchGroupEmployees.length === 0 && <option value="">배차담당자명</option>}
-                  {dispatchGroupEmployees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                </select>
-                <input
-                  value={dispatchManagerPhone}
-                  onChange={e => setDispatchManagerPhone(e.target.value)}
-                  placeholder="배차담당자 전화번호"
-                  style={{ width:120, height:28, padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }}
-                />
               </div>
             </div>
 
             {/* Row 3: 상차지명 */}
             <div style={row}>
-              <span style={lbl}>상차지명</span>
+              <span style={lbl}>상차지</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1, minWidth:0 }}>
                 <input defaultValue={loadLoc} placeholder="상차지명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <input defaultValue={loadWorkType} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E6E6E6', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
@@ -2771,7 +2793,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
 
             {/* Row 4: 하차지명 */}
             <div style={row}>
-              <span style={lbl}>하차지명</span>
+              <span style={lbl}>하차지</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1, minWidth:0 }}>
                 <input defaultValue={unloadLoc} placeholder="하차지명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <input defaultValue={unloadWorkType} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E6E6E6', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
@@ -2864,14 +2886,16 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                       </select>
                     )}
                     {(dispatchType === '협력사위탁' || (dispatchType === '장부기록' && ledgerChannel === '협력사위탁(정보망 이용안함)')) && (
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <PartnerAutocomplete
+                      <div style={{ width: dispatchType === '협력사위탁' ? 200 : undefined, flex: dispatchType === '협력사위탁' ? 'none' : 1, minWidth:0 }}>
+                        <PartyNameField
                           value={dispatchPartnerName}
                           onChange={setDispatchPartnerName}
-                          onSelect={p => setDispatchPartnerName(p.alias)}
-                          partners={allPartners}
-                          placeholder="협력사명을 입력해 주세요"
-                          inputStyle={{ height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' }}
+                          partners={allPartners.filter(p => p.partnerType === '협력사')}
+                          placeholder="협력사명"
+                          record={allPartners.find(p => p.partnerType === '협력사' && (p.alias === dispatchPartnerName || p.bizName === dispatchPartnerName))}
+                          onOpen={setDetailPartnerId}
+                          inputStyle={{ ...partyInputStyle, background:'#E8F3FE' }}
+                          useAlias
                         />
                       </div>
                     )}
@@ -2886,17 +2910,17 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                   </div>
                 )}
                 {/* Row B: inputs */}
-                <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <input defaultValue={plate} placeholder="차량번호" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                  <input defaultValue={driverName} placeholder="기사명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                  <input defaultValue={driverContact} placeholder="기사 연락처" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                  <select defaultValue={tonType} style={{ flex:1, minWidth:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #FFFFFF`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
+                <fieldset disabled={vehicleLocked} style={{ display:'flex', gap:6, alignItems:'center', border:'none', margin:0, padding:0, minWidth:0 }}>
+                  <input defaultValue={plate} placeholder="차량번호" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background: vehicleLocked ? '#EEEFF1' : '#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                  <input defaultValue={driverName} placeholder="기사명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background: vehicleLocked ? '#EEEFF1' : '#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                  <input defaultValue={driverContact} placeholder="기사 휴대전화" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background: vehicleLocked ? '#EEEFF1' : '#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                  <select defaultValue={tonType} style={{ flex:1, minWidth:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, ${vehicleLocked ? '#EEEFF1' : '#FFFFFF'}`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor: vehicleLocked ? 'default' : 'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
                     {['1톤','2.5톤','3.5톤','5톤','8톤'].map(o => <option key={o}>{o}</option>)}
                   </select>
-                  <select defaultValue={cargoTypeModal} style={{ flex:1, minWidth:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #FFFFFF`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
+                  <select defaultValue={cargoTypeModal} style={{ flex:1, minWidth:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, ${vehicleLocked ? '#EEEFF1' : '#FFFFFF'}`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor: vehicleLocked ? 'default' : 'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
                     {['카고','윙바디','탑차','리프트'].map(o => <option key={o}>{o}</option>)}
                   </select>
-                </div>
+                </fieldset>
                 {/* Row C: note */}
                 <div style={{ display:'flex', alignItems:'center', gap:2, height:20 }}>
                   {/* ⓘ 아이콘 */}
@@ -3190,6 +3214,33 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                   <input defaultValue={unloadMemo} placeholder="메모" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 </div>
               </div>
+            </div>
+
+            {/* 배차담당: 배차담당자명 · 전화번호 · 담당그룹 — 담당그룹은 내가 속한 업무그룹 중에서, 배차담당자명은 그 그룹 소속 직원 중에서 선택 */}
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:13, fontWeight:700, color:'#666', letterSpacing:'-0.01em', flexShrink:0, width:60 }}>배차담당</span>
+                <select
+                  value={dispatchManagerId}
+                  onChange={e => handleDispatchManagerChange(e.target.value)}
+                  style={{ width:100, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}
+                >
+                  {dispatchGroupEmployees.length === 0 && <option value="">배차담당자명</option>}
+                  {dispatchGroupEmployees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                </select>
+                <input
+                  value={dispatchManagerPhone}
+                  onChange={e => setDispatchManagerPhone(e.target.value)}
+                  placeholder="배차담당자 전화번호"
+                  style={{ width:120, height:28, padding:'0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', flexShrink:0 }}
+                />
+                <select
+                  value={dispatchGroupId}
+                  onChange={e => handleDispatchGroupChange(e.target.value)}
+                  style={{ width:100, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}
+                >
+                  {myGroups.length === 0 && <option value="">담당그룹</option>}
+                  {myGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
             </div>
 
             {/* 요청사항 */}

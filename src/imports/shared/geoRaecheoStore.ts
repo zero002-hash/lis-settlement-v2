@@ -17,9 +17,15 @@ export type SettleSchedule = {
   collectDueDate: string; // 수금예정일
   taxEmail: string;       // 세금계산서 이메일
   settleMemo: string;     // 정산 메모
-  // 아래는 거래처 상세 > 거래처 업무그룹 아코디언에서 지정하는 값 — 미지정이면 화면에서 기본값으로 표시
+  // 아래는 거래처 상세 > 정산스케줄 수정에서 지정하는 값 — 미지정이면 화면에서 기본값으로 표시
   payMeans?: string;       // 결제수단 (현금/어음/카드, 기본 현금)
-  collectDays?: number;    // 수금예정일 — 계산서 발행 N일 후 (기본 30)
+  collectDays?: number;    // 수금기한 — 정산 종료일 N일 후 (기본 30, 최대 180)
+  invoiceDays?: number;    // 거래명세서 작성일 — 정산 종료일 N일 후 (기본 1, 최대 99)
+  groupId?: string;        // 담당 업무그룹 (미지정이면 기본그룹)
+  bank?: string;           // 계좌 정보 — 은행
+  accountNumber?: string;  // 계좌번호 (숫자만, 최대 15자)
+  accountHolder?: string;  // 예금주 (최대 20자)
+  bankbookFile?: string;   // 통장사본 파일명
 };
 
 export type PartnerContact = {
@@ -30,12 +36,20 @@ export type PartnerContact = {
   fax: string;    // 팩스번호
   email: string;  // 이메일
   memo: string;
+  scheduleId?: string; // 이 직원에게 거래명세서·세금계산서를 보낼 정산스케줄 (미지정이면 첫 번째 스케줄)
 };
 
 export type SharedGroupMapping = {
   groupName: string;   // 상대방 업무그룹명
   scheduleId: string;  // 매핑된 우리 정산스케줄 id
+  isNew?: boolean;     // 거래처가 새로 공유한 그룹 — 상세 재진입 시 해제
 };
+
+// 주력정보 — 이 거래처와 자주 쓰는 차량/노선
+export type MainVehicle = { id: string; ton: string; carType: string; count: number };
+export type MainRoute = { id: string; from: string; to: string; memo: string };
+
+export type PartnerDocKey = 'bankbook' | 'brokerLicense' | 'transportLicense' | 'contract' | 'etc';
 
 export type TradePartner = {
   id: number;
@@ -51,9 +65,15 @@ export type TradePartner = {
   ceoName: string;       // 대표자명
   contact: string;       // 대표자 연락처
   fax?: string;          // 팩스번호
+  ceoEmail?: string;     // 대표자 이메일
   taxEmail: string;      // 세금계산서 이메일
-  bizLicenseFile?: string; // 사업자등록증 첨부 파일명
+  bizLicenseFiles?: string[]; // 사업자등록증 첨부 파일명 (최대 5개)
+  statusReason?: string; // 거래중지 사유
   memo: string;          // 배차운영메모
+  settleMemo?: string;   // 거래처 정산 메모
+  documents?: Partial<Record<PartnerDocKey, string[]>>; // 서류정보 탭 첨부 파일명 (사업자등록증은 bizLicenseFiles)
+  mainVehicles?: MainVehicle[]; // 주력 차량
+  mainRoutes?: MainRoute[];     // 주력 노선
   registeredAt: string;  // 등록일시
   tTrucker: boolean;     // T 트럭커 운송관리시스템 가입 여부 — 공유그룹 노출 기준
   sharedGroups: SharedGroupMapping[]; // 가입인 경우 상대방 업무그룹 목록(+매핑)
@@ -157,13 +177,25 @@ export const MOCK_BIZ_REGISTRY: BizRecord[] = BIZ_NAMES.map((bizName, i) => ({
   bizItem: BIZ_ITEMS[i % BIZ_ITEMS.length],
 }));
 
+// 아직 거래처로 등록하지 않은 사업자 — 거래처 등록 모달의 사업자 검색 예시용 (등록된 사업자는 '등록불가')
+MOCK_BIZ_REGISTRY.push(
+  { bizName: 'SK네트웍스', bizNumber: '788-87-01890', address: '제주특별자치도 제주시 애월읍 장전로 33', addressDetail: '', bizType: '도소매업', bizItem: '물류대행업' },
+  { bizName: 'SK전자', bizNumber: '788-87-01891', address: '경기 안양시 만안구 안양동 441-29', addressDetail: '3층', bizType: '제조업', bizItem: '전자부품' },
+  { bizName: 'SK모바일', bizNumber: '788-87-01892', address: '경기 안양시 만안구 안양동 441-29', addressDetail: '5층', bizType: '서비스업', bizItem: '통신판매업' },
+  { bizName: '(주)한빛물류', bizNumber: '305-81-22041', address: '대전 유성구 테크노중앙로 55', addressDetail: '물류동 B', bizType: '운수업', bizItem: '화물자동차운송업' },
+  { bizName: '(주)새벽물류센터', bizNumber: '214-86-33310', address: '경기 광주시 오포읍 신현로 120', addressDetail: '', bizType: '운수업', bizItem: '물류대행업' },
+);
+
+// 모든 거래처는 기본그룹을 담당 업무그룹으로 갖는다. 대표 업무그룹은 기본그룹 외 그룹을 돌려가며 배분한다.
 function genAssignedGroups(i: number): { mainGroupId: string; assignedGroupIds: string[] } {
-  const groupIds = getGroups().map(g => g.id);
-  if (groupIds.length === 0) return { mainGroupId: '', assignedGroupIds: [] };
+  const groups = getGroups();
+  const defaultId = groups.find(g => g.isDefault)?.id;
+  const groupIds = groups.filter(g => !g.isDefault).map(g => g.id);
+  if (groupIds.length === 0) return { mainGroupId: defaultId ?? '', assignedGroupIds: defaultId ? [defaultId] : [] };
   const mainGroupId = groupIds[i % groupIds.length];
   const extra = groupIds[(i + 1) % groupIds.length];
-  const assignedGroupIds = i % 3 === 0 && extra !== mainGroupId ? [mainGroupId, extra] : [mainGroupId];
-  return { mainGroupId, assignedGroupIds };
+  const picked = i % 3 === 0 && extra !== mainGroupId ? [mainGroupId, extra] : [mainGroupId];
+  return { mainGroupId, assignedGroupIds: defaultId ? [defaultId, ...picked] : picked };
 }
 
 function genPartners(): TradePartner[] {
@@ -179,7 +211,8 @@ function genPartners(): TradePartner[] {
     const defaultSchedule = makeSchedule('기본스케줄', i + 1);
     const settleSchedules = i % 4 === 0 ? [defaultSchedule, makeSchedule('추가스케줄', i + 51)] : [defaultSchedule];
     const groupNames = tTrucker ? SHARED_GROUP_POOLS[i % SHARED_GROUP_POOLS.length] : [];
-    const sharedGroups: SharedGroupMapping[] = groupNames.map(groupName => ({ groupName, scheduleId: defaultSchedule.id }));
+    // 공유그룹이 2개 이상인 거래처는 마지막 그룹을 '새로 공유한 그룹'으로 둔다
+    const sharedGroups: SharedGroupMapping[] = groupNames.map((groupName, gi) => ({ groupName, scheduleId: defaultSchedule.id, ...(groupNames.length > 1 && gi === groupNames.length - 1 ? { isNew: true } : {}) }));
     const contacts: PartnerContact[] = i % 3 === 0 ? [] : [
       makeContact(i, 0),
       ...(i % 5 === 0 ? [makeContact(i, 2)] : []),
@@ -198,6 +231,8 @@ function genPartners(): TradePartner[] {
       bizItem: biz.bizItem,
       ceoName: CEO_NAMES[i % CEO_NAMES.length],
       contact: `010-${String(1000 + i * 37).padStart(4, '0')}-${String(2000 + i * 53).padStart(4, '0')}`,
+      fax: `02-${String(300 + i * 11).padStart(3, '0')}-${String(4000 + i * 23).padStart(4, '0')}`,
+      ceoEmail: `ceo${i + 1}@example.com`,
       taxEmail: `settle${i + 1}@example.com`,
       memo: i % 4 === 1 ? '상차 시 지게차 필요, 사전 연락 필수' : '',
       registeredAt: `${yy}.${mm}.${dd} ${hh}:${mi}`,
@@ -231,6 +266,17 @@ export function addPartner(p: TradePartner): void {
 
 export function updatePartner(updated: TradePartner): void {
   _partners = _partners.map(p => p.id === updated.id ? updated : p);
+  notify();
+}
+
+// 업무그룹 삭제 시 그 그룹을 담당 업무그룹으로 둔 거래처를 다른 그룹으로 옮긴다
+export function replaceGroupInPartners(fromId: string, toId: string): void {
+  _partners = _partners.map(p => {
+    if (!p.assignedGroupIds.includes(fromId)) return p;
+    const rest = p.assignedGroupIds.filter(id => id !== fromId);
+    const assignedGroupIds = toId && !rest.includes(toId) ? [...rest, toId] : rest;
+    return { ...p, assignedGroupIds, mainGroupId: p.mainGroupId === fromId ? (toId || assignedGroupIds[0] || '') : p.mainGroupId };
+  });
   notify();
 }
 

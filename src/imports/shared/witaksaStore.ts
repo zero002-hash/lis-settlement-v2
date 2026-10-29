@@ -48,7 +48,7 @@ function xhash(i: number) {
 }
 
 function genAssignedGroupIds(i: number): string[] {
-  const groupIds = getGroups().map(g => g.id);
+  const groupIds = getGroups().filter(g => !g.isDefault).map(g => g.id);
   if (groupIds.length === 0) return [];
   const main = groupIds[i % groupIds.length];
   const extra = groupIds[(i + 2) % groupIds.length];
