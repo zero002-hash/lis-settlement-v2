@@ -1717,7 +1717,7 @@ const gridTd: React.CSSProperties = { minHeight: 44, padding: '6px 8px', display
 type ContactSearchType = '직원명' | '휴대전화번호' | '이메일';
 const CONTACT_SEARCH_TYPES: ContactSearchType[] = ['직원명', '휴대전화번호', '이메일'];
 const contactField = (c: PartnerContact, t: ContactSearchType) => t === '직원명' ? c.name : t === '휴대전화번호' ? c.phone : c.email;
-const CONTACT_COLS = '50px 100px 130px 130px 130px 158px minmax(130px, 1fr) 140px 108px';
+const CONTACT_COLS = '50px 100px 130px 130px 130px 158px minmax(120px, 1fr) 140px 108px';
 const contactTh: React.CSSProperties = { ...gridTh, borderRight: `1px solid ${BORDER}`, fontSize: 15 };
 const contactTd: React.CSSProperties = { ...gridTd, minHeight: 48, borderRight: `1px solid ${BORDER}` };
 
@@ -1867,7 +1867,7 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
 
   return (
     <ModalOverlay overlayRef={overlayRef} height={overlayHeight} onClose={anyChildOpen ? () => {} : handleClose} name="partner-detail-modal">
-      <div role="dialog" aria-label="거래처 상세" style={{ width: tab === 'contacts' ? 1132 : 870, height: 820, maxHeight: overlayHeight ? overlayHeight - 32 : 'calc(100vh - 32px)', flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 12, boxShadow: modalBoxShadow, overflow: 'hidden', position: 'relative' }}>
+      <div role="dialog" aria-label="거래처 상세" style={{ width: 1122, height: 820, maxHeight: overlayHeight ? overlayHeight - 32 : 'calc(100vh - 32px)', flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 12, boxShadow: modalBoxShadow, overflow: 'hidden', position: 'relative' }}>
         <style>{REGISTER_CSS + GROUP_PICKER_CSS + DETAIL_CSS}</style>
         <div style={{ height: 72, padding: '24px 24px 16px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <p style={{ margin: 0, fontFamily: ffBold, fontWeight: 700, fontSize: 22, lineHeight: '32px', letterSpacing: ls, color: '#2E3238' }}>거래처 상세</p>
