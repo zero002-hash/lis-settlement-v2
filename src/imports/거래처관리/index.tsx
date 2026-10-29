@@ -1713,6 +1713,14 @@ function TabCount({ n }: { n: number }) {
 const gridTh: React.CSSProperties = { height: 40, padding: '0 8px', display: 'flex', alignItems: 'center', background: '#F6F7F8', borderBottom: `1px solid ${BORDER}`, fontFamily: ffSemiBold, fontWeight: 600, fontSize: 14, color: '#5C6370', letterSpacing: ls, whiteSpace: 'nowrap', boxSizing: 'border-box' };
 const gridTd: React.CSSProperties = { minHeight: 44, padding: '6px 8px', display: 'flex', alignItems: 'center', borderBottom: `1px solid ${BORDER}`, fontFamily: ff, fontSize: 15, color: '#2E3238', letterSpacing: ls, boxSizing: 'border-box', minWidth: 0, overflow: 'hidden' };
 
+// 직원정보 탭 — 검색 기준과 열 너비(번호·직원명·직책/직함·휴대전화번호·팩스·이메일·담당 업무·정산스케줄·수정/삭제)
+type ContactSearchType = '직원명' | '휴대전화번호' | '이메일';
+const CONTACT_SEARCH_TYPES: ContactSearchType[] = ['직원명', '휴대전화번호', '이메일'];
+const contactField = (c: PartnerContact, t: ContactSearchType) => t === '직원명' ? c.name : t === '휴대전화번호' ? c.phone : c.email;
+const CONTACT_COLS = '50px 100px 130px 130px 130px 158px minmax(130px, 1fr) 140px 108px';
+const contactTh: React.CSSProperties = { ...gridTh, borderRight: `1px solid ${BORDER}`, fontSize: 15 };
+const contactTd: React.CSSProperties = { ...gridTd, minHeight: 48, borderRight: `1px solid ${BORDER}` };
+
 // 배차관리 > 단건등록에서도 거래처명 옆 [▶]로 연다
 export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave }: { partner: TradePartner; onClose: () => void; onSave: (p: TradePartner) => void }) {
   const [partner, setPartner] = useState<TradePartner>(initialPartner);
@@ -1725,6 +1733,9 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
   // 직원정보 — 한 행씩 수정 (isNew: [담당자 추가]로 만든 행)
   const [contactEdit, setContactEdit] = useState<{ row: PartnerContact; isNew: boolean } | null>(null);
   const [contactDelete, setContactDelete] = useState<PartnerContact | null>(null);
+  const [contactSearchType, setContactSearchType] = useState<ContactSearchType>('직원명');
+  const [contactKeyword, setContactKeyword] = useState('');
+  const [contactQuery, setContactQuery] = useState<{ type: ContactSearchType; keyword: string }>({ type: '직원명', keyword: '' });
   const [pending, setPending] = useState<DetailPending>(EMPTY_PENDING);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [openScheduleIds, setOpenScheduleIds] = useState<Set<string>>(() => new Set(initialPartner.settleSchedules?.[0] ? [initialPartner.settleSchedules[0].id] : []));
@@ -1804,7 +1815,9 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
 
   // ── 직원정보
   const contacts = partner.contacts || [];
-  const contactRows = contactEdit?.isNew ? [...contacts, contactEdit.row] : contacts;
+  const contactQ = contactQuery.keyword.trim();
+  const shownContacts = contactQ ? contacts.filter(c => contactField(c, contactQuery.type).includes(contactQ)) : contacts;
+  const contactRows = contactEdit?.isNew ? [...shownContacts, contactEdit.row] : shownContacts;
   const contactNameError = contactEdit && contactEdit.row.name.trim() === '';
   const contactEmailError = contactEdit && contactEdit.row.email.trim() !== '' && !isValidEmail(contactEdit.row.email.trim());
   const saveContact = () => {
@@ -1818,7 +1831,7 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
   const setContactField = (key: keyof PartnerContact, v: string) => setContactEdit(e => e && { ...e, row: { ...e.row, [key]: v } });
   const addContact = () => {
     if (contactEdit) { showToast('수정 중인 직원 정보를 먼저 저장해 주세요.', 'error'); return; }
-    setContactEdit({ row: { id: genId('ct'), name: '', department: '', phone: '', fax: '', email: '', memo: '', scheduleId: firstScheduleId }, isNew: true });
+    setContactEdit({ row: { id: genId('ct'), name: '', department: '', title: '', phone: '', fax: '', email: '', memo: '', scheduleId: firstScheduleId }, isNew: true });
   };
 
   const assignedIds = partner.assignedGroupIds || [];
@@ -1854,7 +1867,7 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
 
   return (
     <ModalOverlay overlayRef={overlayRef} height={overlayHeight} onClose={anyChildOpen ? () => {} : handleClose} name="partner-detail-modal">
-      <div role="dialog" aria-label="거래처 상세" style={{ width: 870, height: 820, maxHeight: overlayHeight ? overlayHeight - 32 : 'calc(100vh - 32px)', flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 12, boxShadow: modalBoxShadow, overflow: 'hidden', position: 'relative' }}>
+      <div role="dialog" aria-label="거래처 상세" style={{ width: tab === 'contacts' ? 1132 : 870, height: 820, maxHeight: overlayHeight ? overlayHeight - 32 : 'calc(100vh - 32px)', flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 12, boxShadow: modalBoxShadow, overflow: 'hidden', position: 'relative' }}>
         <style>{REGISTER_CSS + GROUP_PICKER_CSS + DETAIL_CSS}</style>
         <div style={{ height: 72, padding: '24px 24px 16px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <p style={{ margin: 0, fontFamily: ffBold, fontWeight: 700, fontSize: 22, lineHeight: '32px', letterSpacing: ls, color: '#2E3238' }}>거래처 상세</p>
@@ -1975,55 +1988,83 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
           )}
 
           {tab === 'contacts' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <p style={tabDescStyle}>정산 담당 직원의 이메일로 거래명세서와 세금계산서 발행 내역을 보내요.</p>
-              <div><ModalButton h={32} size={14} px={10} onClick={addContact}>담당자 추가</ModalButton></div>
-              <div role="table" style={{ display: 'grid', gridTemplateColumns: '48px 1.2fr 1.2fr 1.2fr 1.6fr 1.3fr 104px', borderTop: `1px solid ${BORDER}` }}>
-                {['번호', '직원명', '휴대전화번호', '팩스', '이메일', '정산스케줄', ''].map((h, i) => (
-                  <div key={h + i} role="columnheader" style={{ ...gridTh, justifyContent: i === 0 ? 'center' : 'flex-start' }}>{h}</div>
-                ))}
-                {contactRows.map((c, idx) => {
-                  const editing = contactEdit?.row.id === c.id;
-                  const row = editing ? contactEdit!.row : c;
-                  const scheduleId = schedules.some(s => s.id === row.scheduleId) ? row.scheduleId! : firstScheduleId;
-                  return editing ? (
-                    <div key={c.id} role="row" style={{ display: 'contents' }}>
-                      <div style={{ ...gridTd, justifyContent: 'center' }}>{idx + 1}</div>
-                      <div style={{ ...gridTd, flexDirection: 'column', alignItems: 'stretch', gap: 2 }}>
-                        <input className="pmd-in" value={row.name} placeholder="이름" autoFocus onChange={e => setContactField('name', e.target.value)} />
-                        <input className="pmd-in" value={row.department} placeholder="소속/직책" onChange={e => setContactField('department', e.target.value)} />
-                      </div>
-                      <div style={gridTd}><input className="pmd-in" style={{ width: '100%' }} value={row.phone} placeholder="010-0000-0000" inputMode="tel" onChange={e => setContactField('phone', formatPhone(e.target.value))} /></div>
-                      <div style={gridTd}><input className="pmd-in" style={{ width: '100%' }} value={row.fax} placeholder="팩스" inputMode="tel" onChange={e => setContactField('fax', formatPhone(e.target.value))} /></div>
-                      <div style={gridTd}><input className="pmd-in" style={{ width: '100%' }} value={row.email} placeholder="이메일" inputMode="email" onChange={e => setContactField('email', e.target.value)} /></div>
-                      <div style={gridTd}>{scheduleSelect(scheduleId, v => setContactField('scheduleId', v))}</div>
-                      <div style={{ ...gridTd, gap: 4, justifyContent: 'center' }}>
-                        <SmallButton primary onClick={saveContact}>저장</SmallButton>
-                        <SmallButton onClick={() => setContactEdit(null)}>취소</SmallButton>
-                      </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <ModalButton h={36} size={15} px={12} onClick={addContact}>담당자 추가</ModalButton>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex' }}>
+                      <select
+                        value={contactSearchType}
+                        onChange={e => setContactSearchType(e.target.value as ContactSearchType)}
+                        style={{ height: 36, minWidth: 79, padding: '0 30px 0 10px', border: `1px solid ${BORDER}`, borderRadius: '4px 0 0 4px', marginRight: -1, boxSizing: 'border-box', cursor: 'pointer', appearance: 'none', background: `${selArrow} no-repeat right 10px center, #FFFFFF`, fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238', outline: 'none' }}
+                      >
+                        {CONTACT_SEARCH_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <input
+                        value={contactKeyword}
+                        onChange={e => setContactKeyword(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') setContactQuery({ type: contactSearchType, keyword: contactKeyword }); }}
+                        placeholder="검색어를 입력하세요."
+                        className="pm-search-input"
+                        style={{ width: 198, height: 36, padding: '0 10px', border: `1px solid ${BORDER}`, borderRadius: '0 4px 4px 0', boxSizing: 'border-box', fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238', outline: 'none' }}
+                      />
                     </div>
-                  ) : (
-                    <div key={c.id} role="row" style={{ display: 'contents' }}>
-                      <div style={{ ...gridTd, justifyContent: 'center' }}>{idx + 1}</div>
-                      <div style={{ ...gridTd, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0 }}>
-                        <span style={{ fontFamily: ffSemiBold, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{c.name}</span>
-                        {c.department && <span style={{ fontSize: 12, color: '#767D8A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{c.department}</span>}
+                    <ModalButton h={36} size={15} px={12} onClick={() => setContactQuery({ type: contactSearchType, keyword: contactKeyword })}>검색</ModalButton>
+                  </div>
+                </div>
+                <div role="table" style={{ display: 'grid', gridTemplateColumns: CONTACT_COLS, borderTop: `1px solid ${BORDER}`, borderLeft: `1px solid ${BORDER}` }}>
+                  {['번호', '직원명', '직책/직함', '휴대전화번호', '팩스', '이메일', '담당 업무', '정산스케줄', ''].map((h, i) => (
+                    <div key={h + i} role="columnheader" style={{ ...contactTh, justifyContent: i === 0 ? 'center' : 'flex-start' }}>{h}</div>
+                  ))}
+                  {contactRows.map((c, idx) => {
+                    const editing = contactEdit?.row.id === c.id;
+                    const row = editing ? contactEdit!.row : c;
+                    const scheduleId = schedules.some(s => s.id === row.scheduleId) ? row.scheduleId! : firstScheduleId;
+                    return editing ? (
+                      <div key={c.id} role="row" style={{ display: 'contents' }}>
+                        <div style={{ ...contactTd, justifyContent: 'center' }}>{idx + 1}</div>
+                        <div style={{ ...contactTd, flexDirection: 'column', alignItems: 'stretch', gap: 2 }}>
+                          <input className="pmd-in" value={row.name} placeholder="이름" autoFocus onChange={e => setContactField('name', e.target.value)} />
+                          <input className="pmd-in" value={row.department} placeholder="소속" onChange={e => setContactField('department', e.target.value)} />
+                        </div>
+                        <div style={contactTd}><input className="pmd-in" style={{ width: '100%' }} value={row.title ?? ''} placeholder="직책/직함" onChange={e => setContactField('title', e.target.value)} /></div>
+                        <div style={contactTd}><input className="pmd-in" style={{ width: '100%' }} value={row.phone} placeholder="010-0000-0000" inputMode="tel" onChange={e => setContactField('phone', formatPhone(e.target.value))} /></div>
+                        <div style={contactTd}><input className="pmd-in" style={{ width: '100%' }} value={row.fax} placeholder="팩스" inputMode="tel" onChange={e => setContactField('fax', formatPhone(e.target.value))} /></div>
+                        <div style={contactTd}><input className="pmd-in" style={{ width: '100%' }} value={row.email} placeholder="이메일" inputMode="email" onChange={e => setContactField('email', e.target.value)} /></div>
+                        <div style={contactTd}><input className="pmd-in" style={{ width: '100%' }} value={row.memo} placeholder="담당 업무" onChange={e => setContactField('memo', e.target.value)} /></div>
+                        <div style={contactTd}>{scheduleSelect(scheduleId, v => setContactField('scheduleId', v))}</div>
+                        <div style={{ ...contactTd, gap: 6, justifyContent: 'center' }}>
+                          <SmallButton primary onClick={saveContact}>저장</SmallButton>
+                          <SmallButton onClick={() => setContactEdit(null)}>취소</SmallButton>
+                        </div>
                       </div>
-                      <div style={gridTd}><Ellipsis>{c.phone || '-'}</Ellipsis></div>
-                      <div style={gridTd}><Ellipsis>{c.fax || '-'}</Ellipsis></div>
-                      <div style={gridTd} title={c.email}><Ellipsis>{c.email || '-'}</Ellipsis></div>
-                      <div style={gridTd}>{scheduleSelect(scheduleId, v => commit({ ...partner, contacts: contacts.map(x => x.id === c.id ? { ...x, scheduleId: v } : x) }))}</div>
-                      <div style={{ ...gridTd, gap: 4, justifyContent: 'center' }}>
-                        <SmallButton onClick={() => { if (contactEdit) { showToast('수정 중인 직원 정보를 먼저 저장해 주세요.', 'error'); return; } setContactEdit({ row: { ...c }, isNew: false }); }}>수정</SmallButton>
-                        <SmallButton onClick={() => setContactDelete(c)}>삭제</SmallButton>
+                    ) : (
+                      <div key={c.id} role="row" style={{ display: 'contents' }}>
+                        <div style={{ ...contactTd, justifyContent: 'center' }}>{idx + 1}</div>
+                        <div style={{ ...contactTd, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0 }}>
+                          <span style={{ fontFamily: ffSemiBold, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{c.name}</span>
+                          {c.department && <span style={{ fontSize: 12, color: '#767D8A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{c.department}</span>}
+                        </div>
+                        <div style={contactTd}><Ellipsis>{c.title || '-'}</Ellipsis></div>
+                        <div style={contactTd}><Ellipsis>{c.phone || '-'}</Ellipsis></div>
+                        <div style={contactTd}><Ellipsis>{c.fax || '-'}</Ellipsis></div>
+                        <div style={contactTd} title={c.email}><Ellipsis>{c.email || '-'}</Ellipsis></div>
+                        <div style={contactTd} title={c.memo}><Ellipsis>{c.memo || '-'}</Ellipsis></div>
+                        <div style={contactTd}>{scheduleSelect(scheduleId, v => commit({ ...partner, contacts: contacts.map(x => x.id === c.id ? { ...x, scheduleId: v } : x) }))}</div>
+                        <div style={{ ...contactTd, gap: 6, justifyContent: 'center' }}>
+                          <SmallButton onClick={() => { if (contactEdit) { showToast('수정 중인 직원 정보를 먼저 저장해 주세요.', 'error'); return; } setContactEdit({ row: { ...c }, isNew: false }); }}>수정</SmallButton>
+                          <SmallButton onClick={() => setContactDelete(c)}>삭제</SmallButton>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+                {contactRows.length === 0 && (
+                  <div style={{ height: 120, marginTop: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ff, fontSize: 15, color: '#9197A1', border: `1px solid ${BORDER}`, borderTop: 'none' }}>{contactQ ? '검색 결과가 없습니다.' : '등록된 직원이 없습니다.'}</div>
+                )}
               </div>
-              {contactRows.length === 0 && (
-                <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ff, fontSize: 15, color: '#9197A1', borderBottom: `1px solid ${BORDER}` }}>등록된 직원이 없습니다.</div>
-              )}
             </div>
           )}
 
@@ -2121,8 +2162,8 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
         </div>
         <div style={{ height: 88, padding: '20px 24px 24px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, borderTop: `1px solid ${BORDER}`, flexShrink: 0 }}>
           <ModalButton ghost h={48} size={18} px={20} onClick={handleClose}>닫기</ModalButton>
-          {/* 직원정보는 행 단위로 바로 저장 → 하단 [수정] 미노출 */}
-          {tab !== 'contacts' && <ModalButton primary h={48} size={18} px={20} disabled={isPendingEmpty(pending)} onClick={savePending}>수정</ModalButton>}
+          {/* 직원정보는 행 단위로 바로 저장되어 이 탭의 변경분은 없지만, 피그마대로 [수정]은 그대로 노출 */}
+          <ModalButton primary h={48} size={18} px={20} disabled={isPendingEmpty(pending)} onClick={savePending}>수정</ModalButton>
         </div>
         {toast && <Toast message={toast.message} tone={toast.tone} onClose={hideToast} />}
       </div>

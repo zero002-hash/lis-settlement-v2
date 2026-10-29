@@ -32,10 +32,11 @@ export type PartnerContact = {
   id: string;
   name: string;
   department: string; // 소속팀/업무그룹 (자유 텍스트)
+  title?: string;     // 직책/직함
   phone: string;  // 전화번호
   fax: string;    // 팩스번호
   email: string;  // 이메일
-  memo: string;
+  memo: string;   // 담당 업무
   scheduleId?: string; // 이 직원에게 거래명세서·세금계산서를 보낼 정산스케줄 (미지정이면 첫 번째 스케줄)
 };
 
@@ -125,6 +126,7 @@ const SHARED_GROUP_POOLS = [
 const CONTACT_NAMES = ['김민준', '이서준', '박도윤', '최예준', '정시우', '강주원', '윤하준'];
 const CONTACT_MEMOS = ['배차 담당', '정산/세금계산서 담당', '현장 배차 담당', '계약 담당자'];
 const CONTACT_DEPARTMENTS = ['배송1팀', '배송2팀', '정산팀', '영업팀', '현장운영팀', '인천 물류센터'];
+const CONTACT_TITLES = ['과장', '대리', '팀장', '주임', '차장'];
 
 function xhash(i: number) {
   let h = i ^ (i >>> 13);
@@ -159,6 +161,7 @@ function makeContact(i: number, offset: number): PartnerContact {
     id: genId('ct'),
     name: CONTACT_NAMES[idx],
     department: CONTACT_DEPARTMENTS[(i + offset) % CONTACT_DEPARTMENTS.length],
+    title: CONTACT_TITLES[(i + offset) % CONTACT_TITLES.length],
     phone: `010-${String(2000 + i * 41 + offset).padStart(4, '0')}-${String(3000 + i * 59 + offset).padStart(4, '0')}`,
     fax: `02-${String(500 + i * 13 + offset).padStart(3, '0')}-${String(1000 + i * 29 + offset).padStart(4, '0')}`,
     email: `${CONTACT_NAMES[idx]}@example.com`,
