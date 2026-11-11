@@ -32,6 +32,9 @@ let panel: HTMLDivElement | null = null;
 let canvas: HTMLCanvasElement | null = null;
 let showHeat = false;
 let showDots = false;
+// 진행자 패널 접힘 — 접으면 제목줄(기록 상태 · 히트맵 보기)만 남겨 화면을 덜 가림. 마지막 상태를 기억
+const FOLD_KEY = 'lis.ut.heatmap.folded';
+let folded = (() => { try { return localStorage.getItem(FOLD_KEY) === '1'; } catch { return false; } })();
 let filter = { p: ALL, task: ALL, screen: AUTO_SCREEN };
 let lastScreen = '';
 let timer = 0;
@@ -300,16 +303,24 @@ function renderPanel() {
   const sizeWarn = sizes.some(s => s !== window.innerWidth + '×' + window.innerHeight);
   const mine = clicks.filter(c => c.p === (session.p || '익명')).length;
   const stats = taskStats();
-  el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;">
-      <b style="font-size:15px;">UT 클릭 히트맵</b>
+  const iconBtn = 'border:none;background:none;cursor:pointer;color:#9197A1;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;padding:0;';
+  // 펼침/접힘 화살표 — 펼친 상태는 아래(접기), 접힌 상태는 위(펼치기)
+  const chevron = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="transform:rotate(${folded ? 180 : 0}deg);"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const header = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:${folded ? '8px 10px 8px 14px' : '12px 14px'};">
+      <button data-act="fold" title="${folded ? '펼치기' : '접기'}" style="border:none;background:none;padding:0;cursor:pointer;font:inherit;font-size:${folded ? 13 : 15}px;font-weight:700;color:#2E3238;white-space:nowrap;">UT 클릭 히트맵</button>
       <span style="display:flex;align-items:center;gap:8px;">
-        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:${session.recording ? '#E23A3A' : '#9197A1'};">
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;color:${session.recording ? '#E23A3A' : '#9197A1'};">
           <span style="width:8px;height:8px;border-radius:50%;background:${session.recording ? '#E23A3A' : '#C7CBD1'};"></span>${session.recording ? '기록 중' : '기록 꺼짐'}
         </span>
-        <button data-act="close" title="닫기 (Ctrl+Shift+H)" style="border:none;background:none;cursor:pointer;font-size:16px;color:#9197A1;">✕</button>
+        ${folded ? `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;white-space:nowrap;"><input type="checkbox" data-t="heat"${showHeat ? ' checked' : ''} style="margin:0;">히트맵</label>` : ''}
+        <button data-act="fold" title="${folded ? '펼치기' : '접기'}" aria-expanded="${!folded}" style="${iconBtn}">${chevron}</button>
+        <button data-act="close" title="닫기 (Ctrl+Shift+H)" style="${iconBtn}font-size:15px;">✕</button>
       </span>
-    </div>
+    </div>`;
+  el.style.width = folded ? 'auto' : '340px';
+  if (folded) { el.innerHTML = header; return; }
+  el.innerHTML = header + `
     <div style="${css.sec}">
       <div style="display:flex;gap:8px;">
         <label style="flex:1;"><span style="${css.label}">참가자</span><input data-f="p" value="${esc(session.p)}" placeholder="예: P1" style="${css.input}"></label>
@@ -377,6 +388,11 @@ function onPanelClick(e: Event) {
   if (!btn) return;
   const act = btn.dataset.act;
   if (act === 'close') togglePanel(false);
+  else if (act === 'fold') {
+    folded = !folded;
+    try { localStorage.setItem(FOLD_KEY, folded ? '1' : '0'); } catch { /* 무시 */ }
+    renderPanel();
+  }
   else if (act === 'rec') {
     if (!session.recording && !session.p) { alert('참가자 이름(예: P1)을 먼저 입력해 주세요.'); return; }
     session.recording = !session.recording; saveSession(); renderPanel();
