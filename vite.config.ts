@@ -16,6 +16,19 @@ function figmaAssetResolver() {
   }
 }
 
+// iframe으로 띄우는 정적 플로우 HTML(배차관리 *-flow.html)은 HMR 대상이 아니라서, 수정 시 페이지 전체를 새로고침
+function flowHtmlReload() {
+  return {
+    name: 'flow-html-reload',
+    handleHotUpdate({ file, server }) {
+      if (file.endsWith('-flow.html')) {
+        server.ws.send({ type: 'full-reload' })
+        return []
+      }
+    },
+  }
+}
+
 export default defineConfig({
   // km-deploy.onkakao.net 배포 슬러그(lis-settlement)에 맞춘 경로. 슬러그를 바꾸면 DEPLOY_BASE 환경변수로 덮어쓸 수 있음
   // 예: DEPLOY_BASE=/p/다른슬러그/ npm run build
@@ -39,6 +52,7 @@ export default defineConfig({
   },
   plugins: [
     figmaAssetResolver(),
+    flowHtmlReload(),
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them
     react(),

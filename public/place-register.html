@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>장소 등록</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{--text:#2E3238;--sub1:#5C6370;--sub2:#767D8A;--sub3:#9197A1;--line:#E4E5E9;--bg:#F6F7F8;--blue:#005FFF;--red:#DD2222;--font:"Pretendard",-apple-system,sans-serif;}
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;background:#D9DBDF;font-family:var(--font);color:var(--text);letter-spacing:-0.3px;display:flex;align-items:center;justify-content:center;padding:24px 16px;}
+  button,input,select{font-family:var(--font);letter-spacing:inherit;}
+
+  .modal{width:952px;max-width:100%;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.18);display:flex;flex-direction:column;}
+  .head{display:flex;align-items:center;justify-content:space-between;padding:24px 20px 20px;border-bottom:1px solid var(--line);}
+  .head h1{margin:0;font-size:20px;font-weight:700;}
+  .x{width:28px;height:28px;padding:0;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .body{display:grid;grid-template-columns:1fr 1fr 1px 1fr;gap:0 32px;padding:16px 20px 24px;}
+  .vline{background:var(--line);}
+  @media (max-width:900px){.body{grid-template-columns:1fr;}.vline{display:none;}}
+  .foot{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--line);}
+  .btn{height:44px;padding:0 20px;border:none;border-radius:4px;font-size:16px;font-weight:600;cursor:pointer;}
+  .btn.text{background:none;color:var(--text);}
+  .btn.primary{background:var(--blue);color:#fff;}
+  .btn.primary:disabled{background:#CCDFFF;cursor:not-allowed;}
+
+  .field{margin-bottom:16px;}
+  .lb{display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:14px;font-weight:600;}
+  .lb .req{color:var(--blue);}
+  .desc{margin:-2px 0 8px;font-size:12px;line-height:18px;color:var(--sub2);}
+  .in{width:100%;height:36px;padding:0 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);font-size:14px;color:var(--text);outline:none;}
+  .in::placeholder{color:var(--sub3);}
+  .in:focus{border-color:var(--blue);background:#fff;}
+  .in + .in{margin-top:6px;}
+  .search{position:relative;}
+  .search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);}
+  .search .in{padding-left:32px;}
+  select.in{appearance:none;background:var(--bg) url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='%23767D8A' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center;cursor:pointer;}
+  .two{display:flex;gap:6px;}
+  .two .in + .in{margin-top:0;}
+  .unit{position:relative;width:76px;flex-shrink:0;}
+  .unit .in{padding-right:28px;text-align:left;}
+  .unit span{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:14px;}
+  .info{position:relative;display:inline-flex;cursor:help;}
+  .info .bubble{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);width:220px;padding:8px 10px;border-radius:6px;background:#2E3238;color:#fff;font-size:12px;font-weight:400;line-height:18px;display:none;z-index:5;}
+  .info:hover .bubble{display:block;}
+
+  /* 도착 판단 */
+  .range-row{display:flex;align-items:center;gap:12px;}
+  .range{flex:1;}
+  .range input{width:100%;accent-color:var(--blue);}
+  .range .mm{display:flex;justify-content:space-between;font-size:11px;color:var(--sub3);}
+  .map{position:relative;height:184px;margin-top:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden;
+    background:#F2F1EC;background-image:linear-gradient(#E6E4DD 1px,transparent 1px),linear-gradient(90deg,#E6E4DD 1px,transparent 1px);background-size:28px 28px;}
+  .map .road{position:absolute;background:#FBE9A6;}
+  .map .ring{position:absolute;left:50%;top:50%;border-radius:50%;border:1.5px solid var(--blue);background:rgba(0,95,255,.1);transform:translate(-50%,-50%);transition:width .15s,height .15s;}
+  .map .pin{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--blue);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .delay{display:flex;justify-content:space-between;gap:12px;}
+  .delay .desc{margin:0;}
+
+  /* 오른쪽 */
+  .note{margin:0 0 16px;font-size:13px;line-height:20px;color:var(--sub1);}
+  .oh-row{display:flex;align-items:center;gap:6px;}
+  .oh-dash{width:12px;text-align:center;color:#C7CBD1;flex-shrink:0;}
+  .oh-box{position:relative;flex:1;min-width:0;}
+  .oh-box .in:disabled{color:var(--sub3);cursor:not-allowed;}
+  .oh-box.err .in{border-color:var(--red);background:#FEF6F6;}
+  .oh-tag{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:none;height:20px;padding:0 6px;border-radius:4px;background:#EBEDEF;font-size:11px;font-weight:600;line-height:20px;color:var(--sub1);pointer-events:none;}
+  .oh-tag.next{background:#E6EFFF;color:var(--blue);}
+  .oh-tag.show{display:block;}
+  .oh-help{margin:6px 0 0;font-size:12px;line-height:18px;color:var(--sub2);}
+  .oh-help.err{color:var(--red);}
+  .oh-help b{font-weight:600;color:var(--text);}
+  .check{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:6px;font-size:14px;cursor:pointer;}
+  .check input{width:16px;height:16px;margin:0;accent-color:var(--blue);cursor:pointer;}
+  .seg{display:flex;}
+  .seg button{flex:1;height:36px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--sub2);cursor:pointer;}
+  .seg button:first-child{border-radius:4px 0 0 4px;}
+  .seg button:last-child{border-radius:0 4px 4px 0;margin-left:-1px;}
+  .seg button.on{position:relative;border-color:var(--blue);color:var(--blue);font-weight:600;}
+  .sub-row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--sub1);}
+  .sub-row[hidden]{display:none;}
+  .ghost{width:100%;height:36px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;}
+  .ghost:disabled{background:var(--bg);border-color:var(--bg);color:#C7CBD1;cursor:not-allowed;}
+  .days{display:flex;gap:4px;margin-top:6px;}
+  .days[hidden]{display:none;}
+  .days button{flex:1;height:32px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:13px;color:var(--sub1);cursor:pointer;}
+  .days button.on{border-color:var(--blue);background:#E6EFFF;color:var(--blue);font-weight:600;}
+  .chips{display:flex;flex-direction:column;gap:4px;margin-top:6px;}
+  .chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:4px;background:var(--bg);font-size:13px;}
+  .chip .r{flex:1;min-width:0;color:var(--sub2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .chip button{border:none;background:none;padding:0;cursor:pointer;display:flex;}
+
+  .toast{position:fixed;left:50%;bottom:32px;transform:translate(-50%,8px);padding:12px 24px;border-radius:8px;background:#2E3238;color:#fff;font-size:15px;opacity:0;transition:.2s;pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+</style>
+</head>
+<body>
+<div class="modal" role="dialog" aria-label="장소 등록">
+  <div class="head">
+    <h1>장소 등록</h1>
+    <button class="x" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#767D8A" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <div class="body">
+    <!-- 1열 -->
+    <div>
+      <div class="field">
+        <label class="lb" for="name">장소명<span class="req">*</span></label>
+        <input class="in" id="name" placeholder="장소명 입력">
+      </div>
+      <div class="field">
+        <label class="lb" for="addr">주소<span class="req">*</span></label>
+        <div class="search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.8" stroke="#9197A1" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="#9197A1" stroke-width="1.4" stroke-linecap="round"/></svg><input class="in" id="addr" placeholder="기본주소 검색"></div>
+        <input class="in" placeholder="상세주소 입력">
+      </div>
+      <div class="field">
+        <div class="lb">도착 판단 기준<span class="req">*</span></div>
+        <p class="desc">설정된 반경 내에 차량이 진입하면 도착으로 안내됩니다.</p>
+        <div class="range-row">
+          <div class="range"><input type="range" id="radius" min="50" max="1000" step="10" value="200" aria-label="도착 반경"><div class="mm"><span>50m</span><span>1000m</span></div></div>
+          <div class="unit"><input class="in" id="radiusNum" inputmode="numeric" value="200" aria-label="도착 반경(m)"><span>m</span></div>
+        </div>
+        <div class="map" aria-hidden="true">
+          <div class="road" style="left:0;right:0;top:62%;height:10px;transform:rotate(-8deg)"></div>
+          <div class="road" style="top:0;bottom:0;left:58%;width:10px;transform:rotate(6deg)"></div>
+          <div class="ring" id="ring"></div><div class="pin"></div>
+        </div>
+      </div>
+      <div class="delay">
+        <div><div class="lb">지연 판단 기준<span class="req">*</span></div><p class="desc">상하차 요청시각 기준, 설정된 시간이 지났을 경우 지연으로 안내됩니다.</p></div>
+        <div class="unit"><input class="in" inputmode="numeric" value="10" aria-label="지연 판단 기준(분)"><span>분</span></div>
+      </div>
+    </div>
+
+    <!-- 2열 -->
+    <div>
+      <div class="field">
+        <div class="lb">공유 여부</div>
+        <p class="desc">추가한 거래처와 우리 회사 직원에게만 장소 정보를 공유합니다.</p>
+        <input class="in" placeholder="사업자명 입력" aria-label="공유할 사업자명">
+      </div>
+      <div class="field">
+        <label class="lb" for="memo">장소 메모</label>
+        <input class="in" id="memo" placeholder="거래처에게 공유되는 메모입니다">
+      </div>
+      <div class="field">
+        <label class="lb" for="code">내부 관리 장소 코드
+          <span class="info"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="#9197A1" stroke-width="1.2"/><path d="M8 7.2v3.6" stroke="#9197A1" stroke-width="1.2" stroke-linecap="round"/><circle cx="8" cy="5.1" r=".8" fill="#9197A1"/></svg><span class="bubble">우리 회사에서만 쓰는 장소 코드예요. 거래처에는 보이지 않아요.</span></span>
+        </label>
+        <input class="in" id="code" placeholder="장소 코드 입력">
+      </div>
+      <div class="field">
+        <label class="lb" for="ptype">장소 타입</label>
+        <select class="in" id="ptype"><option value="" selected disabled>장소 타입을 선택해 주세요</option><option>물류센터</option><option>HUB</option><option>매장</option><option>공장</option><option>기타</option></select>
+      </div>
+      <div class="field">
+        <div class="lb">담당자 정보</div>
+        <div class="two"><input class="in" placeholder="담당자명 입력" aria-label="담당자명"><input class="in" placeholder="전화번호 입력" aria-label="담당자 전화번호"></div>
+      </div>
+    </div>
+
+    <div class="vline"></div>
+
+    <!-- 3열: AI 배차계획 반영 정보 -->
+    <div>
+      <p class="note">아래 정보는 AI 배차계획 결과에 반영돼요.</p>
+
+      <div class="field">
+        <label class="lb" for="ohStart">운영시간</label>
+        <div class="oh-row">
+          <div class="oh-box" id="boxStart"><input class="in" id="ohStart" inputmode="numeric" maxlength="5" placeholder="00:00" value="09:00" aria-label="운영 시작 시간"></div>
+          <span class="oh-dash">–</span>
+          <div class="oh-box" id="boxEnd"><input class="in" id="ohEnd" inputmode="numeric" maxlength="5" placeholder="00:00" value="18:00" aria-label="운영 종료 시간"><span class="oh-tag" id="ohTag"></span></div>
+        </div>
+        <p class="oh-help" id="ohHelp"></p>
+        <label class="check"><input type="checkbox" id="oh24" checked>24시간 운영</label>
+      </div>
+
+      <div class="field">
+        <div class="lb">상하차 소요시간</div>
+        <div class="seg" id="durSeg"><button class="on" data-v="off">설정 안 함</button><button data-v="on">설정 함</button></div>
+        <div class="sub-row" id="durRow" hidden>평균<div class="unit"><input class="in" inputmode="numeric" value="30" aria-label="상하차 소요시간(분)"><span>분</span></div>소요</div>
+      </div>
+
+      <div class="field">
+        <div class="lb">휴무일</div>
+        <button class="ghost" id="offBtn">휴무일 추가</button>
+        <div class="days" id="days" hidden><button>월</button><button>화</button><button>수</button><button>목</button><button>금</button><button>토</button><button>일</button></div>
+      </div>
+
+      <div class="field">
+        <label class="lb" for="limit">차량 진입 제한</label>
+        <select class="in" id="limit"><option>제한 없음</option><option>1톤 이하</option><option>2.5톤 이하</option><option>5톤 이하</option><option>11톤 이하</option></select>
+      </div>
+
+      <div class="field">
+        <div class="lb">기피기사 관리</div>
+        <p class="desc">이 장소에 배차하면 안 되는 기사를 추가해 주세요.<br>AI 배차계획 시 이 장소가 포함된 오더에는 해당 기사를 배차하지 않아요.</p>
+        <div class="two"><input class="in" id="avName" placeholder="기사명" aria-label="기사명"><input class="in" id="avPlate" placeholder="기사 차량번호" aria-label="기사 차량번호"></div>
+        <input class="in" id="avReason" placeholder="사유 입력" aria-label="사유">
+        <button class="ghost" id="avAdd" style="margin-top:6px" disabled>추가</button>
+        <div class="chips" id="avList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <button class="btn text">닫기</button>
+    <button class="btn primary" id="submit" disabled>등록</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2000); }
+  function esc(v){ return String(v).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+  // 도착 반경 — 슬라이더·숫자·지도 원 연동
+  const radius = $("radius"), radiusNum = $("radiusNum"), ring = $("ring");
+  function setRadius(v){ v = Math.min(1000, Math.max(50, v || 50)); radius.value = v; radiusNum.value = v; const px = 24 + v / 1000 * 150; ring.style.width = ring.style.height = px + "px"; }
+  radius.addEventListener("input", () => setRadius(+radius.value));
+  radiusNum.addEventListener("change", () => setRadius(parseInt(radiusNum.value, 10)));
+  setRadius(200);
+
+  // ── 운영시간: 익일·자정·같은 시간·24시간 ──
+  const start = $("ohStart"), end = $("ohEnd"), all = $("oh24");
+  let saved = { start:"09:00", end:"18:00" }; // 24시간 끄면 돌아갈 값
+  const pad = v => String(v).padStart(2, "0");
+  const fmt = t => pad(Math.floor(t / 60)) + ":" + pad(t % 60);
+  function parse(v){ const m = /^(\d{1,2}):?(\d{2})$/.exec(v.trim()); if(!m) return null; const h = +m[1], mi = +m[2]; return h < 24 && mi < 60 ? h * 60 + mi : null; }
+  function speak(t){ if(t === 0) return "자정"; const h = Math.floor(t / 60), mi = t % 60; return (h < 12 ? "오전 " : "오후 ") + (h % 12 || 12) + "시" + (mi ? " " + mi + "분" : ""); }
+  function dur(min){ const h = Math.floor(min / 60), mi = min % 60; return (h ? h + "시간" : "") + (mi ? (h ? " " : "") + mi + "분" : ""); }
+  function readOh(){
+    if(all.checked) return { ok:true, kind:"all", min:1440 };
+    const s = parse(start.value), e = parse(end.value);
+    if(s == null || e == null) return { ok:false, bad: s == null ? "start" : "end", msg:"00:00 ~ 23:59 형식으로 입력해 주세요." };
+    if(s === e) return { ok:false, bad:"both", msg:"시작과 종료 시간이 같아요. 24시간 운영이면 체크박스를 선택해 주세요." };
+    if(e === 0) return { ok:true, kind:"midnight", s, e, min:1440 - s };
+    if(e < s) return { ok:true, kind:"next", s, e, min:1440 - s + e };
+    return { ok:true, kind:"day", s, e, min:e - s };
+  }
+  function renderOh(){
+    const r = readOh(), tag = $("ohTag"), help = $("ohHelp");
+    $("boxStart").classList.toggle("err", !r.ok && (r.bad === "start" || r.bad === "both"));
+    $("boxEnd").classList.toggle("err", !r.ok && (r.bad === "end" || r.bad === "both"));
+    tag.className = "oh-tag";
+    help.className = "oh-help" + (r.ok ? "" : " err");
+    if(!r.ok) help.textContent = r.msg;
+    else if(r.kind === "all") help.innerHTML = "<b>하루 종일</b> 운영 · 총 24시간";
+    else {
+      if(r.kind === "next"){ tag.textContent = "익일"; tag.classList.add("show", "next"); }
+      if(r.kind === "midnight"){ tag.textContent = "자정"; tag.classList.add("show"); }
+      help.innerHTML = speak(r.s) + " ~ " + (r.kind === "next" ? "<b>다음 날</b> " : "") + speak(r.e) + " · 총 " + dur(r.min);
+    }
+    validate();
+  }
+  function set24(on){
+    if(on){ if(!start.disabled) saved = { start:start.value, end:end.value }; start.value = "00:00"; end.value = "24:00"; }
+    else { start.value = saved.start; end.value = saved.end; }
+    start.disabled = end.disabled = on;
+    renderOh();
+  }
+  [start, end].forEach(function(inp){
+    inp.addEventListener("input", () => { inp.value = inp.value.replace(/[^\d:]/g, ""); renderOh(); });
+    inp.addEventListener("blur", function(){ // 930 → 09:30, 9 → 09:00
+      const d = inp.value.replace(/\D/g, "");
+      const t = d.length === 3 || d.length === 4 ? parse(d.padStart(4, "0")) : d && d.length <= 2 ? parse(d.padStart(2, "0") + "00") : null;
+      if(t != null) inp.value = fmt(t);
+      renderOh();
+    });
+  });
+  all.addEventListener("change", () => set24(all.checked));
+
+  // 상하차 소요시간
+  $("durSeg").addEventListener("click", function(e){
+    const b = e.target.closest("button"); if(!b) return;
+    this.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    $("durRow").hidden = b.dataset.v !== "on";
+  });
+
+  // 휴무일
+  $("offBtn").addEventListener("click", function(){
+    const d = $("days"); d.hidden = !d.hidden; this.textContent = d.hidden ? "휴무일 추가" : "요일 선택 닫기";
+  });
+  $("days").addEventListener("click", e => { const b = e.target.closest("button"); if(b) b.classList.toggle("on"); });
+
+  // 기피기사
+  const avName = $("avName"), avAdd = $("avAdd");
+  avName.addEventListener("input", () => { avAdd.disabled = !avName.value.trim(); });
+  avAdd.addEventListener("click", function(){
+    const row = document.createElement("div"); row.className = "chip";
+    const plate = $("avPlate").value.trim(), reason = $("avReason").value.trim();
+    row.innerHTML = "<b>" + esc(avName.value.trim()) + "</b>" + (plate ? "<span>" + esc(plate) + "</span>" : "") + '<span class="r">' + esc(reason || "사유 없음") + '</span><button aria-label="삭제"><svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="#9197A1" stroke-width="1.8" stroke-linecap="round"/></svg></button>';
+    row.querySelector("button").addEventListener("click", () => row.remove());
+    $("avList").append(row);
+    avName.value = $("avPlate").value = $("avReason").value = ""; avAdd.disabled = true;
+  });
+
+  // 등록 버튼: 필수값 + 운영시간 오류 없음
+  function validate(){ $("submit").disabled = !($("name").value.trim() && $("addr").value.trim() && readOh().ok); }
+  ["name", "addr"].forEach(id => $(id).addEventListener("input", validate));
+  $("submit").addEventListener("click", () => toast("장소를 등록했어요."));
+
+  set24(true);
+})();
+</script>
+</body>
+</html>

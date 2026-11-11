@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>운영시간 입력</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{--text:#2E3238;--sub1:#5C6370;--sub2:#767D8A;--sub3:#9197A1;--line:#E4E5E9;--bg:#F6F7F8;--blue:#005FFF;--red:#DD2222;--font:"Pretendard",-apple-system,sans-serif;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#EEF0F3;font-family:var(--font);color:var(--text);letter-spacing:-0.3px;}
+  .wrap{max-width:960px;margin:0 auto;padding:40px 16px;display:grid;grid-template-columns:400px 1fr;gap:24px;align-items:start;}
+  @media (max-width:760px){.wrap{grid-template-columns:1fr;}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px;}
+  h1{grid-column:1/-1;margin:0;font-size:22px;}
+  h2{margin:0 0 16px;font-size:16px;}
+
+  /* 운영시간 필드 */
+  .oh-label{display:block;margin-bottom:8px;font-size:14px;font-weight:600;color:var(--text);}
+  .oh-row{display:flex;align-items:center;gap:8px;}
+  .oh-dash{width:16px;flex-shrink:0;text-align:center;color:#C7CBD1;}
+  .oh-box{position:relative;flex:1;min-width:0;}
+  .oh-box input{width:100%;height:48px;padding:0 16px;border:1px solid var(--line);border-radius:4px;background:var(--bg);font-size:16px;font-family:var(--font);color:var(--text);outline:none;}
+  .oh-box input:focus{border-color:var(--blue);background:#fff;}
+  .oh-box input:disabled{color:var(--sub3);cursor:not-allowed;}
+  .oh-box.err input{border-color:var(--red);background:#FEF6F6;}
+  .oh-tag{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:none;height:22px;padding:0 6px;border-radius:4px;background:#EBEDEF;font-size:12px;font-weight:600;line-height:22px;color:var(--sub1);pointer-events:none;}
+  .oh-tag.next{background:#E6EFFF;color:var(--blue);}
+  .oh-tag.show{display:block;}
+  .oh-foot{margin-top:8px;min-height:20px;}
+  .oh-all{display:flex;justify-content:flex-end;margin-top:8px;}
+  .oh-help{margin:0;font-size:13px;line-height:20px;color:var(--sub2);}
+  .oh-help.err{color:var(--red);}
+  .oh-help b{font-weight:600;color:var(--text);}
+  .oh-check{display:flex;align-items:center;gap:6px;flex-shrink:0;font-size:15px;cursor:pointer;white-space:nowrap;}
+  .oh-check input{width:18px;height:18px;margin:0;accent-color:var(--blue);cursor:pointer;}
+
+  .save{width:100%;height:48px;margin-top:24px;border:none;border-radius:4px;background:var(--blue);color:#fff;font-size:16px;font-weight:600;font-family:var(--font);cursor:pointer;}
+  .save:disabled{background:#CCDFFF;cursor:not-allowed;}
+
+  /* 예시·목록 */
+  .ex{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;}
+  .ex button{height:32px;padding:0 10px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:13px;font-family:var(--font);color:var(--text);cursor:pointer;}
+  .ex button:hover{background:var(--bg);}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th,td{height:40px;padding:0 8px;border-bottom:1px solid var(--line);text-align:left;}
+  th{background:var(--bg);font-weight:600;color:var(--sub1);}
+  td .next{color:var(--blue);font-weight:600;}
+  .rules{margin:24px 0 0;padding-left:18px;font-size:13px;line-height:22px;color:var(--sub1);}
+  .toast{position:fixed;left:50%;bottom:32px;transform:translate(-50%,8px);padding:12px 24px;border-radius:8px;background:#2E3238;color:#fff;font-size:15px;opacity:0;transition:.2s;pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>운영시간 입력 프로토타입</h1>
+
+  <div class="card">
+    <h2>입력</h2>
+    <label class="oh-label" for="ohStart">운영시간</label>
+    <div class="oh-row">
+      <div class="oh-box" id="boxStart"><input id="ohStart" inputmode="numeric" maxlength="5" placeholder="00:00" value="08:00" aria-label="시작 시간"></div>
+      <span class="oh-dash">–</span>
+      <div class="oh-box" id="boxEnd"><input id="ohEnd" inputmode="numeric" maxlength="5" placeholder="00:00" value="18:00" aria-label="종료 시간"><span class="oh-tag" id="ohTag"></span></div>
+    </div>
+    <div class="oh-foot">
+      <p class="oh-help" id="ohHelp"></p>
+    </div>
+    <div class="oh-all"><label class="oh-check"><input type="checkbox" id="oh24">24시간 운영</label></div>
+    <button class="save" id="saveBtn">저장</button>
+  </div>
+
+  <div class="card">
+    <h2>예시 넣어 보기</h2>
+    <div class="ex" id="examples">
+      <button data-v="08:00-18:00">08:00 – 18:00 (당일)</button>
+      <button data-v="15:00-10:00">15:00 – 10:00 (익일)</button>
+      <button data-v="09:00-00:00">09:00 – 00:00 (자정)</button>
+      <button data-v="08:00-08:00">08:00 – 08:00 (같은 시간)</button>
+      <button data-v="24">24시간 운영</button>
+    </div>
+    <h2>저장된 목록 표기</h2>
+    <table><thead><tr><th>장소</th><th>운영시간</th><th>총 시간</th></tr></thead><tbody id="list"></tbody></table>
+    <ul class="rules">
+      <li>종료가 시작보다 빠르면 다음 날로 보고 <b>익일</b> 태그를 붙입니다.</li>
+      <li>종료 00:00은 <b>자정</b>으로 표시합니다 (익일 태그 없음).</li>
+      <li>시작과 종료가 같으면 저장할 수 없습니다. 24시간 운영은 체크박스로만 입력합니다.</li>
+      <li>24시간 운영을 켜면 00:00 – 24:00으로 잠기고, 끄면 이전 시간으로 돌아갑니다.</li>
+    </ul>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const start = $("ohStart"), end = $("ohEnd"), all = $("oh24");
+  let saved = { start:"08:00", end:"18:00" }; // 24시간 켜기 전 값
+  let n = 0;
+
+  function parse(v){
+    const m = /^(\d{1,2}):?(\d{2})$/.exec(v.trim());
+    if(!m) return null;
+    const h = +m[1], mi = +m[2];
+    return h < 24 && mi < 60 ? h * 60 + mi : null;
+  }
+  const pad = v => String(v).padStart(2, "0");
+  const fmt = t => pad(Math.floor(t / 60)) + ":" + pad(t % 60);
+  function speak(t){ // 오전 8시, 오후 3시 30분
+    if(t === 0) return "자정";
+    const h = Math.floor(t / 60), mi = t % 60;
+    return (h < 12 ? "오전 " : "오후 ") + (h % 12 || 12) + "시" + (mi ? " " + mi + "분" : "");
+  }
+  function dur(min){ const h = Math.floor(min / 60), mi = min % 60; return (h ? h + "시간" : "") + (mi ? (h ? " " : "") + mi + "분" : ""); }
+
+  // 현재 입력을 해석: {ok, kind: day|next|midnight|all, s, e, min, msg}
+  function read(){
+    if(all.checked) return { ok:true, kind:"all", min:1440 };
+    const s = parse(start.value), e = parse(end.value);
+    if(s == null || e == null) return { ok:false, bad: s == null ? "start" : "end", msg:"00:00 ~ 23:59 형식으로 입력해 주세요." };
+    if(s === e) return { ok:false, bad:"both", msg:"시작과 종료 시간이 같아요. 24시간 운영이면 체크박스를 선택해 주세요." };
+    if(e === 0) return { ok:true, kind:"midnight", s, e, min:1440 - s };
+    if(e < s) return { ok:true, kind:"next", s, e, min:1440 - s + e };
+    return { ok:true, kind:"day", s, e, min:e - s };
+  }
+
+  function render(){
+    const r = read(), tag = $("ohTag"), help = $("ohHelp");
+    $("boxStart").classList.toggle("err", !r.ok && (r.bad === "start" || r.bad === "both"));
+    $("boxEnd").classList.toggle("err", !r.ok && (r.bad === "end" || r.bad === "both"));
+    tag.className = "oh-tag";
+    help.className = "oh-help" + (r.ok ? "" : " err");
+    if(!r.ok){ help.textContent = r.msg; }
+    else if(r.kind === "all"){ help.innerHTML = "<b>하루 종일</b> 운영 · 총 24시간"; }
+    else {
+      if(r.kind === "next"){ tag.textContent = "익일"; tag.classList.add("show", "next"); }
+      if(r.kind === "midnight"){ tag.textContent = "자정"; tag.classList.add("show"); }
+      help.innerHTML = speak(r.s) + " ~ " + (r.kind === "next" ? "<b>다음 날</b> " : "") + speak(r.e) + " · 총 " + dur(r.min);
+    }
+    $("saveBtn").disabled = !r.ok;
+  }
+
+  function label(r){
+    if(r.kind === "all") return "24시간";
+    if(r.kind === "midnight") return fmt(r.s) + " ~ 자정";
+    if(r.kind === "next") return fmt(r.s) + ' ~ <span class="next">익일</span> ' + fmt(r.e);
+    return fmt(r.s) + " ~ " + fmt(r.e);
+  }
+
+  function set24(on){
+    all.checked = on;
+    if(on){ saved = { start:start.value, end:end.value }; start.value = "00:00"; end.value = "24:00"; }
+    else { start.value = saved.start; end.value = saved.end; }
+    start.disabled = end.disabled = on;
+    render();
+  }
+
+  // 입력: 숫자만 넣어도 HH:MM으로 맞춤 (930 → 09:30)
+  [start, end].forEach(function(inp){
+    inp.addEventListener("input", function(){ inp.value = inp.value.replace(/[^\d:]/g, ""); render(); });
+    inp.addEventListener("blur", function(){
+      const d = inp.value.replace(/\D/g, "");
+      if(d.length === 3 || d.length === 4){ const t = parse(d.padStart(4, "0")); if(t != null) inp.value = fmt(t); }
+      else if(d.length <= 2 && d){ const t = parse(d.padStart(2, "0") + "00"); if(t != null) inp.value = fmt(t); }
+      render();
+    });
+  });
+  all.addEventListener("change", function(){ set24(all.checked); });
+
+  $("examples").addEventListener("click", function(e){
+    const b = e.target.closest("[data-v]"); if(!b) return;
+    if(b.dataset.v === "24"){ if(!all.checked) set24(true); return; }
+    if(all.checked) set24(false);
+    const v = b.dataset.v.split("-"); start.value = v[0]; end.value = v[1]; render();
+  });
+
+  $("saveBtn").addEventListener("click", function(){
+    const r = read(); if(!r.ok) return;
+    n++;
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>장소 " + n + "</td><td>" + label(r) + "</td><td>" + dur(r.min) + "</td>";
+    $("list").prepend(tr);
+    const t = $("toast"); t.textContent = "운영시간을 저장했어요.";
+    t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(function(){ t.classList.remove("show"); }, 2000);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

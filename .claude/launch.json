@@ -4,8 +4,42 @@
     {
       "name": "lis-dev",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/sue.su/lis-1 && npm run dev"],
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/sue.su/lis-1 && npm run dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "lis-5173",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "DEPLOY_BASE=/p/lis/ npx vite --port 5173 --strictPort"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "lis-dev-local",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
+      "port": 5174
+    },
+    {
+      "name": "lis-merge",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/connie.hi/lis-merge && npx vite --port 5175 --strictPort"
+      ],
+      "port": 5175
     }
   ]
 }

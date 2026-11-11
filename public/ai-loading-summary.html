@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 배차계획 입력 요약</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{--text:#2E3238;--sub1:#5C6370;--sub2:#767D8A;--sub3:#9197A1;--line:#E4E5E9;--bg:#F5F7FA;--blue:#005FFF;--ai1:#337FFF;--ai2:#9966FF;--font:"Pretendard",-apple-system,sans-serif;}
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;background:#5C6068;font-family:var(--font);color:var(--text);letter-spacing:-0.3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;}
+  button,select{font-family:var(--font);letter-spacing:inherit;}
+
+  /* 데모 조작 (프로토타입 전용) */
+  .demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:#fff;font-size:13px;}
+  .demo button,.demo select{height:30px;padding:0 10px;border:1px solid rgba(255,255,255,.35);border-radius:4px;background:rgba(255,255,255,.08);color:#fff;font-size:13px;cursor:pointer;}
+  .demo select option{color:#2E3238;}
+  .demo label{display:flex;align-items:center;gap:6px;cursor:pointer;}
+
+  .modal{position:relative;width:1280px;max-width:100%;height:760px;max-height:calc(100vh - 70px);background:#fff;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden;}
+  .modal[hidden]{display:none;}
+  .head{display:flex;align-items:center;gap:16px;height:62px;padding:0 24px;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .head h1{margin:0;font-size:20px;font-weight:700;}
+  .head .day{font-size:16px;color:var(--sub1);}
+  .head .day b{margin-left:6px;font-weight:600;color:var(--text);}
+  .head .ic{width:32px;height:32px;border:none;border-radius:4px;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .head .ic:hover{background:#EEEFF1;}
+  .head .ic:first-of-type{margin-left:auto;}
+
+  .body{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);padding:24px;}
+
+  /* 진행 상태 */
+  .orb{width:56px;height:56px;border-radius:50%;position:relative;}
+  .orb::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,var(--ai1),var(--ai2),var(--ai1));animation:spin 2.4s linear infinite;}
+  .orb::after{content:"AI";position:absolute;inset:4px;border-radius:50%;background:var(--bg);color:var(--ai2);font-size:15px;font-weight:800;line-height:48px;text-align:center;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .orb.done::before{animation:none;background:linear-gradient(135deg,var(--ai1),var(--ai2));}
+  .orb.done::after{content:"";inset:0;background:url("data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 12.5l4 4 8-9' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center no-repeat;}
+  h2{margin:16px 0 10px;font-size:22px;font-weight:700;}
+  .bar{position:relative;width:220px;height:4px;border-radius:2px;background:#E4E5E9;overflow:hidden;}
+  .bar::after{content:"";position:absolute;top:0;bottom:0;width:40%;border-radius:2px;background:linear-gradient(90deg,var(--ai1),var(--ai2));animation:flow 1.4s ease-in-out infinite;}
+  @keyframes flow{0%{left:-40%;}100%{left:100%;}}
+  .bar.full::after{left:0;width:100%;animation:none;}
+  .meta{margin:10px 0 0;font-size:13px;color:var(--sub2);font-variant-numeric:tabular-nums;}
+
+  /* 요약 카드 — 한 줄짜리 3~4개만 */
+  .brief{width:520px;max-width:100%;margin-top:36px;}
+  .brief-h{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--sub2);}
+  .item{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:15px;line-height:22px;
+    opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s cubic-bezier(.2,.8,.2,1);}
+  .item + .item{margin-top:8px;}
+  .item.in{opacity:1;transform:none;}
+  .item .ic{flex-shrink:0;width:32px;height:32px;border-radius:8px;background:#EEF4FF;display:flex;align-items:center;justify-content:center;}
+  .item b{font-weight:700;}
+
+  .foot{margin-top:28px;font-size:13px;color:var(--sub3);}
+  .foot button{border:none;background:none;padding:0;font-size:13px;color:var(--sub1);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+  .go{display:none;height:44px;margin-top:28px;padding:0 22px;border:none;border-radius:4px;background:var(--blue);color:#fff;font-size:16px;font-weight:600;cursor:pointer;}
+  .go.show{display:block;}
+
+  .result{position:absolute;inset:0;z-index:3;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(255,255,255,.96);font-size:16px;}
+  .result.show{display:flex;}
+  .result button{height:40px;padding:0 16px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:14px;cursor:pointer;}
+  .mini{position:fixed;right:24px;bottom:24px;display:none;align-items:center;gap:12px;padding:12px 16px;border-radius:8px;background:#2E3238;color:#fff;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-variant-numeric:tabular-nums;}
+  .mini.show{display:flex;}
+  .mini button{height:30px;padding:0 12px;border:none;border-radius:4px;background:#fff;color:#2E3238;font-size:13px;font-weight:600;cursor:pointer;}
+
+  .reduce *,.reduce *::before{transition:none !important;animation:none !important;}
+</style>
+</head>
+<body>
+<div class="demo" aria-label="데모 조작">
+  <span>프로토타입 조작:</span>
+  엔진 응답 <select id="dur"><option value="1500">1.5초 (최소 2.4초 확인)</option><option value="12000" selected>12초</option><option value="45000">45초</option></select>
+  <button id="replay">처음부터 다시</button>
+  <button id="respond">지금 응답 받기</button>
+  <label><input type="checkbox" id="reduce">움직임 줄이기</label>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-label="AI 배차계획 생성 중">
+  <div class="head">
+    <h1>AI 배차계획</h1>
+    <span class="day">배차일지<b>10.11 (내일)</b></span>
+    <button class="ic" id="minBtn" title="최소화 — 배차일지에서 계속 진행돼요" aria-label="최소화"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="2" stroke="#767D8A" stroke-width="1.4"/><path d="M6.5 12.5h7" stroke="#767D8A" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <button class="ic" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#767D8A" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <div class="body">
+    <div class="orb" id="orb"></div>
+    <h2 id="title" role="status" aria-live="polite">AI 배차계획 생성 중</h2>
+    <div class="bar" id="bar"></div>
+    <p class="meta" id="meta">계산 중 · 00:00 · 보통 30초 정도 걸려요</p>
+
+    <div class="brief">
+      <p class="brief-h">이번에 선택한 내용</p>
+      <div id="items"></div>
+    </div>
+
+    <p class="foot" id="foot"><button id="backBtn">기다리지 않고 배차일지로 돌아가기</button></p>
+    <button class="go" id="goBtn">예상 결과 보기</button>
+  </div>
+  <div class="result" id="result"><b>→ AI 배차계획 예상 결과 화면으로 전환</b><span style="font-size:13px;color:var(--sub2)">프로토타입에서는 여기서 멈춰요</span><button id="again">다시 보기</button></div>
+</div>
+<div class="mini" id="mini"><span id="miniTxt">AI 배차계획 생성 중 · 00:00</span><button id="openBtn">열기</button></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const MIN_SHOW = 2400, AUTO_GO = 3000, ITEM_GAP = 900;
+
+  // ── 예시 데이터: 선택한 오더 106건 · 기사 52명 (엔진 없이 화면에서 바로 계산 가능한 값만 사용) ──
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pick = (arr, w) => { let r = rnd() * w.reduce((a, b) => a + b), i = 0; while((r -= w[i]) > 0) i++; return arr[i]; };
+  const CARS = ["카고", "윙바디", "탑차", "냉장"];
+  const orders = Array.from({length:106}, () => ({
+    hour: pick([...Array(24).keys()], [0,0,1,2,4,8,12,14,10,7,5,4,4,3,3,3,4,4,3,2,2,1,1,0]),
+    car: pick(CARS, [50,34,14,8])
+  }));
+  const drivers = Array.from({length:52}, () => ({
+    garage: pick(["이천","평택","용인","분당","천안"], [16,12,10,8,6]),
+    car: pick(CARS, [26,9,10,7])
+  }));
+  const count = (arr, key) => arr.reduce((m, x) => (m[x[key]] = (m[x[key]] || 0) + 1, m), {});
+  const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return c >= 0 && c % 28 ? "은" : "는"; }; // 받침 있으면 '은'
+  const pct = (a, b) => Math.round(a / b * 100);
+
+  // 요약 문장 4줄
+  function brief(){
+    const byHour = Array(24).fill(0); orders.forEach(o => byHour[o.hour]++);
+    let best = 0, bi = 0; for(let h = 0; h < 22; h++){ const s = byHour[h] + byHour[h+1] + byHour[h+2]; if(s > best){ best = s; bi = h; } }
+    const oc = count(orders, "car"), dc = count(drivers, "car");
+    const top = CARS.map(c => ({c, r:(oc[c] || 0) / Math.max(1, dc[c] || 0)})).reduce((a, b) => b.r > a.r ? b : a);
+    const gar = Object.entries(count(drivers, "garage")).sort((a, b) => b[1] - a[1])[0];
+    const P = d => '<svg width="18" height="18" viewBox="0 0 20 20" fill="none">' + d + '</svg>';
+    return [
+      [P('<rect x="3" y="4" width="14" height="12" rx="2" stroke="#337FFF" stroke-width="1.5"/><path d="M6 8h8M6 11.5h5" stroke="#337FFF" stroke-width="1.5" stroke-linecap="round"/>'),
+        "오더 <b>" + orders.length + "건</b>, 기사 <b>" + drivers.length + "명</b>으로 계획해요"],
+      [P('<circle cx="10" cy="10" r="7" stroke="#337FFF" stroke-width="1.5"/><path d="M10 6v4l2.5 2" stroke="#337FFF" stroke-width="1.5" stroke-linecap="round"/>'),
+        "상차는 <b>" + String(bi).padStart(2, "0") + "~" + String(bi + 3).padStart(2, "0") + "시</b>에 " + pct(best, orders.length) + "%가 몰려 있어요"],
+      [P('<path d="M2.5 13V6.5h9V13M11.5 8.5h3l3 3V13" stroke="#337FFF" stroke-width="1.5" stroke-linejoin="round"/><circle cx="6" cy="14" r="1.6" stroke="#337FFF" stroke-width="1.4"/><circle cx="14.5" cy="14" r="1.6" stroke="#337FFF" stroke-width="1.4"/>'),
+        "<b>" + top.c + "</b>" + josa(top.c) + " 기사 1명당 오더가 <b>" + top.r.toFixed(1) + "건</b>으로 가장 많아요"],
+      [P('<path d="M10 17s5.5-5 5.5-9a5.5 5.5 0 10-11 0c0 4 5.5 9 5.5 9z" stroke="#337FFF" stroke-width="1.5"/><circle cx="10" cy="8" r="2" stroke="#337FFF" stroke-width="1.5"/>'),
+        "기사 차고지는 <b>" + gar[0] + "</b>에 " + pct(gar[1], drivers.length) + "%가 있어요"]
+    ];
+  }
+
+  let st = {}, timers = [];
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+  const fmt = ms => { const s = Math.floor(ms / 1000); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+  function tick(){
+    const el = fmt((st.tEnd || performance.now()) - st.t0);
+    if(!st.done) $("meta").textContent = "계산 중 · " + el + " · 보통 30초 정도 걸려요";
+    $("miniTxt").textContent = st.done ? "AI 배차계획 완료 · 예상 결과를 볼 수 있어요" : "AI 배차계획 생성 중 · " + el;
+  }
+
+  function respond(){
+    if(st.done || st.waitingMin) return;
+    const wait = MIN_SHOW - (performance.now() - st.t0);
+    if(wait > 0){ st.waitingMin = true; later(() => { st.waitingMin = false; respond(); }, wait); return; }
+    st.done = true; st.tEnd = performance.now(); clearInterval(st.clockT); tick();
+    timers.forEach(clearTimeout); timers = [];
+    document.querySelectorAll(".item").forEach(i => i.classList.add("in")); // 남은 요약은 한 번에
+    $("bar").classList.add("full"); $("orb").classList.add("done");
+    $("title").textContent = "AI 배차계획 생성 완료";
+    $("foot").style.display = "none"; $("goBtn").classList.add("show");
+    // 요약을 읽는 중일 수 있어 3초 카운트다운 후 이동
+    let left = AUTO_GO / 1000;
+    const say = () => { $("meta").textContent = "계산 완료 · " + fmt(st.tEnd - st.t0) + " · " + left + "초 뒤 예상 결과로 이동해요"; };
+    say();
+    st.goT = setInterval(() => { left--; left > 0 ? say() : go(); }, 1000);
+  }
+  function go(){ clearInterval(st.goT); $("result").classList.add("show"); }
+
+  function start(){
+    timers.forEach(clearTimeout); timers = []; clearInterval(st.clockT); clearInterval(st.goT);
+    const reduce = $("reduce").checked;
+    st = {t0:performance.now(), done:false};
+    $("modal").classList.toggle("reduce", reduce);
+    $("result").classList.remove("show"); $("bar").classList.remove("full"); $("orb").classList.remove("done");
+    $("title").textContent = "AI 배차계획 생성 중";
+    $("foot").style.display = ""; $("goBtn").classList.remove("show");
+    $("items").innerHTML = brief().map(b => '<div class="item"><span class="ic">' + b[0] + '</span><span>' + b[1] + '</span></div>').join("");
+    // 한 줄씩 차례로
+    document.querySelectorAll(".item").forEach((el, i) => later(() => el.classList.add("in"), reduce ? 0 : 400 + i * ITEM_GAP));
+    st.clockT = setInterval(tick, 250); tick();
+    later(respond, Number($("dur").value));
+  }
+
+  function minimize(on){ $("modal").hidden = on; $("mini").classList.toggle("show", on); }
+  $("minBtn").addEventListener("click", () => minimize(true));
+  $("backBtn").addEventListener("click", () => minimize(true));
+  $("openBtn").addEventListener("click", () => minimize(false));
+  $("goBtn").addEventListener("click", go);
+  $("replay").addEventListener("click", start);
+  $("again").addEventListener("click", start);
+  $("respond").addEventListener("click", respond);
+  $("reduce").addEventListener("change", start);
+  $("dur").addEventListener("change", start);
+  if(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) $("reduce").checked = true;
+  start();
+})();
+</script>
+</body>
+</html>
