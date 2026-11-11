@@ -2,6 +2,8 @@
 // 배차관리 화면(본문 · 배차일지 패널 · AI 배차계획 iframe 포함)에서 참가자의 클릭 위치를 기록하고,
 // 진행자가 단축키로 연 패널에서 화면 위에 히트맵을 겹쳐 본다.
 //  - Ctrl + Shift + H : 진행자 패널 열기/닫기 (참가자에게는 아무것도 보이지 않음)
+//  - 링크에 ?ut=1 을 붙이면 UT 모드: 기록이 바로 켜지고, 키보드 없는 기기(태블릿)용으로 왼쪽 아래에 작은 패널 버튼이 생김
+//    ?ut=1&p=P1&task=T1 처럼 참가자·과업을 링크로 지정할 수 있음
 //  - 기록은 이 브라우저(localStorage)에만 저장 → 여러 PC에서 진행했다면 JSON 내보내기 후 한 PC에서 불러오기로 합침
 //  - 같은 버튼이라도 열린 화면(모달·패널)에 따라 위치가 달라서, 클릭할 때의 '화면'을 함께 기록하고 화면별로 본다
 
@@ -14,6 +16,7 @@ type Click = {
   vw: number; vh: number; // 기록 당시 화면 크기
   label: string; // 클릭한 요소 이름
   t: number;
+  input?: string; // mouse · touch · pen
 };
 
 const STORE_KEY = 'lis.ut.heatmap.v1';
@@ -34,6 +37,7 @@ let lastScreen = '';
 let timer = 0;
 const hooked = new WeakSet<Document>();
 let iframeObserver: MutationObserver | null = null;
+let utButton: HTMLButtonElement | null = null;
 
 // ── 저장 ──
 function load() {
@@ -96,7 +100,7 @@ function labelOf(target: Element | null, frameName: string) {
 function record(e: MouseEvent, frame: HTMLIFrameElement | null) {
   if (!session.recording) return;
   const target = e.target as Element | null;
-  if (target && panel && !frame && panel.contains(target)) return; // 진행자 패널 클릭은 제외
+  if (target && !frame && ((panel && panel.contains(target)) || (utButton && utButton.contains(target)))) return; // 진행자 패널·버튼 클릭은 제외
   let x = e.clientX, y = e.clientY;
   if (frame) {
     const r = frame.getBoundingClientRect();
@@ -107,6 +111,7 @@ function record(e: MouseEvent, frame: HTMLIFrameElement | null) {
     p: session.p || '익명', task: session.task || '-', screen: currentScreen(),
     x: Math.round(x), y: Math.round(y), vw: window.innerWidth, vh: window.innerHeight,
     label: labelOf(target, frame ? frame.title : ''), t: Date.now(),
+    input: (e as PointerEvent).pointerType || 'mouse',
   });
   save();
   if (panel && panel.style.display !== 'none') renderPanel();
@@ -221,6 +226,35 @@ function tick() {
   }
 }
 
+// ── 분석 수치: 참가자 × 과업별 (화면 필터와 무관, 참가자·과업 필터만 적용) ──
+type TaskStat = { p: string; task: string; clicks: number; sec: number; empty: number; screens: number; first: string; last: string };
+function taskStats(): TaskStat[] {
+  const groups = new Map<string, Click[]>();
+  clicks
+    .filter(c => (filter.p === ALL || c.p === filter.p) && (filter.task === ALL || c.task === filter.task))
+    .forEach(c => { const k = c.p + '\u0000' + c.task; if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(c); });
+  return Array.from(groups.values()).map(list => {
+    list.sort((a, b) => a.t - b.t);
+    return {
+      p: list[0].p, task: list[0].task, clicks: list.length,
+      // 소요 시간 = 그 과업의 첫 클릭 ~ 마지막 클릭
+      sec: Math.round((list[list.length - 1].t - list[0].t) / 1000),
+      empty: list.filter(c => c.label.endsWith('(빈 영역)')).length,
+      screens: new Set(list.map(c => c.screen)).size,
+      first: list[0].label, last: list[list.length - 1].label,
+    };
+  }).sort((a, b) => a.task.localeCompare(b.task) || a.p.localeCompare(b.p));
+}
+const fmtSec = (sec: number) => (sec >= 60 ? Math.floor(sec / 60) + '분 ' : '') + (sec % 60) + '초';
+
+function exportCsv() {
+  const cell = (v: string | number) => '"' + String(v).replace(/"/g, '""') + '"';
+  const head: (string | number)[] = ['참가자', '과업', '클릭 수', '소요 시간(초)', '빈 영역 클릭', '빈 영역 비율(%)', '거친 화면 수', '첫 클릭', '마지막 클릭'];
+  const rows: (string | number)[][] = taskStats().map(r => [r.p, r.task, r.clicks, r.sec, r.empty, Math.round(r.empty / r.clicks * 100), r.screens, r.first, r.last]);
+  // 엑셀에서 한글이 깨지지 않도록 BOM 포함
+  download(`ut-stats-${stamp()}.csv`, '\ufeff' + [head, ...rows].map(r => r.map(cell).join(',')).join('\r\n'), 'text/csv');
+}
+
 // ── 진행자 패널 ──
 const esc = (v: string) => v.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]!));
 const uniq = (key: 'p' | 'task' | 'screen') => Array.from(new Set(clicks.map(c => c[key]))).sort();
@@ -265,6 +299,7 @@ function renderPanel() {
   const sizes = Array.from(new Set(list.map(c => c.vw + '×' + c.vh)));
   const sizeWarn = sizes.some(s => s !== window.innerWidth + '×' + window.innerHeight);
   const mine = clicks.filter(c => c.p === (session.p || '익명')).length;
+  const stats = taskStats();
   el.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;">
       <b style="font-size:15px;">UT 클릭 히트맵</b>
@@ -303,13 +338,21 @@ function renderPanel() {
       <span style="${css.label}">많이 누른 곳</span>
       ${top.length ? top.map(([k, n]) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(k)}</span><b>${n}</b></div>`).join('') : '<div style="color:#9197A1;">아직 기록이 없어요.</div>'}
     </div>
+    <div style="${css.sec}">
+      <span style="${css.label}">과업별 수치 <span style="color:#9197A1;">(소요 시간 = 첫 클릭~마지막 클릭)</span></span>
+      ${stats.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="color:#767D8A;text-align:right;"><th style="text-align:left;font-weight:400;padding:3px 0;">참가자 · 과업</th><th style="font-weight:400;">클릭</th><th style="font-weight:400;">시간</th><th style="font-weight:400;" title="버튼·셀이 아닌 곳을 누른 비율">빈 영역</th></tr></thead>
+        <tbody>${stats.map(r => `<tr style="border-top:1px solid #F1F2F4;text-align:right;"><td style="text-align:left;padding:4px 0;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.p)} · ${esc(r.task)}</td><td>${r.clicks}</td><td>${fmtSec(r.sec)}</td><td style="color:${r.empty / r.clicks >= 0.3 ? '#E23A3A' : 'inherit'};">${Math.round(r.empty / r.clicks * 100)}%</td></tr>`).join('')}</tbody>
+      </table>` : '<div style="color:#9197A1;">아직 기록이 없어요.</div>'}
+    </div>
     <div style="${css.sec}display:flex;flex-wrap:wrap;gap:6px;">
-      <button data-act="export" style="${css.btn}">JSON 내보내기</button>
+      <button data-act="export" style="${css.btn}">JSON 내보내기${filter.p === ALL ? '' : ' (' + esc(filter.p) + ')'}</button>
+      <button data-act="csv" style="${css.btn}">수치 CSV</button>
       <button data-act="import" style="${css.btn}">불러오기</button>
       <button data-act="clear" style="${css.btn}color:#E23A3A;">기록 지우기</button>
       <input type="file" accept="application/json,.json" data-file style="display:none;">
     </div>
-    <div style="padding:0 14px 12px;font-size:11px;color:#9197A1;line-height:16px;">Ctrl+Shift+H로 이 패널을 열고 닫아요. 참가자 진행 중에는 패널을 닫아 두세요(기록은 계속돼요).</div>`;
+    <div style="padding:0 14px 12px;font-size:11px;color:#9197A1;line-height:16px;">Ctrl+Shift+H(태블릿은 왼쪽 아래 UT 버튼)로 이 패널을 열고 닫아요. 참가자 진행 중에는 패널을 닫아 두세요(기록은 계속돼요). 참가자 필터를 고르고 JSON 내보내기를 누르면 그 참가자 파일만 저장돼요.</div>`;
 }
 
 function onPanelInput(e: Event) {
@@ -337,6 +380,7 @@ function onPanelClick(e: Event) {
     if (!session.recording && !session.p) { alert('참가자 이름(예: P1)을 먼저 입력해 주세요.'); return; }
     session.recording = !session.recording; saveSession(); renderPanel();
   } else if (act === 'export') exportJson();
+  else if (act === 'csv') exportCsv();
   else if (act === 'import') (panel!.querySelector('[data-file]') as HTMLInputElement).click();
   else if (act === 'clear') {
     const who = filter.p === ALL ? '모든 참가자' : filter.p;
@@ -347,15 +391,24 @@ function onPanelClick(e: Event) {
   }
 }
 
-function exportJson() {
-  const blob = new Blob([JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), clicks }, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
+function stamp() {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
-  a.href = URL.createObjectURL(blob);
-  a.download = `ut-heatmap-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+function download(name: string, text: string, type: string) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+// 참가자 필터가 '전체'면 모든 기록, 특정 참가자면 그 참가자 기록만 (파일 이름에 참가자 포함)
+function exportJson() {
+  const who = filter.p === ALL ? '' : filter.p;
+  const list = who ? clicks.filter(c => c.p === who) : clicks;
+  const name = `ut-heatmap-${who ? who.replace(/[^\w가-힣-]/g, '_') + '-' : ''}${stamp()}.json`;
+  download(name, JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), participant: who || 'all', clicks: list }, null, 2), 'application/json');
 }
 
 function importFile(file: File) {
@@ -381,10 +434,43 @@ export function togglePanel(force?: boolean) {
 function onResize() { if (showHeat) scheduleDraw(); }
 
 // ── 설치/해제 (배차관리 화면 진입/이탈) ──
+// ?ut=1 링크로 들어오면 UT 모드 — 링크의 참가자·과업을 적용하고 기록을 켬
+function applyUrlMode() {
+  let q: URLSearchParams;
+  try { q = new URLSearchParams(window.location.search); } catch { return false; }
+  if (q.get('ut') !== '1') return false;
+  const p = q.get('p'), task = q.get('task');
+  if (p) session.p = p.trim();
+  if (task) session.task = task.trim();
+  if (session.p) session.recording = true;
+  saveSession();
+  return true;
+}
+
+function ensureUtButton() {
+  if (utButton) return;
+  utButton = document.createElement('button');
+  utButton.setAttribute('data-name', 'ut-heatmap-button');
+  utButton.setAttribute('aria-label', 'UT 진행자 패널');
+  utButton.textContent = 'UT';
+  Object.assign(utButton.style, {
+    position: 'fixed', left: '8px', bottom: '8px', width: '28px', height: '28px', borderRadius: '50%',
+    border: '1px solid #DBDDE1', background: 'rgba(255,255,255,.9)', color: '#9197A1', fontSize: '10px', fontWeight: '700',
+    cursor: 'pointer', zIndex: String(Z), opacity: '0.45', padding: '0', fontFamily: 'inherit',
+  });
+  utButton.addEventListener('click', () => togglePanel());
+  document.body.appendChild(utButton);
+}
+
 export function install() {
   if (installed) return;
   installed = true;
   load();
+  if (applyUrlMode()) {
+    ensureUtButton();
+    // 참가자를 링크로 정하지 않았으면 진행자 패널을 열어 입력하게 함
+    if (!session.p) setTimeout(() => togglePanel(true), 300);
+  }
   hookDoc(document, null);
   hookFrames();
   iframeObserver = new MutationObserver(muts => {
@@ -403,6 +489,7 @@ export function uninstall() {
   window.removeEventListener('resize', onResize);
   clearInterval(timer);
   panel?.remove(); panel = null;
+  utButton?.remove(); utButton = null;
   canvas?.remove(); canvas = null;
   showHeat = false;
   // document의 pointerdown 리스너는 남지만 다른 화면에서는 기록하지 않도록 막음
