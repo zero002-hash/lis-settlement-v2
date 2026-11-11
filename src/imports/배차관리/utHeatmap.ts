@@ -348,6 +348,7 @@ function renderPanel() {
     <div style="${css.sec}display:flex;flex-wrap:wrap;gap:6px;">
       <button data-act="export" style="${css.btn}">JSON 내보내기${filter.p === ALL ? '' : ' (' + esc(filter.p) + ')'}</button>
       <button data-act="csv" style="${css.btn}">수치 CSV</button>
+      <button data-act="viewer" style="${css.btn}" title="여러 참가자 JSON을 모아 스크린샷 위에 히트맵·수치를 보는 페이지">히트맵 뷰어 ↗</button>
       <button data-act="import" style="${css.btn}">불러오기</button>
       <button data-act="clear" style="${css.btn}color:#E23A3A;">기록 지우기</button>
       <input type="file" accept="application/json,.json" data-file style="display:none;">
@@ -381,6 +382,7 @@ function onPanelClick(e: Event) {
     session.recording = !session.recording; saveSession(); renderPanel();
   } else if (act === 'export') exportJson();
   else if (act === 'csv') exportCsv();
+  else if (act === 'viewer') window.open(viewerUrl(), '_blank', 'noopener');
   else if (act === 'import') (panel!.querySelector('[data-file]') as HTMLInputElement).click();
   else if (act === 'clear') {
     const who = filter.p === ALL ? '모든 참가자' : filter.p;
@@ -389,6 +391,12 @@ function onPanelClick(e: Event) {
     if (filter.p !== ALL) filter.p = ALL;
     save(); draw(); renderPanel();
   }
+}
+
+// 히트맵 뷰어(public/heatmap.html) — 배포 경로(base)가 바뀌어도 같은 앱 기준으로 엶
+function viewerUrl() {
+  const base = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL || '/';
+  return base.replace(/\/?$/, '/') + 'heatmap.html';
 }
 
 function stamp() {
