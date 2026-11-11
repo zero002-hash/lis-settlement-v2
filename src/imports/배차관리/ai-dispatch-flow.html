@@ -68,23 +68,29 @@
   .resizer::after{content:"";position:absolute;top:50%;left:50%;width:3px;height:36px;transform:translate(-50%,-50%);border-radius:3px;background:var(--faint);}
   .resizer:hover::after, .resizer.dragging::after{background:var(--blue);}
   .resizer.dragging{background:var(--blue-soft);}
-  .tabs-row{display:flex;align-items:center;padding:14px 20px 0;gap:4px;}
-  .tab-item{padding:8px 12px;border-radius:6px 6px 0 0;font-size:14px;color:var(--sub2);cursor:pointer;font-weight:500;}
-  .tab-item.active{background:var(--bg);color:var(--text);font-weight:700;}
-  .tab-edit-ic{color:var(--sub3);margin-left:2px;font-size:11px;}
-  .tabs-right{margin-left:auto;display:flex;gap:16px;padding-bottom:8px;color:var(--sub2);font-size:13px;align-items:center;}
-  .tabs-right span{display:flex;align-items:center;gap:4px;cursor:pointer;}
+  .tabs-row{display:flex;align-items:center;justify-content:space-between;height:56px;padding:6px 20px;border-bottom:1px solid var(--line);box-sizing:border-box;flex-shrink:0;}
+  .tabs-left{display:flex;align-items:center;gap:2px;min-width:0;}
+  .tab-item{display:flex;align-items:center;height:44px;padding:8px 12px;border-radius:8px;font-size:16px;line-height:24px;letter-spacing:-0.02em;color:var(--sub2);cursor:pointer;font-weight:600;white-space:nowrap;box-sizing:border-box;flex-shrink:0;}
+  .tab-item.active{background:var(--bg);color:var(--text);padding-right:8px;}
+  .tab-edit-ic{display:flex;align-items:center;justify-content:center;width:26px;height:26px;margin-left:4px;}
+  .tab-setting{display:flex;align-items:center;gap:2px;height:26px;padding:0 8px;margin-left:4px;font-size:15px;font-weight:600;letter-spacing:-0.02em;color:#9197a1;cursor:pointer;white-space:nowrap;}
+  .tabs-right{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+  .tabs-right span, .tool-link{display:flex;align-items:center;gap:4px;height:36px;padding:0 12px;border-radius:4px;font-size:15px;line-height:22px;font-weight:600;letter-spacing:-0.02em;color:var(--text);cursor:pointer;white-space:nowrap;flex-shrink:0;}
+  .tool-link.boxed{border:1px solid var(--line);background:var(--white);box-sizing:border-box;}
 
-  .toolbar{display:flex;align-items:center;gap:8px;padding:12px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
-  .btn-action{padding:0 14px;height:36px;border-radius:6px;border:1px solid var(--line);background:var(--white);font-size:14px;font-weight:600;color:var(--text);cursor:pointer;font-family:var(--font);}
+  .toolbar{display:flex;align-items:center;gap:4px;height:56px;padding:0 20px;flex-wrap:nowrap;overflow-x:auto;flex-shrink:0;box-sizing:border-box;}
+  .btn-action{padding:0 12px;height:36px;border-radius:4px;border:1px solid var(--line);background:var(--white);font-size:15px;font-weight:600;letter-spacing:-0.02em;color:var(--text);cursor:pointer;font-family:var(--font);white-space:nowrap;flex-shrink:0;}
   .btn-action.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
   .btn-action:hover:not(.primary){background:var(--bg);}
-  .sel-box{border:1px solid var(--line);border-radius:6px;height:36px;padding:0 10px;font-size:13.5px;color:var(--sub1);background:var(--white);font-family:var(--font);}
-  .search-input{border:1px solid var(--line);border-radius:6px;height:36px;padding:0 12px;font-size:13.5px;width:220px;font-family:var(--font);}
-  .btn-search{height:36px;padding:0 16px;border-radius:6px;border:1px solid var(--line);background:var(--white);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);}
-  .count-pill{margin-left:auto;font-size:13.5px;color:var(--sub2);white-space:nowrap;}
-  .count-pill b{color:var(--text);font-weight:700;}
-  .tool-link{font-size:13.5px;color:var(--sub1);display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;}
+  .tb-divider{width:1px;height:24px;background:#d5d8dd;margin:0 8px;flex-shrink:0;}
+  .search-group{display:flex;align-items:center;flex-shrink:0;}
+  .sel-box{display:flex;align-items:center;justify-content:space-between;gap:2px;width:66px;height:36px;padding:0 6px 0 10px;border:1px solid var(--line);border-right:none;border-radius:4px 0 0 4px;font-size:15px;letter-spacing:-0.02em;color:var(--text);background:var(--white);font-family:var(--font);box-sizing:border-box;cursor:pointer;}
+  .search-input{border:1px solid var(--line);border-radius:0 4px 4px 0;height:36px;padding:0 10px;font-size:15px;letter-spacing:-0.02em;width:180px;font-family:var(--font);color:var(--text);box-sizing:border-box;outline:none;}
+  .search-input::placeholder{color:#767d8a;}
+  .btn-search{height:36px;padding:0 12px;border-radius:4px;border:1px solid var(--line);background:var(--white);font-size:15px;font-weight:600;letter-spacing:-0.02em;color:var(--text);cursor:pointer;font-family:var(--font);white-space:nowrap;flex-shrink:0;}
+  .count-pill{margin-left:8px;font-size:15px;letter-spacing:-0.02em;color:var(--text);white-space:nowrap;flex-shrink:0;}
+  .count-pill b{font-weight:400;}
+  .toolbar-right{margin-left:auto;display:flex;align-items:center;gap:4px;padding-left:12px;flex-shrink:0;}
 
   .table-scroll{flex:1;min-height:0;overflow:auto;}
   table{width:100%;border-collapse:collapse;}
@@ -585,16 +591,18 @@
     <div class="body-area" id="bodyArea">
       <div class="order-panel">
         <div class="tabs-row">
-          <div class="tab-item">기본</div>
-          <div class="tab-item active">쿠팡 CLS <span class="tab-edit-ic">✎</span></div>
-          <div class="tab-item">세라젬</div>
-          <div class="tab-item">대상청정원</div>
-          <div class="tab-item">한샘</div>
-          <div class="tab-item">일반화주</div>
+          <div class="tabs-left">
+            <div class="tab-item">기본</div>
+            <div class="tab-item active">쿠팡 CLS <span class="tab-edit-ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10.2 3.3l2.5 2.5-6.9 6.9-3.1.6.6-3.1 6.9-6.9z" fill="#767D8A"/></svg></span></div>
+            <div class="tab-item">세라젬</div>
+            <div class="tab-item">대상청정원</div>
+            <div class="tab-item">한샘</div>
+            <div class="tab-item">일반화주</div>
+            <span class="tab-setting"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="#9197A1" stroke-width="1.3"/><path d="M8 1.6l1.1.2.3 1.6 1.2.7 1.5-.6 1.6 1.6-.6 1.5.7 1.2 1.6.3v2.2l-1.6.3-.7 1.2.6 1.5-1.6 1.6-1.5-.6-1.2.7-.3 1.6H6.9l-.3-1.6-1.2-.7-1.5.6-1.6-1.6.6-1.5-.7-1.2-1.6-.3V6.9l1.6-.3.7-1.2-.6-1.5 1.6-1.6 1.5.6 1.2-.7.3-1.6z" stroke="#9197A1" stroke-width="1.3" stroke-linejoin="round"/></svg>편집</span>
+          </div>
           <div class="tabs-right">
-            <span>⚙ 편집</span>
-            <span>⇅ 필터 닫기</span>
-            <span>▤ 상세 보기</span>
+            <span><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="0.5" y1="4" x2="8.71" y2="4" stroke="#9197A1" stroke-width="1.3"/><line x1="11.42" y1="4" x2="15.5" y2="4" stroke="#9197A1" stroke-width="1.3"/><circle cx="10.345" cy="3.355" r="1.405" stroke="#9197A1" stroke-width="1.3"/><line x1="0.5" y1="8.66" x2="4.25" y2="8.66" stroke="#9197A1" stroke-width="1.3"/><line x1="7.06" y1="8.66" x2="15.5" y2="8.66" stroke="#9197A1" stroke-width="1.3"/><circle cx="5.655" cy="7.99" r="1.405" stroke="#9197A1" stroke-width="1.3"/><line x1="0.5" y1="13.13" x2="8.71" y2="13.13" stroke="#9197A1" stroke-width="1.3"/><line x1="11.42" y1="13.13" x2="15.5" y2="13.13" stroke="#9197A1" stroke-width="1.3"/><circle cx="10.345" cy="12.495" r="1.405" stroke="#9197A1" stroke-width="1.3"/></svg>필터 닫기</span>
+            <span><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="#9197A1"/><rect x="3" y="4" width="10" height="4" rx="1" fill="#9197A1" stroke="#9197A1"/></svg>상세 보기</span>
           </div>
         </div>
 
@@ -604,13 +612,18 @@
           <button class="btn-action">배차방법 변경</button>
           <button class="btn-action">오더 삭제</button>
           <button class="btn-action">배차 취소</button>
-          <select class="sel-box"><option>전체</option></select>
-          <input class="search-input" placeholder="검색어를 입력하세요.">
+          <span class="tb-divider"></span>
+          <div class="search-group">
+            <div class="sel-box">전체<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 7l4 4 4-4" stroke="#9197A1" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+            <input class="search-input" placeholder="검색어를 입력하세요.">
+          </div>
           <button class="btn-search">검색</button>
           <span class="count-pill">총 30명 중 <b>2명</b> 선택</span>
-          <span class="tool-link">⬇ 엑셀 저장</span>
-          <span class="tool-link">⇄ 목록 표시 설정</span>
-          <span class="tool-link">⇅ 목록 정렬 설정</span>
+          <span class="tool-link"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="8" y1="2.5" x2="8" y2="10.5" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round"/><polyline points="5,8 8,11 11,8" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><line x1="2.67" y1="13.33" x2="13.33" y2="13.33" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round"/></svg>엑셀 저장</span>
+          <div class="toolbar-right">
+            <span class="tool-link boxed"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="0.5" y1="4" x2="8.71" y2="4" stroke="#9197A1" stroke-width="1.3"/><line x1="11.42" y1="4" x2="15.5" y2="4" stroke="#9197A1" stroke-width="1.3"/><circle cx="10.345" cy="3.355" r="1.405" stroke="#9197A1" stroke-width="1.3"/><line x1="0.5" y1="8.66" x2="4.25" y2="8.66" stroke="#9197A1" stroke-width="1.3"/><line x1="7.06" y1="8.66" x2="15.5" y2="8.66" stroke="#9197A1" stroke-width="1.3"/><circle cx="5.655" cy="7.99" r="1.405" stroke="#9197A1" stroke-width="1.3"/><line x1="0.5" y1="13.13" x2="8.71" y2="13.13" stroke="#9197A1" stroke-width="1.3"/><line x1="11.42" y1="13.13" x2="15.5" y2="13.13" stroke="#9197A1" stroke-width="1.3"/><circle cx="10.345" cy="12.495" r="1.405" stroke="#9197A1" stroke-width="1.3"/></svg>목록 표시 설정</span>
+            <span class="tool-link boxed"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="5.34" y1="3.77" x2="5.34" y2="12.67" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round"/><polyline points="3.01,5.77 5.34,3.33 7.67,5.77" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><line x1="10.67" y1="3.33" x2="10.67" y2="12.23" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round"/><polyline points="8.34,10.23 10.67,12.67 13,10.23" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>목록 정렬 설정</span>
+          </div>
         </div>
 
         <div class="table-scroll">
@@ -2216,16 +2229,913 @@ document.getElementById("allOrders").addEventListener("click",function(e){
   });
 })();
 </script>
+<!-- ═══ AI 배차계획 (피그마 2026 배차자동화 step2) — 1. 오더 선택 → 2. 기사 선택 → 배차계획 실행 ═══ -->
+<style id="ap-step2">
+  /* 오더/기사 체크박스를 처음 켰을 때 토스트 */
+  .ap-sel-toast{position:fixed;left:50%;bottom:32px;transform:translate(-50%,8px);display:flex;align-items:center;gap:48px;padding:12px 16px 12px 24px;border-radius:8px;background:#2E3238;color:#fff;font-size:15px;line-height:22px;letter-spacing:-0.3px;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:4;}
+  .ap-sel-toast.err{background:#E23A3A;}
+  .ap-sel-toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto;}
+  .ap-sel-toast button{display:flex;width:24px;height:24px;padding:0;border:none;background:none;cursor:pointer;align-items:center;justify-content:center;}
+  .ap-overlay{position:fixed;inset:0;background:rgba(20,22,28,.5);display:none;align-items:center;justify-content:center;z-index:55;font-family:var(--font);}
+  .ap-overlay.open{display:flex;}
+  .ap-modal{width:1860px;max-width:calc(100vw - 40px);height:1056px;max-height:calc(100vh - 40px);background:#fff;border:1px solid #E4E5E9;border-radius:12px;box-shadow:0 2px 6px 1px rgba(34,34,34,.06);box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;}
+  .ap-head{display:flex;align-items:center;gap:24px;height:74px;padding:24px 24px 16px;border-bottom:1px solid #E4E5E9;box-sizing:border-box;flex-shrink:0;}
+  .ap-head h3{margin:0;font-size:22px;line-height:32px;font-weight:700;color:#2E3238;letter-spacing:-0.4px;}
+  .ap-date{display:flex;align-items:center;gap:12px;font-size:18px;line-height:26px;color:#2E3238;}
+  .ap-date b{font-weight:400;}
+  .ap-ic{width:24px;height:24px;padding:0;border:none;border-radius:4px;background:none;color:#9197A1;cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font);}
+  .ap-ic:hover{background:#EEEFF1;}
+  .ap-close{margin-left:auto;}
+  .ap-main{flex:1;min-height:0;display:flex;}
+  .ap-side{width:289px;flex-shrink:0;padding:20px 24px;border-right:1px solid #E4E5E9;box-sizing:border-box;}
+  .ap-side .lead{font-size:14px;line-height:22px;font-weight:600;color:#2E3238;margin:0 0 16px;}
+  .ap-steps{display:flex;flex-direction:column;gap:6px;border:1px solid #E4E5E9;border-radius:8px;padding:6px 6px 12px;}
+  .ap-step{display:flex;align-items:center;gap:4px;height:48px;border-radius:4px;padding:12px;box-sizing:border-box;background:#fff;cursor:pointer;}
+  .ap-step:hover{background:#F6F7F8;}
+  .ap-step.on{background:#E6EFFF;}
+  .ap-step .no{margin-right:4px;font-size:13px;line-height:20px;font-weight:700;color:#2E3238;}
+  .ap-step .nm{font-size:16px;line-height:24px;font-weight:700;color:#2E3238;flex:1;}
+  .ap-step .cnt{display:flex;align-items:center;gap:0;height:24px;padding:0;border:none;border-radius:4px;background:none;font-size:16px;line-height:24px;font-weight:700;color:#2E3238;cursor:pointer;font-family:var(--font);}
+  /* 건수/명수 — 선택한 게 있으면 호버 시 밑줄(클릭: 선택한 목록 보기), 0이면 밑줄 없음 */
+  .ap-step .cnt:hover{text-decoration:underline;text-underline-offset:3px;}
+  .ap-step .chev{display:flex;margin-left:2px;}
+  .ap-steps .desc{margin:0 3px;padding-top:12px;border-top:1px solid #F1F2F4;font-size:14px;line-height:21px;color:#9197A1;}
+  .ap-excl-note{margin-top:28px;font-size:14px;line-height:22px;color:#9197A1;}
+  .ap-excl-note b{display:flex;align-items:center;gap:4px;font-weight:600;color:#767D8A;margin-bottom:4px;}
+  .ap-excl-note ul{margin:0;padding:0;list-style:none;}
+  .ap-excl-note li{position:relative;padding-left:12px;}
+  .ap-excl-note li::before{content:"";position:absolute;left:3px;top:9.5px;width:3px;height:3px;border-radius:50%;background:#C7CBD1;}
+  .ap-body{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px 0;box-sizing:border-box;}
+  .ap-filters{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;min-height:68px;padding:16px 30px 16px 20px;border-radius:4px;background:#F6F7F8;box-sizing:border-box;flex-shrink:0;}
+  .ap-fsel{display:flex;align-items:center;justify-content:space-between;gap:4px;width:79px;height:36px;padding:0 10px 0 12px;border:1px solid #E4E5E9;border-radius:4px;background:#fff;font-size:14px;color:#2E3238;font-family:var(--font);box-sizing:border-box;}
+  .ap-fgroup{display:flex;align-items:center;gap:4px;}
+  .ap-range{display:flex;align-items:center;width:219px;height:36px;border:1px solid #E4E5E9;border-radius:4px;background:#fff;box-sizing:border-box;}
+  .ap-range button{width:36px;height:100%;padding:0;border:none;background:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+  .ap-range span{flex:1;text-align:center;font-size:14px;font-weight:600;color:#2E3238;border-left:1px solid #E4E5E9;border-right:1px solid #E4E5E9;line-height:34px;}
+  .ap-chips{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+  .ap-chip{display:flex;align-items:center;gap:4px;height:32px;padding:6px 10px 6px 12px;border:none;border-radius:30px;background:none;font-size:14px;line-height:20px;font-weight:600;color:#2E3238;cursor:pointer;font-family:var(--font);white-space:nowrap;box-sizing:border-box;}
+  .ap-chip:hover{background:#EBEDEF;}
+  .ap-chip.on{background:#F5F9FF;color:#005FFF;}
+  .ap-chip .n{min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#CCDFFF;color:#005FFF;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;}
+  .ap-check{display:flex;align-items:center;gap:6px;font-size:16px;line-height:24px;color:#454B55;cursor:pointer;white-space:nowrap;}
+  .ap-check input{margin:0;width:16px;height:16px;accent-color:var(--blue);}
+  .ap-reset{display:flex;align-items:center;gap:4px;margin-left:auto;border:none;background:none;font-size:14px;font-weight:600;color:#2E3238;cursor:pointer;font-family:var(--font);}
+  .ap-search-row{display:flex;align-items:center;gap:8px;height:60px;padding:12px 0;box-sizing:border-box;flex-shrink:0;}
+  .ap-search{display:flex;height:36px;}
+  .ap-search select{width:66px;border:1px solid #E4E5E9;border-radius:4px 0 0 4px;padding:0 6px 0 10px;font-size:14px;color:#2E3238;font-family:var(--font);background:#fff;}
+  .ap-search input{width:180px;border:1px solid #E4E5E9;border-left:none;border-radius:0 4px 4px 0;padding:0 12px;font-size:14px;color:#2E3238;font-family:var(--font);outline:none;box-sizing:border-box;}
+  .ap-search input::placeholder{color:#767D8A;}
+  .ap-search input:focus{border-color:#005FFF;border-left:1px solid #005FFF;}
+  .ap-search-go{width:50px;height:36px;padding:0;border:1px solid #E4E5E9;border-radius:4px;background:#fff;font-size:15px;font-weight:600;color:#2E3238;cursor:pointer;font-family:var(--font);}
+  .ap-total{margin-left:8px;font-size:15px;line-height:22px;color:#2E3238;}
+  .ap-excl-msg{display:flex;align-items:center;gap:4px;margin-left:12px;font-size:15px;line-height:22px;font-weight:600;color:#2E3238;}
+  .ap-excl-msg:empty{display:none;}
+  .ap-table-wrap{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--line);}
+  .ap-table{border-collapse:collapse;min-width:100%;font-size:14px;color:var(--text);}
+  .ap-table th{position:sticky;top:0;z-index:2;height:40px;padding:0 10px;background:#F6F7F8;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-weight:600;color:var(--sub1);text-align:left;white-space:nowrap;}
+  .ap-table td{height:36px;padding:0 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis;}
+  .ap-table th:first-child,.ap-table td:first-child{width:40px;text-align:center;padding:0;}
+  .ap-table input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:var(--blue);cursor:pointer;}
+  .ap-table tr.sel td{background:#CCDFFF66;}
+  .ap-table tr.excl td{background:#FDF0F0;}
+  .ap-table tr.excl td:first-child{box-shadow:inset 2px 0 0 #E23A3A;}
+  .ap-table tr.excl input{cursor:not-allowed;}
+  .ap-link{color:var(--text);text-decoration:underline;}
+  .ap-badge{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:2px;font-size:12px;}
+  .ap-badge.plan{background:#FFF1E5;color:#F07800;}
+  .ap-badge.wait{background:#EBEDEF;color:var(--sub1);}
+  .ap-badge.bad{background:#FDE7E7;color:#E23A3A;margin-left:6px;}
+  .ap-warn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;margin-left:6px;border:1.3px solid #E23A3A;border-radius:50%;color:#E23A3A;font-size:9px;font-weight:700;vertical-align:middle;cursor:help;}
+  .ar-btip{display:none;position:fixed;padding:12px 16px;border-radius:8px;background:#2E3238;color:#fff;font-size:13px;line-height:20px;z-index:80;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.2);letter-spacing:-0.3px;}
+  .ar-btip table{border-collapse:collapse;background:none;}
+  #arBtip thead,#arBtip tbody,#arBtip tr{background:none;border:none;position:static;}
+  #arBtip th,#arBtip td{position:static;height:auto;background:none;border:none;color:#fff;font-size:13px;line-height:20px;}
+  #arBtip th{padding:3px 8px 3px 0;text-align:left;font-weight:600;color:#9197A1;white-space:nowrap;}
+  .ar-btip td{padding:3px 0 3px 16px;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .ar-btip td.pl{padding-left:0;padding-right:8px;}
+  #arBtip td.h{padding-bottom:6px;font-size:12px;color:#9197A1;}
+  #arBtip td.h.ai,#arBtip td.ai{color:#7FB0FF;}
+  .ar-btip td.h svg{vertical-align:-1px;margin-right:3px;}
+  #arBtip td.ai{font-weight:600;}
+  .ar-btip .df{margin-left:6px;font-size:12px;font-weight:400;color:#C7CBD1;}
+  .ar-btip .mgr{margin-top:8px;padding-top:8px;border-top:1px solid #454B55;}
+  .ar-btip .mgr span{margin-right:8px;font-weight:600;color:#9197A1;}
+  .ap-tip{display:none;position:fixed;padding:8px 10px;border-radius:4px;background:#2E3238;color:#fff;font-size:12px;line-height:18px;white-space:pre-line;z-index:80;pointer-events:none;max-width:300px;}
+  .ap-red{color:#E23A3A;}
+  .ap-garage-btn{height:26px;margin-left:8px;padding:0 8px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;font-family:var(--font);}
+  .ap-garage-btn:hover{background:#F6F7F8;}
+  .ap-pager{display:flex;align-items:center;justify-content:center;gap:4px;height:56px;flex-shrink:0;}
+  .ap-pager button{min-width:30px;height:30px;border:none;border-radius:4px;background:none;font-size:14px;color:var(--sub1);cursor:pointer;font-family:var(--font);}
+  .ap-pager button.cur{background:#F1F2F4;color:var(--text);font-weight:600;}
+  .ap-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;height:96px;padding:20px 24px 24px;border-top:1px solid #E4E5E9;box-sizing:border-box;flex-shrink:0;}
+  .ap-foot .ap-btn{height:52px;padding:0 20px;font-size:18px;}
+  .ap-btn{height:48px;padding:0 20px;border:none;border-radius:4px;font-size:16px;font-weight:600;cursor:pointer;font-family:var(--font);}
+  .ap-btn.ghost{background:#fff;border:1px solid var(--line);color:var(--text);}
+  .ap-btn.primary{background:#005FFF;color:#fff;}
+  .ap-btn.primary:disabled{background:#CCDFFF;cursor:not-allowed;}
+  #apOverlay .ap-table-wrap{border-top:1px solid #E4E5E9;border-bottom:1px solid #E4E5E9;}
+  #apOverlay .ap-table-wrap::-webkit-scrollbar{width:6px;height:6px;}
+  #apOverlay .ap-table-wrap::-webkit-scrollbar-thumb{background:#767D8A;border-radius:3px;}
+  #apOverlay .ap-table-wrap::-webkit-scrollbar-track{background:transparent;}
+  #apOverlay .ap-table{font-size:15px;color:#2E3238;table-layout:fixed;width:max-content;min-width:100%;}
+  #apOverlay .ap-table th{height:40px;padding:8px;background:#F6F7F8;border-bottom:1px solid #E4E5E9;border-right:none;font-size:15px;line-height:22px;font-weight:600;color:#5C6370;box-sizing:border-box;}
+  #apOverlay .ap-table td{height:40px;padding:10px 8px;line-height:20px;border-bottom:1px solid #E4E5E9;border-right:none;max-width:none;box-sizing:border-box;}
+  #apOverlay .ap-table th:first-child,#apOverlay .ap-table td:first-child{width:46px;padding:0;}
+  #apOverlay .ap-table tr:last-child td{border-bottom:none;}
+  #apOverlay .ap-table tr.excl td{background:#FEF6F6;}
+  #apOverlay .ap-table tr.excl td:first-child{box-shadow:inset 2px 0 0 #DD2222;}
+  #apOverlay .ap-table tr.excl td{color:#2E3238;}
+  #apOverlay .ap-table td.off{color:#C7CBD1;}
+  #apOverlay .ap-th{display:flex;align-items:center;gap:2px;}
+  #apOverlay .ap-sort{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;margin:-2px 0;border-radius:4px;}
+  #apOverlay .ap-sort:hover{background:#EBEDEF;}
+  #apOverlay .ap-status{display:inline-flex;align-items:center;justify-content:center;width:57px;height:26px;margin:-3px 0;border-radius:4px;font-size:13px;font-weight:600;}
+  #apOverlay .ap-status.plan{background:#FCF2E9;color:#DD8022;}
+  #apOverlay .ap-status.wait{background:#EBEDEF;color:#454B55;}
+  #apOverlay .ap-badge{height:20px;padding:0 6px;border-radius:2px;font-size:12px;font-weight:600;background:#EBEDEF;color:#454B55;}
+  #apOverlay .ap-badge.bad{background:#FDE7E7;color:#DD2222;}
+  #apOverlay .ap-red{color:#DD2222;}
+  #apOverlay .ap-warn{border-color:#DD2222;color:#DD2222;}
+  #apOverlay .ap-pager{gap:8px;height:64px;border-top:1px solid #E4E5E9;}
+  #apOverlay .ap-pager button{width:32px;min-width:32px;height:32px;padding:0;font-size:15px;color:#454B55;display:inline-flex;align-items:center;justify-content:center;}
+  #apOverlay .ap-pager button.cur{background:#F6F7F8;color:#2E3238;font-weight:600;}
+  #apOverlay .ap-pager button:disabled{cursor:default;}
+  .ap-sub{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(20,22,28,.35);z-index:70;}
+  .ap-sub.open{display:flex;}
+  .ap-sub-box{width:420px;max-height:70vh;display:flex;flex-direction:column;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;}
+  .ap-sub-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 20px 12px;font-size:18px;font-weight:700;line-height:26px;color:var(--text);}
+  .ap-sub-body{flex:1;min-height:0;overflow:auto;padding:0 20px;font-size:14px;color:var(--text);}
+  .ap-sub-body .row{display:flex;justify-content:space-between;gap:12px;height:36px;align-items:center;border-bottom:1px solid var(--line);}
+  .ap-sub-body .row span:last-child{color:var(--sub2);}
+  .ap-sub-foot{display:flex;justify-content:flex-end;gap:8px;padding:16px 20px;}
+  .ap-sub-foot .ap-btn{height:40px;font-size:15px;}
+  .ap-btn.text{background:none;color:#2E3238;}
+  .ap-out-box{width:416px;}
+  .ap-out-box .ap-sub-head{padding:24px 24px 16px;}
+  .ap-out-box .ap-sub-foot{padding:16px 24px 24px;}
+  .ap-pick{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(20,22,28,.35);z-index:3;}
+  .ap-pick.open{display:flex;}
+  .ap-pick .ap-head{border-bottom:none;}
+  .ap-pick-tabs{display:flex;gap:4px;padding:0 24px;border-bottom:1px solid #E4E5E9;flex-shrink:0;}
+  .ap-pick-tabs button{height:48px;padding:0 12px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;font-size:16px;line-height:24px;color:#767D8A;cursor:pointer;font-family:var(--font);}
+  .ap-pick-tabs button.on{border-bottom-color:#2E3238;color:#2E3238;font-weight:600;}
+  .ap-pick-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 24px 0;}
+  .ap-pick-bar{display:flex;align-items:center;gap:12px;height:40px;margin-bottom:12px;flex-shrink:0;}
+  .ap-pick-bar .ap-total{margin-left:0;}
+  .ap-pick-out{height:36px;padding:0 12px;border:1px solid #E4E5E9;border-radius:4px;background:#fff;font-size:14px;font-weight:600;color:#2E3238;cursor:pointer;font-family:var(--font);}
+  .ap-pick-out:hover{background:#F6F7F8;}
+  .ap-pick-empty{margin:0;padding:60px 0;text-align:center;font-size:15px;color:#9197A1;}
+  .ap-pick-empty[hidden]{display:none;}
+  .ap-field-label{font-size:13px;font-weight:600;color:var(--text);margin:4px 0 6px;}
+  .ap-addr{display:flex;align-items:center;gap:6px;height:40px;padding:0 10px;border:1px solid var(--line);border-radius:4px;background:#F6F7F8;}
+  .ap-addr:focus-within{border-color:var(--blue);background:#fff;}
+  .ap-addr input{flex:1;border:none;background:none;font-size:14px;font-family:var(--font);outline:none;}
+  .ap-sug{margin-top:4px;border:1px solid var(--line);border-radius:4px;max-height:200px;overflow:auto;display:none;}
+  .ap-sug.open{display:block;}
+  .ap-sug button{display:block;width:100%;padding:8px 10px;border:none;background:none;text-align:left;cursor:pointer;font-family:var(--font);}
+  .ap-sug button:hover{background:#F5F9FF;}
+  .ap-sug .t{font-size:14px;color:var(--text);}
+  .ap-sug .t mark{background:none;color:var(--blue);}
+  .ap-sug .a{font-size:12px;color:var(--sub2);}
+  .ap-sug .hub{display:inline-flex;height:16px;padding:0 4px;margin-left:4px;border-radius:2px;background:#EBEDEF;font-size:10px;color:var(--sub1);vertical-align:middle;}
+</style>
+
+<div class="ap-overlay" id="apOverlay">
+  <div class="ap-sel-toast" id="apSelToast" role="status"><span id="apSelToastMsg"></span><button id="apSelToastClose" aria-label="닫기"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4.5 4.5L15.5 15.5M15.5 4.5L4.5 15.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>
+  <div class="ap-modal" role="dialog" aria-label="AI 배차계획">
+    <div class="ap-head">
+      <h3>AI 배차계획</h3>
+      <div class="ap-date">
+        <button class="ap-ic" id="apPrev" aria-label="배차일자 하루 전"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 5l-5 5 5 5" stroke="#9197A1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <b id="apDate">10.11 (내일)</b>
+        <button class="ap-ic" id="apNext" aria-label="배차일자 하루 뒤"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M8 5l5 5-5 5" stroke="#9197A1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <button class="ap-ic ap-close" id="apClose" aria-label="닫기"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#9197A1" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="ap-main">
+      <div class="ap-side">
+        <p class="lead">배차할 오더와 기사를 선택해 주세요.</p>
+        <div class="ap-steps">
+          <div class="ap-step on" data-step="1"><span class="no">step1.</span><span class="nm">오더 선택</span><button class="cnt" data-all="orders"><span id="apOrderCnt">0</span>건</button><span class="chev"><svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M8 5l5 5-5 5" stroke="#9197A1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+          <div class="ap-step" data-step="2"><span class="no">step2.</span><span class="nm">기사 선택</span><button class="cnt" data-all="drivers"><span id="apDriverCnt">0</span>명</button><span class="chev"><svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M8 5l5 5-5 5" stroke="#9197A1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+          <p class="desc">AI 배차계획은 선택한 모든 오더를 선택한 모든 기사님에게 최대한 많이 배차하는 방향으로 진행됩니다.</p>
+        </div>
+        <div class="ap-excl-note"><b><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="#767D8A" stroke-width="1.3"/><path d="M8 7.2v3.6" stroke="#767D8A" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="5.1" r=".8" fill="#767D8A"/></svg>AI 배차계획 제외 대상</b><ul><li>요청 차량이 퀵(오토바이, 자동차)인 오더</li><li>차고지 정보가 등록되지 않은 기사</li></ul></div>
+      </div>
+      <div class="ap-body">
+        <div class="ap-filters" id="apFilters"></div>
+        <div class="ap-search-row">
+          <div class="ap-search"><select id="apScope"></select><input id="apKeyword" placeholder="검색어"></div>
+          <button class="ap-search-go" id="apSearchGo">검색</button>
+          <span class="ap-total" id="apTotal"></span>
+          <span class="ap-excl-msg" id="apExclMsg"></span>
+        </div>
+        <div class="ap-table-wrap"><table class="ap-table" id="apTable"></table></div>
+        <div class="ap-pager" id="apPager"></div>
+      </div>
+    </div>
+    <div class="ap-foot" id="apFoot"></div>
+  </div>
+  <div class="ap-pick" id="apPick">
+    <div class="ap-modal" role="dialog" aria-label="선택한 오더/기사 모아보기">
+      <div class="ap-head">
+        <h3>선택한 오더/기사 모아보기</h3>
+        <button class="ap-ic ap-close" id="apPickClose" aria-label="닫기"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#9197A1" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </div>
+      <div class="ap-pick-tabs"><button data-kind="1">선택한 오더 <span id="apPickOCnt">0</span></button><button data-kind="2">선택한 기사 <span id="apPickDCnt">0</span></button></div>
+      <div class="ap-pick-body">
+        <div class="ap-pick-bar"><span class="ap-total" id="apPickTotal"></span><button class="ap-pick-out" id="apPickOut">제외하기</button></div>
+        <div class="ap-table-wrap"><table class="ap-table" id="apPickTable"></table><p class="ap-pick-empty" id="apPickEmpty" hidden></p></div>
+        <div class="ap-pager" id="apPickPager"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 선택한 오더/기사 제외 확인 -->
+<div class="ap-sub" id="apOutSub"><div class="ap-sub-box ap-out-box">
+  <div class="ap-sub-head"><span id="apOutTitle"></span><button class="ap-ic" data-close aria-label="닫기"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4.5 4.5L15.5 15.5M15.5 4.5L4.5 15.5" stroke="#9197A1" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>
+  <div class="ap-sub-foot"><button class="ap-btn text" data-close>취소</button><button class="ap-btn primary" id="apOutGo">제외하기</button></div>
+</div></div>
+
+<!-- 차고지 등록 -->
+<div class="ap-sub" id="apGarageSub"><div class="ap-sub-box">
+  <div class="ap-sub-head"><span id="apGarageTitle"></span><button class="ap-ic" data-close>✕</button></div>
+  <div class="ap-sub-body">
+    <div class="ap-field-label">차고지</div>
+    <div class="ap-addr"><span style="color:#9197A1">⌕</span><input id="apGarageInput" placeholder="기본주소"></div>
+    <div class="ap-sug" id="apGarageSug"></div>
+  </div>
+  <div class="ap-sub-foot"><button class="ap-btn ghost" data-close>취소</button><button class="ap-btn primary" id="apGarageSave" disabled>등록</button></div>
+</div></div>
+<div class="ap-tip" id="apTip"></div>
+<div class="ar-btip" id="arBtip" role="tooltip"></div>
+
+<script id="ap-step2-script">
+(function(){
+  // ── 목업 데이터 ──
+  const SHIPPERS = ["쿠팡 CLS","세라젬","대상청정원","한샘"];
+  const PAGE = 20;
+  const orders = Array.from({length:64}, function(_, i){
+    const excl = i === 1 ? "요청 차량이 퀵(오토바이)인 오더예요." : i === 2 ? "상차지 주소가 부정확해 위경도를 찾을 수 없어요.\n오더에서 주소를 수정해 주세요." : i === 3 ? "요청 차량이 퀵(자동차)인 오더예요." : "";
+    return {
+      id: "KMO" + String(1234 + i), shipperNo: i % 4 === 1 || i % 4 === 2 ? "" : "CC120C" + String(8 + i).padStart(2,"0"),
+      status: i < 6 ? "배차계획" : "배차대기", shipper: SHIPPERS[Math.floor(i / 8) % SHIPPERS.length],
+      group: "이천센터", partner: "케이드라이브", loadDate: "26.10.11", loadTime: String(6 + (i % 10)).padStart(2,"0") + ":10",
+      loadName: "해동물류 이천센터", loadAddr: i === 2 ? "이천센터26" : "경기 이천시 백사면 현방리 260-81 이천센터",
+      unloadDate: "26.10.11", unloadName: ["광주2[SH]","경산2HUB","목천1HUB","전주1[SH]"][i % 4],
+      ton: ["5톤","11톤","2.5톤","5톤"][i % 4], car: i === 1 || i === 3 ? "퀵" : ["윙바디","카고","탑차"][i % 3],
+      excl: excl, badAddr: i === 2
+    };
+  });
+  const drivers = Array.from({length:42}, function(_, i){
+    const noGarage = i === 2 || i === 3 || i === 4;
+    return {
+      id: "d" + i, name: ["김카모","이서준","박지훈","최현우","정민재","강도현","김선우"][i % 7], plate: "서울" + (11 + i) + "가" + String(1111 + i * 7),
+      ton: ["5톤","11톤","5톤","2.5톤"][i % 4], car: ["카고","윙바디","탑차"][i % 3], feature: "리프트, 무진동, 호루",
+      garage: noGarage ? "" : "경기 이천시 백사면 현방리 260-81", off: i === 0 ? "" : "8/12, 8/13",
+      group: i === 0 ? "" : "쿠팡, 올리브영", allow: i === 0 ? "" : "쿠팡로지스틱스서비스", memo: i === 1 ? "" : "오전 상차 선호"
+    };
+  });
+  const sel = { orders: new Set(), drivers: new Set() };
+  let step = 1, page = 1, exclOnly = false, query = "", dayOffset = 1;
+
+  const $ = function(id){ return document.getElementById(id); };
+  const overlay = $("apOverlay"), table = $("apTable"), tip = $("apTip");
+  function esc(v){ return String(v == null ? "" : v).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  const isExcluded = function(row){ return step === 1 ? !!row.excl : !row.garage; };
+
+  // ── 필터 바 ──
+  const CHEV = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#767D8A" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const CHEV_ON = CHEV.replace("#767D8A", "#005FFF");
+  const ARR_S_L = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 4l-4 4 4 4" stroke="#767D8A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const ARR_S_R = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="#767D8A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const SORT = '<span class="ap-sort"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M3 7l3 3 3-3" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+  const INFO_S = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="#9197A1" stroke-width="1.3"/><path d="M8 7.2v3.6" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="5.1" r=".8" fill="#9197A1"/></svg>';
+  const WARN_R = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="#DD2222"/><path d="M10 6v4.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="1" fill="#fff"/></svg>';
+  // 헤더 셀: [라벨, 너비, 옵션("sort" | "info")]
+  function th(cols){ return cols.map(function(c){ return '<th style="width:' + c[1] + 'px"><span class="ap-th">' + c[0] + (c[2] === "info" ? INFO_S : "") + (c[2] === "sort" ? SORT : "") + '</span></th>'; }).join(""); }
+  function renderFilters(){
+    if(step === 1){
+      $("apFilters").innerHTML =
+        '<span class="ap-fgroup"><span class="ap-fsel">상차일 ' + CHEV + '</span>' +
+        '<span class="ap-range"><button aria-label="이전 기간">' + ARR_S_L + '</button><span>26.10.09 ~ 26.10.13</span><button aria-label="다음 기간">' + ARR_S_R + '</button></span></span>' +
+        '<span class="ap-chips">' + ["화주","요청협력사","장소타입","요청톤수","요청차종","오더상태"].map(function(t){ return '<button class="ap-chip">' + t + CHEV + '</button>'; }).join("") +
+        '<button class="ap-chip on">배차담당자명 <span class="n">1</span>' + CHEV_ON + '</button>' +
+        '<button class="ap-chip">배차담당자 업무그룹' + CHEV + '</button></span>' +
+        '<label class="ap-check"><input type="checkbox" id="apExclOnly"' + (exclOnly ? " checked" : "") + '>제외 오더만 보기</label>' +
+        '<button class="ap-reset" id="apReset">⟳ 필터 초기화</button>';
+      $("apExclOnly").addEventListener("change", function(e){ exclOnly = e.target.checked; page = 1; renderTable(); });
+      $("apReset").addEventListener("click", function(){ exclOnly = false; query = ""; $("apKeyword").value = ""; page = 1; renderFilters(); renderTable(); });
+      $("apScope").innerHTML = '<option>전체</option><option>오더ID</option><option>화주</option><option>상차지명</option>';
+    } else {
+      $("apFilters").innerHTML = '<span class="ap-chips">' + ["기사그룹","차종","톤수"].map(function(t){ return '<button class="ap-chip">' + t + CHEV + '</button>'; }).join("") + '</span>';
+      $("apScope").innerHTML = '<option>전체</option><option>기사명</option><option>차량번호</option><option>기사메모</option>';
+    }
+  }
+
+  // ── 목록 ──
+  function rows(){
+    const list = step === 1 ? orders : drivers;
+    return list.filter(function(r){
+      if(step === 1 && exclOnly && !r.excl) return false;
+      if(!query) return true;
+      return (step === 1 ? [r.id, r.shipper, r.loadName] : [r.name, r.plate, r.memo]).join(" ").indexOf(query) !== -1;
+    });
+  }
+  function warn(text){ return '<span class="ap-warn" data-tip="' + esc(text) + '">!</span>'; }
+  // kind: 1 오더, 2 기사 — 선택 목록과 모아보기 목록이 같이 씀
+  function tableHtml(kind, view, set){
+    const selectable = view.filter(function(r){ return kind === 1 ? !r.excl : !!r.garage; });
+    const allOn = selectable.length > 0 && selectable.every(function(r){ return set.has(r.id); });
+    let html;
+    if(kind === 1){
+      html = '<thead><tr><th><input type="checkbox" data-all' + (allOn ? " checked" : "") + '></th>' + th([["오더ID",114],["화주 주문번호",128,"info"],["오더 상태",100,"sort"],["화주",140,"sort"],["화주 업무그룹",140,"sort"],["요청협력사",136],["상차일자(요청)",120,"sort"],["상차시간(요청)",120,"sort"],["상차지명",144],["상차지 주소",280],["하차일자(요청)",120,"sort"],["하차지명",144],["요청톤수",80],["요청차종",100]]) + '</tr></thead><tbody>' +
+        view.map(function(o){
+          const ex = !!o.excl, on = set.has(o.id);
+          return '<tr class="' + (ex ? "excl" : on ? "sel" : "") + '" data-id="' + o.id + '">' +
+            '<td><input type="checkbox"' + (on ? " checked" : "") + (ex ? " disabled" : "") + '></td>' +
+            '<td><span class="ap-link">' + o.id + '</span>' + (ex ? warn(o.excl) : "") + '</td>' +
+            '<td' + (o.shipperNo ? "" : ' class="off"') + '>' + (o.shipperNo || "-") + '</td>' +
+            '<td><span class="ap-status ' + (o.status === "배차계획" ? "plan" : "wait") + '">' + o.status + '</span></td>' +
+            '<td>' + esc(o.shipper) + '</td><td>' + o.group + '</td><td>' + o.partner + '</td><td>' + o.loadDate + '</td><td>' + o.loadTime + '</td>' +
+            '<td>' + o.loadName + '</td>' +
+            '<td>' + (o.badAddr ? '<span class="ap-red">' + esc(o.loadAddr) + '</span><span class="ap-badge bad">부정확한 주소</span>' : esc(o.loadAddr)) + '</td>' +
+            '<td>' + o.unloadDate + '</td><td>' + o.unloadName + '</td><td>' + o.ton + '</td><td' + (o.car === "퀵" ? ' class="ap-red"' : "") + '>' + o.car + '</td></tr>';
+        }).join("") + '</tbody>';
+    } else {
+      html = '<thead><tr><th><input type="checkbox" data-all' + (allOn ? " checked" : "") + '></th>' + th([["기사명",114],["차량번호",128],["차량 톤수",100,"sort"],["차량 종류",120,"sort"],["차량특성",144],["차고지",280,"info"],["휴무일",120],["기사그룹",144],["차량 지정 허용 화주",159],["기사메모",280]]) + '</tr></thead><tbody>' +
+        view.map(function(d){
+          const ex = !d.garage, on = set.has(d.id);
+          return '<tr class="' + (ex ? "excl" : on ? "sel" : "") + '" data-id="' + d.id + '">' +
+            '<td><input type="checkbox"' + (on ? " checked" : "") + (ex ? " disabled" : "") + '></td>' +
+            '<td><span class="ap-link">' + esc(d.name) + '</span>' + (ex ? warn("차고지 정보가 등록되지 않은 기사예요.\n차고지를 등록하면 배차계획에 포함할 수 있어요.") : "") + '</td>' +
+            '<td>' + d.plate + '</td><td>' + d.ton + '</td><td>' + d.car + '</td><td>' + d.feature + '</td>' +
+            '<td>' + (ex ? '- <button class="ap-garage-btn" data-garage="' + d.id + '">차고지 등록</button>' : esc(d.garage)) + '</td>' +
+            '<td>' + (d.off || "-") + '</td><td>' + (d.group || "-") + '</td><td>' + (d.allow || "-") + '</td><td>' + (d.memo || "-") + '</td></tr>';
+        }).join("") + '</tbody>';
+    }
+    return html;
+  }
+  function pagerHtml(cur, pages){
+    const pgArr = function(dir, off){ return '<button data-pg="' + dir + '" aria-label="' + (dir === "prev" ? "이전" : "다음") + ' 페이지"' + (off ? " disabled" : "") + '>' + (dir === "prev" ? ARR_S_L : ARR_S_R).replace("#767D8A", off ? "#C7CBD1" : "#454B55") + '</button>'; };
+    return pgArr("prev", cur === 1) + Array.from({length:pages}, function(_, i){ return '<button data-pg="' + (i + 1) + '"' + (i + 1 === cur ? ' class="cur"' : "") + '>' + (i + 1) + '</button>'; }).join("") + pgArr("next", cur === pages);
+  }
+  function renderTable(){
+    const all = rows(), set = step === 1 ? sel.orders : sel.drivers;
+    const pages = Math.max(1, Math.ceil(all.length / PAGE));
+    page = Math.min(page, pages);
+    table.innerHTML = tableHtml(step, all.slice((page - 1) * PAGE, page * PAGE), set);
+    const unit = step === 1 ? "건" : "명", total = (step === 1 ? orders : drivers).length;
+    $("apTotal").textContent = set.size ? "총 " + total + unit + " 중 " + set.size + unit + " 선택" : "총 " + total + unit;
+    const exclCount = (step === 1 ? orders : drivers).filter(isExcluded).length;
+    $("apExclMsg").innerHTML = exclCount ? WARN_R + (step === 1 ? "AI 배차계획에서 제외되는 오더가 " + exclCount + "건 있어요" : "차고지 정보가 없어 제외되는 기사가 " + exclCount + "명 있어요") : "";
+    $("apPager").innerHTML = pagerHtml(page, pages);
+    renderSide();
+  }
+  // 체크박스를 처음 켰을 때만 토스트 — 단계(오더/기사)마다 한 번, 모달을 새로 열면 다시 한 번
+  let selToastTimer = 0, selToastShown = {1:false, 2:false};
+  function hideSelToast(){ clearTimeout(selToastTimer); $("apSelToast").classList.remove("show"); }
+  function flashToast(msg, err){
+    $("apSelToastMsg").textContent = msg;
+    $("apSelToast").classList.toggle("err", !!err);
+    $("apSelToast").classList.add("show");
+    clearTimeout(selToastTimer); selToastTimer = setTimeout(hideSelToast, 3000);
+  }
+  function showSelToast(n, added){
+    if(!n || !added || selToastShown[step]) return;
+    selToastShown[step] = true;
+    flashToast("선택한 " + (step === 1 ? "오더" : "기사") + "가 AI 배차계획 대상에 포함되었습니다.");
+  }
+  $("apSelToastClose").addEventListener("click", hideSelToast);
+  table.addEventListener("click", function(e){
+    const set = step === 1 ? sel.orders : sel.drivers;
+    if(e.target.matches("[data-garage]")){ openGarage(e.target.dataset.garage); return; }
+    if(e.target.matches("[data-all]")){
+      const on = e.target.checked;
+      let changed = 0;
+      table.querySelectorAll("tbody tr:not(.excl)").forEach(function(tr){
+        if(set.has(tr.dataset.id) !== on) changed++;
+        on ? set.add(tr.dataset.id) : set.delete(tr.dataset.id);
+      });
+      renderTable(); showSelToast(changed, on); return;
+    }
+    const tr = e.target.closest("tbody tr");
+    if(!tr || tr.classList.contains("excl")) return;
+    const added = !set.has(tr.dataset.id);
+    added ? set.add(tr.dataset.id) : set.delete(tr.dataset.id);
+    renderTable(); showSelToast(1, added);
+  });
+  $("apPager").addEventListener("click", function(e){
+    const b = e.target.closest("[data-pg]"); if(!b || b.disabled) return;
+    const v = b.dataset.pg;
+    const pages = Math.max(1, Math.ceil(rows().length / PAGE));
+    page = v === "prev" ? Math.max(1, page - 1) : v === "next" ? Math.min(pages, page + 1) : Number(v);
+    renderTable();
+  });
+  function runSearch(){ query = $("apKeyword").value.trim(); page = 1; renderTable(); }
+  $("apSearchGo").addEventListener("click", runSearch);
+  $("apKeyword").addEventListener("keydown", function(e){ if(e.key === "Enter") runSearch(); });
+
+  // 제외 사유 툴팁
+  overlay.addEventListener("mouseover", function(e){
+    const w = e.target.closest("[data-tip]"); if(!w) return;
+    const r = w.getBoundingClientRect();
+    tip.textContent = w.dataset.tip; tip.style.display = "block";
+    tip.style.left = r.left + "px"; tip.style.top = (r.bottom + 6) + "px";
+  });
+  overlay.addEventListener("mouseout", function(e){ if(e.target.closest("[data-tip]")) tip.style.display = "none"; });
+
+  // ── 좌측 단계 + 하단 CTA ──
+  function renderSide(){
+    $("apOrderCnt").textContent = sel.orders.size;
+    $("apDriverCnt").textContent = sel.drivers.size;
+    document.querySelectorAll(".ap-step").forEach(function(s){ s.classList.toggle("on", Number(s.dataset.step) === step); });
+    const ready = sel.orders.size > 0 && sel.drivers.size > 0;
+    $("apFoot").innerHTML = step === 1
+      ? '<button class="ap-btn primary" id="apNextBtn"' + (sel.orders.size || sel.drivers.size ? "" : " disabled") + '>다음</button>'
+      : '<button class="ap-btn ghost" id="apBackBtn">이전</button><button class="ap-btn primary" id="apRunBtn"' + (ready ? "" : " disabled") + '>배차계획 실행하기</button>';
+  }
+  function goStep(n){ hideSelToast(); pick.classList.remove("open"); step = n; page = 1; query = ""; $("apKeyword").value = ""; renderFilters(); renderTable(); }
+  $("apFoot").addEventListener("click", function(e){
+    if(e.target.id === "apNextBtn" && !e.target.disabled) goStep(2);
+    else if(e.target.id === "apBackBtn") goStep(1);
+    else if(e.target.id === "apRunBtn" && !e.target.disabled){
+      overlay.classList.remove("open");
+      // 로딩 → AI 배차계획 예상 결과
+      const ld = document.getElementById("ldOverlay");
+      ld.classList.add("open");
+      setTimeout(function(){ if(!ld.classList.contains("open")) return; ld.classList.remove("open"); window.arOpen(sel.orders.size, sel.drivers.size); }, 1200);
+    }
+  });
+  document.querySelectorAll(".ap-step").forEach(function(s){
+    s.addEventListener("click", function(e){
+      const all = e.target.closest("[data-all]");
+      if(all){ openPick(all.dataset.all === "orders" ? 1 : 2); return; }
+      goStep(Number(s.dataset.step));
+    });
+  });
+
+  // ── 선택한 오더/기사 모아보기 — 담은 순서 최신순, 체크 후 제외하기 ──
+  let pickKind = 1, pickPage = 1;
+  const pickSel = new Set(), pick = $("apPick"), pickTable = $("apPickTable");
+  function pickRows(){
+    const set = pickKind === 1 ? sel.orders : sel.drivers, list = pickKind === 1 ? orders : drivers;
+    return Array.from(set).reverse().map(function(id){ return list.find(function(r){ return r.id === id; }); });
+  }
+  function renderPick(){
+    const all = pickRows(), unit = pickKind === 1 ? "건" : "명";
+    const pages = Math.max(1, Math.ceil(all.length / PAGE));
+    pickPage = Math.min(pickPage, pages);
+    $("apPickOCnt").textContent = sel.orders.size;
+    $("apPickDCnt").textContent = sel.drivers.size;
+    pick.querySelectorAll("[data-kind]").forEach(function(b){ b.classList.toggle("on", Number(b.dataset.kind) === pickKind); });
+    $("apPickTotal").textContent = "총 " + all.length + unit + (pickSel.size ? " 중 " + pickSel.size + unit + " 선택" : "");
+    pickTable.innerHTML = tableHtml(pickKind, all.slice((pickPage - 1) * PAGE, pickPage * PAGE), pickSel);
+    $("apPickEmpty").hidden = all.length > 0;
+    $("apPickEmpty").textContent = "선택한 " + (pickKind === 1 ? "오더가" : "기사가") + " 없습니다.";
+    $("apPickPager").innerHTML = pagerHtml(pickPage, pages);
+  }
+  function openPick(kind){ hideSelToast(); pickKind = kind; pickPage = 1; pickSel.clear(); renderPick(); pick.classList.add("open"); }
+  function closePick(){ hideSelToast(); pick.classList.remove("open"); renderTable(); }
+  $("apPickClose").addEventListener("click", closePick);
+  pick.querySelector(".ap-pick-tabs").addEventListener("click", function(e){
+    const b = e.target.closest("[data-kind]"); if(!b) return;
+    pickKind = Number(b.dataset.kind); pickPage = 1; pickSel.clear(); renderPick();
+  });
+  pickTable.addEventListener("click", function(e){
+    if(e.target.matches("[data-all]")){
+      const on = e.target.checked;
+      pickTable.querySelectorAll("tbody tr").forEach(function(tr){ on ? pickSel.add(tr.dataset.id) : pickSel.delete(tr.dataset.id); });
+      renderPick(); return;
+    }
+    const tr = e.target.closest("tbody tr"); if(!tr) return;
+    pickSel.has(tr.dataset.id) ? pickSel.delete(tr.dataset.id) : pickSel.add(tr.dataset.id);
+    renderPick();
+  });
+  $("apPickPager").addEventListener("click", function(e){
+    const b = e.target.closest("[data-pg]"); if(!b || b.disabled) return;
+    const v = b.dataset.pg, pages = Math.max(1, Math.ceil(pickRows().length / PAGE));
+    pickPage = v === "prev" ? Math.max(1, pickPage - 1) : v === "next" ? Math.min(pages, pickPage + 1) : Number(v);
+    renderPick();
+  });
+  $("apPickOut").addEventListener("click", function(){
+    const what = pickKind === 1 ? "오더" : "기사";
+    if(!pickSel.size){ flashToast("선택한 " + what + "가 없습니다.", true); return; }
+    hideSelToast();
+    $("apOutTitle").textContent = "선택한 " + what + "를 AI 배차계획 대상에서 제외하시겠어요?";
+    $("apOutSub").classList.add("open");
+  });
+  $("apOutGo").addEventListener("click", function(){
+    const set = pickKind === 1 ? sel.orders : sel.drivers, n = pickSel.size;
+    pickSel.forEach(function(id){ set.delete(id); });
+    pickSel.clear();
+    $("apOutSub").classList.remove("open");
+    renderPick(); renderTable();
+    flashToast("선택한 " + n + (pickKind === 1 ? "건 오더가" : "명 기사가") + " AI 배차계획 대상에서 제외되었습니다.");
+  });
+
+  // ── 차고지 등록 ──
+  const PLACES = [{n:"판교센터", hub:true, a:"제주특별자치도 제주시 애월읍 장전로 33"},{n:"판교센터", hub:true, shared:true, a:"경기 안양시 만안구 안양동 441-29"},{n:"판교타워", a:"경기 안양시 만안구 안양동 441-29"},{n:"판교아파트", a:"경기 안양시 만안구 안양동 441-29"},{n:"인천 물류센터", hub:true, a:"인천 서구 원창동 381"},{n:"이천센터", hub:true, a:"경기 이천시 백사면 현방리 260-81"}];
+  let garageTarget = null, garagePick = "";
+  function openGarage(id){
+    garageTarget = drivers.find(function(d){ return d.id === id; }); garagePick = "";
+    $("apGarageTitle").innerHTML = esc(garageTarget.name) + "님의 차고지 정보를<br>입력해 주세요";
+    $("apGarageInput").value = ""; $("apGarageSug").classList.remove("open"); $("apGarageSave").disabled = true;
+    $("apGarageSub").classList.add("open"); $("apGarageInput").focus();
+  }
+  $("apGarageInput").addEventListener("input", function(e){
+    const q = e.target.value.trim(); garagePick = ""; $("apGarageSave").disabled = true;
+    const hits = q ? PLACES.filter(function(p){ return (p.n + p.a).indexOf(q) !== -1; }) : [];
+    $("apGarageSug").innerHTML = hits.map(function(p, i){
+      return '<button data-i="' + PLACES.indexOf(p) + '"><div class="t">' + esc(p.n).replace(esc(q), "<mark>" + esc(q) + "</mark>") + (p.hub ? '<span class="hub">HUB</span>' : "") + (p.shared ? " (공유한 거래처)" : "") + '</div><div class="a">' + esc(p.a) + '</div></button>';
+    }).join("");
+    $("apGarageSug").classList.toggle("open", hits.length > 0);
+  });
+  $("apGarageSug").addEventListener("click", function(e){
+    const b = e.target.closest("button[data-i]"); if(!b) return;
+    const p = PLACES[Number(b.dataset.i)];
+    garagePick = p.a; $("apGarageInput").value = p.n; $("apGarageSug").classList.remove("open"); $("apGarageSave").disabled = false;
+  });
+  $("apGarageSave").addEventListener("click", function(){
+    if(!garageTarget || !garagePick) return;
+    garageTarget.garage = garagePick; $("apGarageSub").classList.remove("open"); renderTable();
+  });
+  document.querySelectorAll(".ap-sub").forEach(function(sub){
+    sub.addEventListener("click", function(e){ if(e.target === sub || e.target.closest("[data-close]")) sub.classList.remove("open"); });
+  });
+
+  // ── 배차일자 / 열기·닫기 ──
+  function renderDate(){
+    const d = new Date(2026, 9, 10 + dayOffset);
+    const label = dayOffset === 0 ? " (오늘)" : dayOffset === 1 ? " (내일)" : "";
+    $("apDate").textContent = String(d.getMonth() + 1).padStart(2,"0") + "." + String(d.getDate()).padStart(2,"0") + label;
+  }
+  $("apPrev").addEventListener("click", function(){ dayOffset--; renderDate(); });
+  $("apNext").addEventListener("click", function(){ dayOffset++; renderDate(); });
+  $("apClose").addEventListener("click", function(){ overlay.classList.remove("open"); });
+  window.apOpen = function(){ selToastShown = {1:false, 2:false}; goStep(1); renderDate(); overlay.classList.add("open"); };
+})();
+</script>
+<!-- ═══ AI 배차계획 예상 결과 (step3) + 최종 배차 적용(충돌 확인) + 그만하기 확인 ═══ -->
+<style id="ar-step3">
+  .ar-overlay{position:fixed;inset:0;background:rgba(20,22,28,.5);display:none;align-items:center;justify-content:center;z-index:56;font-family:var(--font);}
+  .ar-overlay.open{display:flex;}
+  .ar-modal{width:1720px;max-width:96vw;height:90vh;background:#fff;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden;}
+  .ar-head{display:flex;align-items:center;gap:16px;height:66px;padding:0 24px;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .ar-head h3{margin:0;font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.4px;}
+  .ar-day{font-size:16px;color:var(--sub1);}
+  .ar-day b{margin-left:6px;font-weight:600;color:var(--text);}
+  .ar-sum{display:flex;align-items:center;gap:40px;padding:16px 24px 0;flex-shrink:0;}
+  .ar-kpi{display:flex;align-items:baseline;gap:8px;}
+  .ar-kpi .k{font-size:15px;color:var(--sub1);}
+  .ar-kpi b{font-size:24px;line-height:32px;font-weight:700;color:var(--text);letter-spacing:-0.5px;}
+  .ar-kpi .n{font-size:14px;color:var(--sub2);}
+  .ar-kpi + .ar-kpi{padding-left:40px;border-left:1px solid var(--line);}
+  .ar-until{margin-left:auto;font-size:13px;color:var(--sub2);}
+  .ar-ic{width:32px;height:32px;border:none;border-radius:4px;background:none;color:var(--sub2);cursor:pointer;font-size:18px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font);}
+  .ar-ic:hover{background:#EEEFF1;}
+  .ar-min{width:18px;height:16px;border:1.5px solid currentColor;border-radius:3px;position:relative;}
+  .ar-min::after{content:"";position:absolute;left:3px;right:3px;bottom:3px;height:1.5px;background:currentColor;}
+  .ar-bar{display:flex;align-items:center;gap:8px;padding:14px 24px;flex-shrink:0;}
+  .ar-pill{height:40px;padding:0 16px;border:none;border-radius:6px;background:none;font-size:15px;color:var(--sub1);cursor:pointer;font-family:var(--font);}
+  .ar-pill.on{background:#F1F2F4;color:var(--text);font-weight:600;}
+  .ar-pill.miss{color:#E23A3A;}
+  .ar-pill.miss.on{background:#FDF0F0;}
+  .ar-seg{display:flex;margin-left:auto;}
+  .ar-seg button{height:36px;padding:0 12px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--sub2);cursor:pointer;font-family:var(--font);}
+  .ar-seg button+button{margin-left:-1px;}
+  .ar-seg button.on{border-color:var(--text);color:var(--text);font-weight:600;position:relative;z-index:1;}
+  .ar-seg button:disabled{color:#C7CBD1;cursor:not-allowed;}
+  .ar-body{flex:1;min-height:0;display:flex;border-top:1px solid var(--line);}
+  .ar-left{width:300px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--line);background:#F6F7F8;}
+  .ar-left-head{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);box-sizing:border-box;flex-shrink:0;}
+  .ar-date{display:flex;align-items:center;gap:4px;font-size:15px;font-weight:700;color:var(--text);}
+  .ar-date button{width:22px;height:22px;border:none;background:none;color:var(--sub2);cursor:pointer;font-size:14px;border-radius:4px;}
+  .ar-date button:disabled{color:#D5D8DD;cursor:default;}
+  .ar-expand{border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:var(--font);}
+  .ar-drivers{flex:1;overflow:hidden;}
+  .ar-drow{display:flex;flex-direction:column;justify-content:center;height:48px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);box-sizing:border-box;font-size:13px;color:var(--sub2);white-space:nowrap;overflow:hidden;}
+  .ar-drow b{color:var(--text);font-weight:700;margin-right:6px;}
+  .ar-drow .l2{display:none;font-size:12px;margin-top:2px;}
+  .ar-drivers.expanded .ar-drow{height:62px;}
+  .ar-drivers.expanded .ar-drow .l2{display:block;}
+  .ar-gantt{flex:1;min-width:0;overflow:auto;position:relative;}
+  .ar-ghead{position:sticky;top:0;z-index:4;height:56px;background:#fff;border-bottom:1px solid var(--line);display:flex;}
+  .ar-hcell{flex-shrink:0;position:relative;font-size:12px;color:var(--sub2);text-align:center;box-sizing:border-box;}
+  .ar-hcell .d{position:absolute;top:6px;left:4px;font-size:12px;color:var(--text);white-space:nowrap;}
+  .ar-hcell .h{position:absolute;bottom:8px;left:0;right:0;}
+  .ar-grow{position:relative;height:48px;border-bottom:1px solid var(--line);box-sizing:border-box;}
+  .ar-gantt.expanded .ar-grow{height:62px;}
+  .ar-blk{position:absolute;top:9px;height:28px;display:flex;align-items:center;gap:6px;padding:0 8px;border:1px solid #CDB8FF;border-radius:4px;background:#F7F3FF;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;box-sizing:border-box;cursor:default;}
+  .ar-blk:hover{border-color:var(--purple);background:#EFE7FF;}
+  .ar-blk .n{font-weight:700;}
+  .ar-gap{position:absolute;top:15px;width:16px;height:16px;border-radius:50%;background:#E3E5E9;cursor:help;}
+  .ar-gap:hover{background:#C7CBD1;}
+  .ar-day-line{position:absolute;top:0;bottom:0;width:1px;background:var(--line);}
+  .ar-now{position:absolute;top:0;bottom:0;width:1px;background:var(--blue);z-index:3;}
+  .ar-map{flex:1;min-width:0;display:none;background:#EEF0F2;}
+  .ar-map img{width:100%;height:100%;object-fit:cover;display:block;}
+  .ar-list{flex:1;min-width:0;display:none;flex-direction:column;padding:0 24px;}
+  .ar-body.v-map .ar-gantt{display:none;}
+  .ar-body.v-map .ar-map{display:block;}
+  .ar-body.v-list .ar-left,.ar-body.v-list .ar-gantt{display:none;}
+  .ar-body.v-list .ar-list{display:flex;}
+  .ar-list .ap-table-wrap{border-top:none;}
+  .ar-plan-n{color:#E23A3A;}
+  .ar-foot{display:flex;justify-content:flex-end;align-items:center;height:84px;padding:0 24px;border-top:1px solid var(--line);flex-shrink:0;}
+  .ar-confirm{width:420px;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25);padding:24px;box-sizing:border-box;position:relative;}
+  .ar-confirm .warn{width:32px;height:32px;border-radius:50%;background:#FDE7E7;color:#E23A3A;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+  .ar-confirm h4{margin:0 0 8px;font-size:19px;font-weight:700;color:var(--text);}
+  .ar-confirm p{margin:0;font-size:14px;line-height:21px;color:var(--sub1);}
+  .ar-confirm .btns{display:flex;justify-content:flex-end;gap:8px;margin-top:24px;}
+  .ar-confirm .x{position:absolute;top:18px;right:18px;}
+  .ap-btn.danger{background:#E23A3A;color:#fff;}
+  .ac-modal{width:1400px;max-width:94vw;height:80vh;background:#fff;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden;}
+  .ac-head{position:relative;padding:24px 24px 0;flex-shrink:0;}
+  .ac-head h3{margin:0;font-size:20px;font-weight:700;color:var(--text);}
+  .ac-head h3 em{font-style:normal;color:#E23A3A;}
+  .ac-head p{margin:8px 0 0;font-size:13px;color:var(--sub2);}
+  .ac-head .ar-ic{position:absolute;top:18px;right:18px;}
+  .ac-tabs{display:flex;gap:4px;margin:16px 24px 0;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .ac-tabs button{height:40px;padding:0 8px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;font-size:14px;color:var(--sub1);cursor:pointer;font-family:var(--font);}
+  .ac-tabs button.on{border-bottom-color:var(--text);color:var(--text);font-weight:600;}
+  .ac-wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 24px;}
+  .ac-reason{display:inline-flex;align-items:center;height:20px;padding:0 6px;margin-right:6px;border-radius:2px;background:#EBEDEF;font-size:11px;color:var(--sub1);}
+  .ap-table tr.ac-ex td{background:#FDF0F0;}
+  .ac-ex-t{color:#E23A3A;}
+</style>
+
+<div class="ar-overlay" id="arOverlay">
+  <div class="ar-modal" role="dialog" aria-label="AI 배차계획 예상 결과">
+    <div class="ar-head">
+      <h3>AI 배차계획 예상 결과</h3>
+      <span class="ar-day">배차일지<b id="arDay"></b></span>
+      <span class="ar-until" id="arUntil"></span>
+      <button class="ar-ic" id="arMin" title="최소화 — 배차일지에서 이어서 볼 수 있어요"><span class="ar-min"></span></button>
+      <button class="ar-ic" id="arClose" title="닫기">✕</button>
+    </div>
+    <div class="ar-sum">
+      <div class="ar-kpi"><span class="k">오더 배차율</span><b id="arOrderRate">-</b><span class="n" id="arOrderN"></span></div>
+      <div class="ar-kpi"><span class="k">기사 배차율</span><b id="arDriverRate">-</b><span class="n" id="arDriverN"></span></div>
+    </div>
+    <div class="ar-bar">
+      <button class="ar-pill on" data-pill="plan" id="arPillPlan"></button>
+      <button class="ar-pill miss" data-pill="miss" id="arPillMiss"></button>
+      <div class="ar-seg"><button class="on" data-view="schedule">스케줄 보기</button><button data-view="map">지도 보기</button><button data-view="list">목록 보기</button></div>
+    </div>
+    <div class="ar-body" id="arBody">
+      <div class="ar-left">
+        <div class="ar-left-head">
+          <span class="ar-date"><button disabled aria-label="이전 배차결과">‹</button><span id="arDate">10월 11일 (내일)</span><button disabled aria-label="다음 배차결과">›</button></span>
+          <button class="ar-expand" id="arExpand">목록 펼침</button>
+        </div>
+        <div class="ar-drivers" id="arDrivers"></div>
+      </div>
+      <div class="ar-gantt" id="arGantt"></div>
+      <div class="ar-map"><img id="arMapImg" alt="AI 배차계획 지도"></div>
+      <div class="ar-list">
+        <div class="ap-table-wrap"><table class="ap-table" id="arListTable"></table></div>
+        <div class="ap-pager" id="arListPager"></div>
+      </div>
+    </div>
+    <div class="ar-foot"><button class="ap-btn primary" id="arApply">배차일지에 적용하기</button></div>
+  </div>
+</div>
+
+<!-- 그만하기 확인 -->
+<div class="ap-sub" id="arStopSub" style="z-index:75"><div class="ar-confirm">
+  <button class="ar-ic x" data-close>✕</button>
+  <div class="warn">!</div>
+  <h4>AI 배차계획 진행을 그만하시겠어요?</h4>
+  <p>진행 중인 AI 배차계획 결과는 중단되고, 지금까지 생성된 결과가 모두 삭제돼요.</p>
+  <div class="btns"><button class="ap-btn ghost" data-close>이어 진행하기</button><button class="ap-btn danger" id="arStopYes">그만하기</button></div>
+</div></div>
+
+<!-- 최종 배차 적용 — 충돌이 있는 경우 -->
+<div class="ar-overlay" id="acOverlay" style="z-index:60">
+  <div class="ac-modal" role="dialog" aria-label="적용 전 확인">
+    <div class="ac-head">
+      <h3>기사 스케줄에 적용하기 전, 확인이 필요한 오더가 <em id="acCount">0</em>건 있어요.</h3>
+      <p>변경 사유를 확인한 후 배차계획 결과를 적용해 주세요.</p>
+      <button class="ar-ic" id="acClose">✕</button>
+    </div>
+    <div class="ac-tabs" id="acTabs"></div>
+    <div class="ac-wrap">
+      <div class="ap-table-wrap"><table class="ap-table" id="acTable"></table></div>
+      <div class="ap-pager"></div>
+    </div>
+    <div class="ar-foot" style="gap:8px"><button class="ap-btn ghost" id="acCancel">취소</button><button class="ap-btn danger" id="acApply">확인 후 적용</button></div>
+  </div>
+</div>
+
+<script id="ar-step3-script">
+(function(){
+  const $ = function(id){ return document.getElementById(id); };
+  const HOUR_W = 44, DAYS = 2;
+  const NAMES = ["이정호","김도윤","이서준","박지훈","최현우","정민재","강도현","김선우","이지호","박준서","최유찬","김서윤","한지율","윤하준","서지한","임도현"];
+  const HUBS = [["분당HUB","부산HUB"],["목천1HUB","광주2[SH]"],["경산2HUB","전주1[SH]"],["이천센터","분당HUB"]];
+  let state = null, pill = "plan", view = "schedule", listPage = 1;
+  const pad = function(n){ return String(n).padStart(2,"0"); };
+  function esc(v){ return String(v == null ? "" : v).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  // 선택한 오더/기사 수로 예상 결과 목업을 만든다 (미배차 ≈ 10%)
+  function build(orderCount, driverCount){
+    const nOrders = Math.max(orderCount, 1), nDrivers = Math.max(Math.min(driverCount || 1, NAMES.length), 1);
+    const miss = Math.max(orderCount > 0 ? Math.round(nOrders * 0.1) : 0, nOrders > 3 ? 1 : 0);
+    const planned = nOrders - miss;
+    const drivers = NAMES.slice(0, nDrivers).map(function(name, i){
+      return { name: name, plate: "서울82바" + (4922 + i * 7), ton: "5.5톤", car: "윙바디", garage: ["경기 이천","경기 용인","인천 서구"][i % 3], blocks: [] };
+    });
+    const rows = [];
+    for(let k = 0; k < planned; k++){
+      const d = drivers[k % nDrivers], seq = d.blocks.length + 1;
+      const start = 1 + (k % 3) + (seq - 1) * 8, dur = 5;
+      const hub = HUBS[(k + seq) % HUBS.length];
+      const dl = [0, 0, 20][k % 3], du = [-10, 0, 30][k % 3]; // AI 예상 - 오더 요청 (분)
+      d.blocks.push({ seq: seq, s: start, e: start + dur, from: hub[0], to: hub[1], ps: start + dl / 60, pe: start + dur + du / 60 });
+      rows.push({ planned: true, id: "KMO" + (1234 + k), driver: d });
+    }
+    for(let k = 0; k < miss; k++) rows.push({ planned: false, id: "KMO" + (1234 + planned + k), driver: null });
+    const used = drivers.filter(function(d){ return d.blocks.length; });
+    return { planned: planned, miss: miss, drivers: used, rows: rows,
+      nOrders: nOrders, nDrivers: nDrivers,
+      orderRate: Math.round(planned / nOrders * 100), driverRate: Math.round(used.length / nDrivers * 100) };
+  }
+
+  function hm(h){ const hh = Math.floor(h) % 24, mm = Math.round((h % 1) * 60); return pad(hh) + ":" + pad(mm); }
+  function renderSchedule(){
+    const width = HOUR_W * 24 * DAYS;
+    let head = '<div class="ar-ghead" style="width:' + width + 'px">';
+    for(let i = 0; i < 24 * DAYS; i++){
+      head += '<div class="ar-hcell" style="width:' + HOUR_W + 'px">' + (i % 24 === 0 ? '<span class="d">' + (i === 0 ? "10.11 토" : "10.12 일") + '</span>' : "") + '<span class="h">' + pad(i % 24) + '</span></div>';
+    }
+    head += '</div>';
+    const rows = state.drivers.map(function(d){
+      let html = '<div class="ar-grow" style="width:' + width + 'px">';
+      d.blocks.forEach(function(b, bi){
+        const left = b.s * HOUR_W, w = (b.e - b.s) * HOUR_W - 4;
+        html += '<div class="ar-blk" style="left:' + left + 'px;width:' + w + 'px" data-blk="' + state.drivers.indexOf(d) + ':' + bi + '"><span class="n">' + b.seq + '</span>' + esc(b.from) + ' ' + hm(b.s) + ' → ' + esc(b.to) + ' ' + hm(b.e) + '</div>';
+        const next = d.blocks[bi + 1];
+        if(next) html += '<span class="ar-gap" style="left:' + ((b.e * HOUR_W + next.s * HOUR_W) / 2 - 8) + 'px" data-tip="' + esc(b.to + "(하차) → " + next.from + "(상차)\n예상 거리/시간 : 약 24km/50분") + '"></span>';
+      });
+      return html + '</div>';
+    }).join("");
+    $("arGantt").innerHTML = head + '<div style="position:relative">' + rows +
+      '<div class="ar-day-line" style="left:' + (24 * HOUR_W) + 'px"></div><div class="ar-now" style="left:' + (8 * HOUR_W) + 'px"></div></div>';
+    $("arDrivers").innerHTML = state.drivers.map(function(d){
+      return '<div class="ar-drow"><div><b>' + esc(d.name) + '</b>' + esc(d.plate) + ' · ' + d.ton + ', ' + d.car + '</div><div class="l2">(' + esc(d.garage) + ') · 계획 ' + d.blocks.length + '건</div></div>';
+    }).join("");
+  }
+  // 세로 스크롤 동기화
+  $("arGantt").addEventListener("scroll", function(){ $("arDrivers").scrollTop = $("arGantt").scrollTop; });
+
+  function renderList(){
+    // 정렬: 배차 계획 안 됨 → 계획 됨, 그다음 기사 순
+    const list = state.rows.filter(function(r){ return pill === "plan" ? r.planned : !r.planned; });
+    const PAGE = 20, pages = Math.max(1, Math.ceil(list.length / PAGE));
+    listPage = Math.min(listPage, pages);
+    $("arListTable").innerHTML = '<thead><tr><th style="width:auto;padding:0 10px;text-align:left">배차 계획 여부</th><th>오더ID</th><th>화주</th><th>화주 업무그룹 ↓</th><th>기사명</th><th>기사 전화번호</th><th>기사 차량번호</th><th>상차지명</th><th>상차지 주소</th><th>하차지명</th><th>하차지 주소</th><th>배차금액</th></tr></thead><tbody>' +
+      list.slice((listPage - 1) * PAGE, listPage * PAGE).map(function(r, i){
+        const d = r.driver;
+        return '<tr><td style="padding:0 10px;text-align:left"' + (r.planned ? "" : ' class="ar-plan-n"') + '>' + (r.planned ? "계획 됨" : "계획 안 됨") + '</td><td><span class="ap-link">' + r.id + '</span></td><td>쿠팡 CLS</td><td>이천센터</td><td>' + (d ? esc(d.name) : "-") + '</td><td>' + (d ? "010-1234-" + (1234 + i) : "-") + '</td><td>' + (d ? d.plate : "-") + '</td><td>해동물류 이천센터</td><td>경기 이천시 백사면 현방리 260-81 이천센터</td><td>알파돔타워</td><td>경기 성남시 분당구 판교역로 152</td><td>80,000</td></tr>';
+      }).join("") + '</tbody>';
+    $("arListPager").innerHTML = Array.from({length:pages}, function(_, i){ return '<button data-pg="' + (i + 1) + '"' + (i + 1 === listPage ? ' class="cur"' : "") + '>' + (i + 1) + '</button>'; }).join("");
+  }
+  $("arListPager").addEventListener("click", function(e){ if(e.target.dataset.pg){ listPage = Number(e.target.dataset.pg); renderList(); } });
+
+  // 미배차는 목록 보기에서만 제공
+  function setPill(p){
+    pill = p; listPage = 1;
+    $("arPillPlan").classList.toggle("on", p === "plan"); $("arPillMiss").classList.toggle("on", p === "miss");
+    document.querySelectorAll(".ar-seg button").forEach(function(b){ b.disabled = p === "miss" && b.dataset.view !== "list"; });
+    setView(p === "miss" ? "list" : view);
+  }
+  function setView(v){
+    view = v;
+    document.querySelectorAll(".ar-seg button").forEach(function(b){ b.classList.toggle("on", b.dataset.view === v); });
+    $("arBody").className = "ar-body" + (v === "map" ? " v-map" : v === "list" ? " v-list" : "");
+    if(v === "map" && !$("arMapImg").src){ const src = document.getElementById("rsMapImg"); if(src) $("arMapImg").src = src.src; }
+    if(v === "list") renderList();
+  }
+  document.querySelectorAll(".ar-pill").forEach(function(b){ b.addEventListener("click", function(){ setPill(b.dataset.pill); }); });
+  document.querySelectorAll(".ar-seg button").forEach(function(b){ b.addEventListener("click", function(){ if(!b.disabled) setView(b.dataset.view); }); });
+  $("arExpand").addEventListener("click", function(){
+    const on = !$("arDrivers").classList.contains("expanded");
+    $("arDrivers").classList.toggle("expanded", on); $("arGantt").classList.toggle("expanded", on);
+    $("arExpand").textContent = on ? "목록 닫힘" : "목록 펼침";
+  });
+
+  // 블록 툴팁: 오더 요청 / AI 예상 시간을 열로 비교
+  const btip = $("arBtip");
+  function diffLabel(min){
+    if(!min) return "";
+    return '<span class="df">' + Math.abs(min) + "분 " + (min < 0 ? "빠름" : "늦음") + "</span>";
+  }
+  function blockTip(b){
+    const row = function(kind, place, req, ai){
+      const m = Math.round((ai - req) * 60);
+      return '<tr><th>' + kind + '</th><td class="pl">' + esc(place) + '</td><td>' + hm(req) + '</td><td class="ai">' + hm(ai) + diffLabel(m) + '</td></tr>';
+    };
+    return '<table><thead><tr><th></th><td></td><td class="h">오더 요청</td><td class="h ai">' + AI_ICON + 'AI 예상</td></tr></thead><tbody>' +
+      row("상차", b.from, b.s, b.ps) + row("하차", b.to, b.e, b.pe) + '</tbody></table>' +
+      '<div class="mgr"><span>배차담당자</span>김카모</div>';
+  }
+  const AI_ICON = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 .8l1.3 3.4 3.4 1.3-3.4 1.3L6 10.2 4.7 6.8 1.3 5.5l3.4-1.3L6 .8z" fill="#7FB0FF"/></svg>';
+  const tip = $("apTip"), overlay = $("arOverlay");
+  overlay.addEventListener("mouseover", function(e){
+    const bk = e.target.closest("[data-blk]");
+    if(bk){
+      const ix = bk.dataset.blk.split(":"), r = bk.getBoundingClientRect();
+      btip.innerHTML = blockTip(state.drivers[ix[0]].blocks[ix[1]]);
+      btip.style.display = "block";
+      const left = Math.min(r.left, window.innerWidth - btip.offsetWidth - 8);
+      const top = r.bottom + 6 + btip.offsetHeight > window.innerHeight ? r.top - btip.offsetHeight - 6 : r.bottom + 6;
+      btip.style.left = Math.max(8, left) + "px"; btip.style.top = top + "px";
+      return;
+    }
+    const w = e.target.closest("[data-tip]"); if(!w) return;
+    const r = w.getBoundingClientRect();
+    tip.textContent = w.dataset.tip; tip.style.display = "block"; tip.style.left = r.left + "px"; tip.style.top = (r.bottom + 6) + "px";
+  });
+  overlay.addEventListener("mouseout", function(e){
+    if(e.target.closest("[data-tip]")) tip.style.display = "none";
+    if(e.target.closest("[data-blk]")) btip.style.display = "none";
+  });
+
+  function post(type){ try{ parent.postMessage({source:"ai-dispatch-flow", type:type}, "*"); }catch(e){} }
+  window.arOpen = function(orderCount, driverCount){
+    state = build(orderCount, driverCount); pill = "plan"; view = "schedule";
+    $("arDay").textContent = document.getElementById("apDate").textContent;
+    $("arOrderRate").textContent = state.orderRate + "%"; $("arDriverRate").textContent = state.driverRate + "%";
+    $("arOrderN").textContent = state.planned + "/" + state.nOrders + "건";
+    $("arDriverN").textContent = state.drivers.length + "/" + state.nDrivers + "명";
+    $("arPillPlan").textContent = "계획된 배차 " + state.planned;
+    $("arPillMiss").textContent = "미배차 " + state.miss;
+    $("arPillMiss").style.display = state.miss ? "" : "none";
+    const until = new Date(Date.now() + 6 * 3600 * 1000); // 결과 유효시간 6시간
+    $("arUntil").textContent = "ⓘ AI 배차계획 결과는 " + pad(until.getMonth() + 1) + "." + pad(until.getDate()) + " " + pad(until.getHours()) + ":" + pad(until.getMinutes()) + "까지 확인 가능합니다.";
+    renderSchedule(); setPill("plan"); overlay.classList.add("open");
+  };
+  // 최소화한 결과 다시 열기 (배차일지 [배차계획 이어서하기])
+  window.arResume = function(){ if(state){ overlay.classList.add("open"); return true; } return false; };
+
+  // 최소화: 결과를 남겨 두고 닫음 → 배차일지 버튼이 '이어서하기'로 바뀜
+  $("arMin").addEventListener("click", function(){ overlay.classList.remove("open"); post("minimized"); });
+  // 닫기: 그만하기 확인
+  $("arClose").addEventListener("click", function(){ $("arStopSub").classList.add("open"); });
+  $("arStopYes").addEventListener("click", function(){
+    $("arStopSub").classList.remove("open"); overlay.classList.remove("open"); state = null; post("stopped");
+  });
+
+  // ── 최종 배차 적용: 유효성 검사 → 충돌이 있으면 확인 모달, 없으면 바로 적용 ──
+  const REASONS = [
+    {ex:true, tag:"오더 상태 변경", text:"오더 취소"},
+    {ex:true, tag:"배차방법 변경", text:"협력사 위탁"},
+    {ex:false, tag:"오더 정보 변경", text:"상차지 시간"},
+    {ex:false, tag:"기사정보 변경", text:"김카모 → 홍길동"}
+  ];
+  let conflicts = [], acTab = "all";
+  function buildConflicts(){
+    const n = Math.min(state.planned, 30);
+    return Array.from({length:n}, function(_, i){ const r = REASONS[i < 2 ? i : i === 2 ? 2 : 3]; return {ex:r.ex, tag:r.tag, text:r.text, id:"KMO" + (1234 + i)}; });
+  }
+  function renderConflicts(){
+    const ex = conflicts.filter(function(c){ return c.ex; }).length;
+    $("acCount").textContent = conflicts.length;
+    $("acTabs").innerHTML = [["all","전체"],["ex","적용 제외 " + ex],["chk","적용 확인 필요 " + (conflicts.length - ex)]].map(function(t){ return '<button data-tab="' + t[0] + '"' + (acTab === t[0] ? ' class="on"' : "") + '>' + t[1] + '</button>'; }).join("");
+    const list = conflicts.filter(function(c){ return acTab === "all" || (acTab === "ex") === c.ex; });
+    $("acTable").innerHTML = '<thead><tr><th style="width:auto;padding:0 10px;text-align:left">결과 적용 여부</th><th>변경 사유</th><th>오더ID</th><th>화주</th><th>화주 업무그룹</th><th>배차계획기준일</th><th>요청협력사</th><th>상차일자(요청)</th><th>상차시간(요청)</th><th>상차지명</th><th>상차지 주소</th></tr></thead><tbody>' +
+      list.map(function(c){
+        return '<tr class="' + (c.ex ? "ac-ex" : "") + '"><td style="padding:0 10px;text-align:left"' + (c.ex ? ' class="ac-ex-t"' : "") + '>' + (c.ex ? "적용 제외" : "적용 (확인 필요)") + '</td><td><span class="ac-reason">' + c.tag + '</span>' + esc(c.text) + '</td><td><span class="ap-link">' + c.id + '</span></td><td>쿠팡 CLS</td><td>이천센터</td><td>26.10.11</td><td>케이드라이브</td><td>26.10.11</td><td>08:10</td><td>해동물류 이천센터</td><td>경기 이천시 백사면 현방리 260-81</td></tr>';
+      }).join("") + '</tbody>';
+  }
+  $("acTabs").addEventListener("click", function(e){ if(e.target.dataset.tab){ acTab = e.target.dataset.tab; renderConflicts(); } });
+  function finishApply(){
+    $("acOverlay").classList.remove("open"); overlay.classList.remove("open"); state = null;
+    post("applied"); // 호스트가 배차일지에 반영하고 토스트를 띄움
+  }
+  $("arApply").addEventListener("click", function(){
+    conflicts = buildConflicts();
+    if(conflicts.length === 0){ finishApply(); return; }
+    acTab = "all"; renderConflicts(); $("acOverlay").classList.add("open");
+  });
+  $("acApply").addEventListener("click", finishApply); // 적용 제외 오더는 엔진 결과를 반영하지 않음
+  $("acCancel").addEventListener("click", function(){ $("acOverlay").classList.remove("open"); });
+  $("acClose").addEventListener("click", function(){ $("acOverlay").classList.remove("open"); });
+})();
+</script>
 <script id="ai-flow-bridge">
 /* lis-settlement 배차관리 화면과의 브리지
    - 로드/open 메시지 수신 시 '자동 배차 조건 설정' 모달 오픈
    - 모든 모달이 닫히면 부모에게 close 알림, 토스트만 남으면 클릭 통과 요청 */
 (function(){
-  var ids=["csOverlay","ldOverlay","rsOverlay","cfOverlay"];
+  var ids=["apOverlay","ldOverlay","arOverlay","acOverlay","rsOverlay","cfOverlay","csOverlay"];
   var els=ids.map(function(id){return document.getElementById(id);});
   var toast=document.getElementById("applyToast");
   function post(type){ try{ parent.postMessage({source:"ai-dispatch-flow",type:type},"*"); }catch(e){} }
-  function open(){ els[0].classList.add("open"); post("modal"); }
+  /* AI 배차계획 1. 오더 선택부터 (최소화한 결과가 있으면 그 결과를 다시 엶) */
+  function open(){ if(!window.arResume()) window.apOpen(); post("modal"); }
   var t=null, last="";
   function check(){
     clearTimeout(t);
@@ -2241,7 +3151,14 @@ document.getElementById("allOrders").addEventListener("click",function(e){
     if(e.data&&e.data.source==="ai-dispatch-host"&&e.data.type==="open") open();
   });
   document.addEventListener("keydown",function(e){
-    if(e.key==="Escape"){ els.forEach(function(el){ el&&el.classList.remove("open"); }); }
+    if(e.key==="Escape"){
+      var sub=[].slice.call(document.querySelectorAll(".ap-sub.open"));
+      if(sub.length){ sub.forEach(function(el){ el.classList.remove("open"); }); return; }
+      if(document.getElementById("apPick").classList.contains("open")){ document.getElementById("apPickClose").click(); return; }
+      if(document.getElementById("acOverlay").classList.contains("open")){ document.getElementById("acOverlay").classList.remove("open"); return; }
+      if(document.getElementById("arOverlay").classList.contains("open")){ document.getElementById("arStopSub").classList.add("open"); return; }
+      els.forEach(function(el){ el&&el.classList.remove("open"); });
+    }
   });
   last="modal"; open();
 })();

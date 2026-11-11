@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { todayYYMMDD, offsetDayYYMMDD } from '../../utils/date';
 import SharedLnb from "../shared/SharedLnb";
 import { OrderDetailModal } from "../312통합장부/index";
@@ -9,7 +9,14 @@ const TOTAL_ORDERS = 1000;
 const PAGE_SIZE = 200;
 const ff = "'Pretendard GOV:Regular'";
 
-function Header() {
+function Header({ orderFormOpen, onToggleOrderForm }: { orderFormOpen: boolean; onToggleOrderForm: () => void }) {
+  // 배차일지: 최초 진입은 열린 상태, 이후엔 마지막 열림/닫힘을 유지. 화면을 떠나면 패널을 숨김
+  const logBtnRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    let alive = true;
+    import('./aiDispatchFlow').then(m => { if (alive && m.isScheduleOpenByDefault()) m.openSchedule(logBtnRef.current); }).catch(err => console.error(err));
+    return () => { alive = false; import('./aiDispatchFlow').then(m => m.hideSchedule()).catch(() => {}); };
+  }, []);
   const pad = (n: number) => String(n).padStart(2, '0');
   const now = new Date(2026, 5, 29, 12, 30, 21);
   const timeStr = `06.29 ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} 기준`;
@@ -33,39 +40,28 @@ function Header() {
         </div>
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-        <button style={{ display:'flex', alignItems:'center', gap:4, padding:'0 16px', height:44, borderRadius:34, background:'linear-gradient(102.78deg, #337FFF 0%, #9966FF 100%)', border:'none', cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, color:'#FFFFFF', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>
-          AI 오더 입력
-          <svg width="25" height="10" viewBox="0 0 25 10" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0 }}>
-            <path d="M19.9515 9.29547C19.6543 9.29547 19.3818 9.2343 19.1342 9.11196C18.8865 8.98962 18.6718 8.81049 18.4902 8.57455C18.3168 8.32987 18.1806 8.03277 18.0815 7.68323C17.9907 7.32496 17.9453 6.91425 17.9453 6.45112C17.9453 5.61223 18.0609 4.87821 18.2921 4.24904C18.5232 3.61114 18.8452 3.11742 19.258 2.76788C19.679 2.40961 20.1579 2.23047 20.6945 2.23047C21.0495 2.23047 21.355 2.31348 21.6109 2.47951C21.8668 2.64554 22.0609 2.7941 22.193 2.92517C22.2425 2.76788 22.2879 2.64554 22.3292 2.55816C22.3705 2.47078 22.4406 2.40961 22.5397 2.37465C22.6388 2.33096 22.7915 2.30911 22.9979 2.30911H23.1465C23.3942 2.30911 23.5758 2.3397 23.6914 2.40087C23.8152 2.46204 23.8689 2.56253 23.8524 2.70234L23.4189 7.25068C23.4024 7.43419 23.4231 7.56526 23.4809 7.64391C23.5469 7.71382 23.646 7.74877 23.7781 7.74877C23.8689 7.74877 23.9432 7.73566 24.001 7.70945C24.067 7.68323 24.1124 7.67013 24.1372 7.67013C24.2033 7.67013 24.2363 7.72256 24.2363 7.82742C24.2363 7.86237 24.2321 7.94539 24.2239 8.07646C24.2156 8.1988 24.1909 8.37357 24.1496 8.60077C24.1083 8.84544 23.968 9.02021 23.7285 9.12507C23.4974 9.22993 23.2745 9.28236 23.0598 9.28236C22.68 9.28236 22.3705 9.20371 22.131 9.04642C21.8916 8.88913 21.7265 8.63572 21.6357 8.28618C21.4623 8.57455 21.227 8.81486 20.9298 9.0071C20.6409 9.19935 20.3147 9.29547 19.9515 9.29547ZM20.645 7.70945C20.7771 7.70945 20.9009 7.67449 21.0165 7.60459C21.1321 7.53468 21.2394 7.44293 21.3385 7.32933C21.4375 7.20699 21.5284 7.08028 21.6109 6.94921L21.7843 5.17968C21.8091 4.90879 21.8297 4.69907 21.8462 4.55051C21.871 4.40196 21.8999 4.25778 21.9329 4.11796C21.8256 4.02184 21.7059 3.93883 21.5738 3.86892C21.4417 3.79901 21.2889 3.76406 21.1156 3.76406C20.8431 3.76406 20.6078 3.86455 20.4097 4.06553C20.2115 4.25778 20.0588 4.54615 19.9515 4.93064C19.8524 5.30639 19.8029 5.77389 19.8029 6.33315C19.8029 6.63026 19.8318 6.88367 19.8896 7.09339C19.9556 7.29437 20.0506 7.4473 20.1744 7.55216C20.2982 7.65702 20.4551 7.70945 20.645 7.70945Z" fill="white"/>
-            <path d="M15.7052 9.28105C15.4576 9.28105 15.2264 9.2461 15.0117 9.17619C14.8053 9.10629 14.6278 8.99269 14.4792 8.8354C14.3389 8.6781 14.2357 8.47275 14.1696 8.21934C14.1036 7.95719 14.0871 7.6426 14.1201 7.27559L14.4545 3.85451H14.1696C13.9055 3.85451 13.7981 3.63605 13.8477 3.19913L13.8724 2.9763C13.922 2.53938 14.0706 2.32092 14.3183 2.32092H14.6278L14.8631 1.12812C14.8962 0.962094 14.9705 0.844126 15.086 0.774218C15.2099 0.695573 15.3791 0.65625 15.5938 0.65625H15.8662C16.1139 0.65625 16.2914 0.704311 16.3987 0.800433C16.5061 0.887818 16.5515 1.01016 16.535 1.16745L16.4359 2.32092H17.0055C17.1376 2.32092 17.2284 2.37335 17.278 2.47821C17.3275 2.58307 17.3399 2.7491 17.3151 2.9763L17.2904 3.19913C17.2408 3.63605 17.0963 3.85451 16.8569 3.85451H16.2873L15.9529 7.24938C15.9364 7.41541 15.9612 7.54211 16.0272 7.6295C16.1015 7.70814 16.2047 7.74747 16.3368 7.74747C16.4689 7.74747 16.568 7.73436 16.634 7.70814C16.7083 7.68193 16.7579 7.66882 16.7826 7.66882C16.8487 7.66882 16.8817 7.72125 16.8817 7.82611C16.8817 7.86106 16.8776 7.94408 16.8693 8.07516C16.8611 8.19749 16.8363 8.37226 16.795 8.59946C16.7537 8.84413 16.6134 9.0189 16.374 9.12376C16.1428 9.22862 15.9199 9.28105 15.7052 9.28105Z" fill="white"/>
-            <path d="M10.5462 2.21484C11.0498 2.21484 11.4584 2.28038 11.7722 2.41146C12.0941 2.54253 12.3377 2.70856 12.5028 2.90955C12.6762 3.11053 12.7918 3.32025 12.8495 3.53871C12.9156 3.74843 12.9486 3.94068 12.9486 4.11545C12.9486 4.55237 12.8661 4.92375 12.7009 5.22959C12.5441 5.53544 12.3336 5.78448 12.0694 5.97673C11.8134 6.16023 11.5286 6.29568 11.2149 6.38306C10.9012 6.47045 10.5916 6.51414 10.2861 6.51414C9.89808 6.51414 9.57197 6.49666 9.30779 6.46171C9.05186 6.42675 8.80418 6.38743 8.56476 6.34374L8.99819 5.68836V6.22577C8.99819 6.63648 9.05186 6.95543 9.15918 7.18263C9.27476 7.40109 9.4275 7.54964 9.61738 7.62828C9.81552 7.70693 10.0426 7.74625 10.2985 7.74625C10.6287 7.74625 10.9301 7.69819 11.2025 7.60207C11.475 7.50595 11.702 7.40982 11.8836 7.3137C12.0652 7.21758 12.1767 7.16952 12.218 7.16952C12.2427 7.16952 12.2634 7.17826 12.2799 7.19573C12.3047 7.21321 12.317 7.26564 12.317 7.35302C12.317 7.51032 12.3088 7.69382 12.2923 7.90354C12.2758 8.10453 12.251 8.25745 12.218 8.36231C12.1684 8.54582 12.0611 8.69874 11.896 8.82108C11.7309 8.93468 11.5369 9.02643 11.314 9.09634C11.0993 9.15751 10.8805 9.2012 10.6576 9.22741C10.4347 9.26237 10.2366 9.27984 10.0632 9.27984C9.55959 9.27984 9.12203 9.2143 8.75052 9.08323C8.38726 8.94341 8.08592 8.75117 7.8465 8.50649C7.60708 8.25308 7.42958 7.9516 7.314 7.60207C7.19842 7.24379 7.14062 6.84183 7.14062 6.39617C7.14062 5.38251 7.29749 4.56984 7.61121 3.95815C7.92493 3.34647 8.33772 2.90518 8.84959 2.63429C9.36971 2.35466 9.93523 2.21484 10.5462 2.21484ZM10.4223 3.74843C10.0426 3.74843 9.74535 3.89262 9.5307 4.18098C9.3243 4.46061 9.17569 4.80578 9.08488 5.21648H9.6793C9.91046 5.21648 10.1086 5.19901 10.2737 5.16405C10.4471 5.1291 10.5916 5.08541 10.7072 5.03298C10.8227 4.97181 10.9136 4.90627 10.9796 4.83636C11.0456 4.75772 11.0911 4.67907 11.1158 4.60043C11.1488 4.52178 11.1654 4.44314 11.1654 4.36449C11.1654 4.14603 11.0952 3.98874 10.9548 3.89262C10.8145 3.79649 10.637 3.74843 10.4223 3.74843Z" fill="white"/>
-            <path d="M0.447192 9.17532C0.282075 9.17532 0.162365 9.14474 0.0880625 9.08357C0.0220156 9.0224 -0.00687989 8.91317 0.00137598 8.75588L0.806322 0.524305C0.839345 0.174768 1.02097 0 1.35121 0H3.8032C4.76913 0 5.46262 0.187876 5.88367 0.563628C6.30472 0.93064 6.51525 1.41562 6.51525 2.01857C6.51525 2.40306 6.44507 2.74823 6.30472 3.05407C6.17263 3.35118 5.991 3.60459 5.75984 3.81431C5.52867 4.0153 5.26448 4.18133 4.96727 4.3124V4.36483C5.19018 4.41726 5.39245 4.50465 5.57408 4.62698C5.75571 4.74058 5.90844 4.88477 6.03228 5.05954C6.16437 5.2343 6.26344 5.42655 6.32949 5.63627C6.40379 5.84599 6.44094 6.06445 6.44094 6.29165C6.44094 7.20918 6.15612 7.92136 5.58646 8.42819C5.02506 8.92628 4.1871 9.17532 3.07255 9.17532H0.447192ZM2.01993 7.45823H3.23354C3.6711 7.45823 3.98895 7.35773 4.1871 7.15675C4.38524 6.94703 4.48431 6.65429 4.48431 6.27854C4.48431 5.9727 4.37698 5.7455 4.16233 5.59695C3.95593 5.44839 3.65046 5.37412 3.24593 5.37412H2.23046L2.01993 7.45823ZM2.40383 3.65702H3.25831C3.66285 3.65702 3.97244 3.56527 4.1871 3.38176C4.40175 3.18952 4.50907 2.90552 4.50907 2.52977C4.50907 1.97925 4.16646 1.70399 3.48122 1.70399H2.60197L2.40383 3.65702Z" fill="white"/>
-          </svg>
-        </button>
-        {/* AI 자동배차 — 플로우 모듈은 클릭 시점에 동적 로드 */}
+        {/* 오더 등록·수정 (AI) */}
         <button
-          data-name="ai-auto-dispatch"
-          onClick={() => {
-            import('./aiDispatchFlow')
-              .then(m => m.open())
-              .catch(err => { console.error(err); alert('AI 자동배차 화면을 불러오지 못했습니다.'); });
-          }}
-          style={{ display:'flex', alignItems:'center', gap:6, padding:'0 16px', height:44, borderRadius:34, background:'#FFFFFF', border:'1px solid #E4E5E9', cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}
+          data-name="ai-order-edit"
+          aria-pressed={orderFormOpen}
+          onClick={onToggleOrderForm}
+          style={{ display:'flex', alignItems:'center', gap:6, padding:'0 16px', height:44, borderRadius:34, background: orderFormOpen ? '#F5F9FF' : '#FFFFFF', border:`1px solid ${orderFormOpen ? '#669FFF' : '#E4E5E9'}`, cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}
         >
           <span style={{ width:20, height:20, borderRadius:'50%', background:'linear-gradient(135deg, #337FFF 0%, #9966FF 100%)', color:'#FFFFFF', fontSize:9, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, letterSpacing:0 }}>AI</span>
-          자동배차
+          오더 등록·수정
         </button>
-        {/* 기사 스케줄 — 헤더 아래 우측 패널로 열림 (클릭한 버튼 기준으로 위치 계산) */}
+        {/* 배차일지 — 헤더 아래 우측 패널로 열림/닫힘. AI 배차계획은 배차일지 안의 [배차계획 실행하기]로 시작 */}
         <button
-          data-name="gs-schedule"
+          ref={logBtnRef}
+          data-name="dispatch-log"
           onClick={(e) => {
             const anchor = e.currentTarget;
             import('./aiDispatchFlow')
-              .then(m => m.openSchedule(anchor))
-              .catch(err => { console.error(err); alert('기사 스케줄 화면을 불러오지 못했습니다.'); });
+              .then(m => m.toggleSchedule(anchor))
+              .catch(err => { console.error(err); alert('배차일지 화면을 불러오지 못했습니다.'); });
           }}
           style={{ padding:'0 16px', height:44, borderRadius:34, background:'#FFFFFF', border:'1px solid #E4E5E9', cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, color:'#2E3238', letterSpacing:'-0.02em' }}
-        >기사 스케줄</button>
+        >배차일지</button>
       </div>
     </div>
   );
@@ -242,7 +238,7 @@ function genRows(page: number, count = 20) {
 }
 
 // ── Tab Module ──
-const TABS_LIST = ['기본','쿠팡CLS','세라젬','대상청정원','한샘','일반화주','(설정한 이름)'];
+const TABS_LIST = ['기본','쿠팡 CLS','세라젬','대상청정원','한샘','일반화주','(설정한 이름)'];
 
 function TabModule({ activeTab, setActiveTab }: { activeTab: number; setActiveTab: (i: number) => void }) {
   const EditIcon = () => (
@@ -311,9 +307,78 @@ function TabModule({ activeTab, setActiveTab }: { activeTab: number; setActiveTa
             <rect x="1" y="2" width="14" height="12" rx="2" stroke="#9197A1" strokeWidth="1"/>
             <rect x="3" y="4" width="10" height="4" rx="1" fill="#9197A1" stroke="#9197A1" strokeWidth="1"/>
           </svg>
-          <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>상세 닫기</span>
+          <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>상세 보기</span>
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── 필터 칩 체크박스 드롭다운 (피그마 8797:1242794 — Input / Dropdown_Filter + Input / Dropdown) ──
+const REQ_TON_OPTIONS = ['퀵','0.3톤','0.5톤','1톤','1.4톤','2.5톤','3.5톤','5톤','5톤플러스','5톤축','8톤','9.5톤','11톤','14톤','18톤','22톤','25톤','20ft','40ft'];
+const REQ_TON_DISABLED = ['퀵','0.3톤','0.5톤','20ft','40ft'];
+const REQ_CAR_OPTIONS = ['오토바이','승용차','다마스','라보','카고/윙','카고','윙바디','탑','방통차','트레일러'];
+const REQ_CAR_DISABLED = ['오토바이','승용차','다마스','라보','방통차','트레일러'];
+
+function CheckDropdownChip({ label, options, disabled = [] }: { label: string; options: string[]; disabled?: string[] }) {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+  const toggle = (v: string) => setSelected(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
+  const active = selected.length > 0;
+  const blue = open || active;
+  return (
+    <div ref={wrapRef} style={{ position:'relative', flexShrink:0 }}>
+      <div onClick={() => setOpen(o => !o)} style={{
+        display:'flex', alignItems:'center', justifyContent:'center', padding:'6px 10px 6px 12px', gap:8, height:32,
+        background: open ? '#E6EFFF' : active ? '#F5F9FF' : '#F6F7F8', borderRadius:30, cursor:'pointer', boxSizing:'border-box',
+      }}>
+        <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, lineHeight:'20px', color: blue ? '#005FFF' : '#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>{label}</span>
+        {active && !open ? (
+          <div style={{ width:16, height:16, background:'#CCDFFF', borderRadius:100, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:11, color:'#005FFF' }}>{selected.length}</span>
+          </div>
+        ) : (
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none' }}>
+            <path d="M2.5 4.5L6 7.5L9.5 4.5" stroke={open ? '#005FFF' : '#9197A1'} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+      </div>
+      {open && (
+        <div role="listbox" aria-multiselectable="true" style={{
+          position:'absolute', top:34, left:0, zIndex:50, width:170, display:'flex', flexDirection:'column', overflow:'hidden',
+          background:'#FFFFFF', border:'1px solid #E3E5E9', borderRadius:8, boxShadow:'0 2px 6px 1px rgba(34,34,34,0.06)', boxSizing:'border-box',
+        }}>
+          <div style={{ maxHeight:216, overflowY:'auto', padding:8, boxSizing:'border-box' }}>
+            {options.map(v => {
+              const off = disabled.includes(v);
+              const on = selected.includes(v);
+              return (
+                <button key={v} role="option" aria-selected={on} disabled={off} onClick={() => toggle(v)}
+                  onMouseEnter={e => { if (!off) e.currentTarget.style.background = '#F6F7F8'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; }}
+                  style={{ display:'flex', alignItems:'center', gap:4, width:'100%', padding:'9px 8px 9px 4px', border:'none', borderRadius:4, background:'#FFFFFF', cursor: off ? 'default' : 'pointer', textAlign:'left' }}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ flexShrink:0 }}>
+                    {off ? <rect x="2" y="2" width="16" height="16" rx="4" fill="rgba(38,45,57,0.08)"/>
+                      : on ? <><rect x="2" y="2" width="16" height="16" rx="4" fill="#005FFF"/><path d="M6.07617 9.80352L8.82285 12.5502L13.9238 7.44922" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></>
+                      : <rect x="2.65" y="2.65" width="14.7" height="14.7" rx="3.35" fill="#FFFFFF" stroke="#ADB1B9" strokeWidth="1.3"/>}
+                  </svg>
+                  <span style={{ fontFamily:ff, fontWeight:400, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color: off ? '#C7CBD1' : '#2E3238', whiteSpace:'nowrap' }}>{v}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', height:28, padding:'0 8px', borderTop:'1px solid #E3E5E9', boxSizing:'border-box', flexShrink:0 }}>
+            <button onClick={() => setSelected([])} style={{ padding:0, border:'none', background:'none', cursor:'pointer', fontFamily:ff, fontWeight:400, fontSize:12, lineHeight:'18px', letterSpacing:'-0.02em', color:'#9197A1' }}>필터 초기화</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -336,13 +401,14 @@ function FilterSorterModule() {
   return (
     <div style={{ padding:'12px 0', borderBottom:'1px solid #E4E5E9', flexShrink:0 }}>
       {/* Row 1: date + filter chips + reset */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8 }}>
+        {/* 폭이 좁으면 필터 칩이 날짜 아래 줄로 내려감 */}
+        <div style={{ display:'flex', alignItems:'center', gap:8, rowGap:8, flexWrap:'wrap', flex:1, minWidth:0 }}>
           {/* Date switcher */}
-          <div style={{ display:'flex', alignItems:'center' }}>
+          <div style={{ display:'flex', alignItems:'center', flexShrink:0 }}>
             {/* Date picker box */}
             <div style={{ width:79, height:36, border:'1px solid #E4E5E9', borderRight:'none', borderRadius:'4px 0 0 4px', display:'flex', alignItems:'center', justifyContent:'center', background:'#FFFFFF', cursor:'pointer' }}>
-              <span style={{ fontFamily:ff, fontWeight:400, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em' }}>상차일</span>
+              <span style={{ fontFamily:ff, fontWeight:400, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>상차일</span>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginLeft:4 }}><path d="M4 7l4 4 4-4" stroke="#9197A1" strokeWidth="1.4" strokeLinecap="round"/></svg>
             </div>
             {/* Prev */}
@@ -351,7 +417,7 @@ function FilterSorterModule() {
             </div>
             {/* Date range */}
             <div style={{ height:36, border:'1px solid #E4E5E9', display:'flex', alignItems:'center', justifyContent:'center', padding:'0 16px', background:'#FFFFFF', cursor:'pointer' }}>
-              <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#2E3238', letterSpacing:'-0.02em' }}>{todayYYMMDD()} ~ {offsetDayYYMMDD(1)}</span>
+              <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>{todayYYMMDD()} ~ {offsetDayYYMMDD(1)}</span>
             </div>
             {/* Next */}
             <div style={{ width:36, height:36, border:'1px solid #E4E5E9', borderLeft:'none', borderRadius:'0 4px 4px 0', display:'flex', alignItems:'center', justifyContent:'center', background:'#FFFFFF', cursor:'pointer' }}>
@@ -359,13 +425,17 @@ function FilterSorterModule() {
             </div>
           </div>
           {/* Filter chips */}
-          <div style={{ display:'flex', alignItems:'center', gap:4, flexWrap:'wrap' }}>
-            {filterChips.map(chip => (
+          <div style={{ display:'flex', alignItems:'center', gap:4, flexWrap:'wrap', minWidth:0 }}>
+            {filterChips.map(chip => chip.label === '요청톤수' || chip.label === '요청차종' ? (
+              <CheckDropdownChip key={chip.label} label={chip.label}
+                options={chip.label === '요청톤수' ? REQ_TON_OPTIONS : REQ_CAR_OPTIONS}
+                disabled={chip.label === '요청톤수' ? REQ_TON_DISABLED : REQ_CAR_DISABLED} />
+            ) : (
               <div key={chip.label} style={{
                 display:'flex', alignItems:'center', justifyContent:'center', padding:'6px 10px 6px 12px', gap:8, height:32,
                 background: chip.active ? '#F5F9FF' : '#F6F7F8', borderRadius:30, cursor:'pointer', flexShrink:0,
               }}>
-                <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color: chip.active ? '#005FFF' : '#2E3238', letterSpacing:'-0.02em' }}>{chip.label}</span>
+                <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color: chip.active ? '#005FFF' : '#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>{chip.label}</span>
                 {chip.count !== null && (
                   <div style={{ width:16, height:16, background:'#CCDFFF', borderRadius:100, display:'flex', alignItems:'center', justifyContent:'center' }}>
                     <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:11, color:'#005FFF' }}>{chip.count}</span>
@@ -377,7 +447,7 @@ function FilterSorterModule() {
             {/* 필터 편집 */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'6px 12px 6px 10px', gap:4, height:32, border:'1px dashed #E4E5E9', borderRadius:30, cursor:'pointer', flexShrink:0 }}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 9l1-3L8.5 1l1.5 1.5L4.5 8 2 9z" stroke="#9197A1" strokeWidth="1.3" strokeLinejoin="round"/></svg>
-              <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#9197A1', letterSpacing:'-0.02em' }}>필터 편집</span>
+              <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#9197A1', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>필터 편집</span>
             </div>
           </div>
         </div>
@@ -395,24 +465,28 @@ function FilterSorterModule() {
         </button>
       </div>
       {/* Row 2: dashboard */}
-      <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:8, paddingLeft:4 }}>
+      {/* 폭이 좁으면 배차방법 묶음 · 오더상태 묶음 단위로 줄바꿈 */}
+      <div style={{ display:'flex', alignItems:'center', gap:4, rowGap:8, flexWrap:'wrap', marginTop:8, paddingLeft:4 }}>
         {/* 배차방법 */}
-        <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:12, color:'#5C6370', letterSpacing:'-0.02em', marginRight:4 }}>배차방법</span>
-        <div style={{ display:'flex', alignItems:'center', padding:'12px', height:32, background:'#F5F9FF', borderRadius:63, gap:4 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:4, rowGap:8, flexWrap:'wrap' }}>
+        <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:12, color:'#5C6370', letterSpacing:'-0.02em', marginRight:4, whiteSpace:'nowrap', flexShrink:0 }}>배차방법</span>
+        <div style={{ display:'flex', alignItems:'center', padding:'12px', height:32, background:'#F5F9FF', borderRadius:63, gap:4, flexShrink:0, whiteSpace:'nowrap', boxSizing:'border-box' }}>
           <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#005FFF' }}>전체</span>
           <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#005FFF' }}>1,000</span>
         </div>
         {[['소속','500'],['위탁','300'],['정보망','150'],['장부기록','50']].map(([label, cnt]) => (
-          <div key={label} style={{ display:'flex', alignItems:'center', padding:'8px 12px', height:32, background:'#F6F7F8', borderRadius:100, gap:4 }}>
+          <div key={label} style={{ display:'flex', alignItems:'center', padding:'8px 12px', height:32, background:'#F6F7F8', borderRadius:100, gap:4, flexShrink:0, whiteSpace:'nowrap', boxSizing:'border-box' }}>
             <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#5C6370' }}>{label}</span>
             <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#2E3238' }}>{cnt}</span>
           </div>
         ))}
         {/* separator */}
-        <div style={{ width:1, height:24, background:'#D5D8DD', margin:'0 4px' }} />
+        <div style={{ width:1, height:24, background:'#D5D8DD', margin:'0 4px', flexShrink:0 }} />
+        </div>
         {/* 오더상태 */}
-        <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:12, color:'#5C6370', letterSpacing:'-0.02em', marginRight:4 }}>오더상태</span>
-        <div style={{ display:'flex', alignItems:'center', padding:'12px', height:32, background:'#F5F9FF', borderRadius:63, gap:4 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:4, rowGap:8, flexWrap:'wrap' }}>
+        <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:12, color:'#5C6370', letterSpacing:'-0.02em', marginRight:4, whiteSpace:'nowrap', flexShrink:0 }}>오더상태</span>
+        <div style={{ display:'flex', alignItems:'center', padding:'12px', height:32, background:'#F5F9FF', borderRadius:63, gap:4, flexShrink:0, whiteSpace:'nowrap', boxSizing:'border-box' }}>
           <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#005FFF' }}>전체</span>
           <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#005FFF' }}>1,000</span>
         </div>
@@ -426,7 +500,7 @@ function FilterSorterModule() {
           ['운송완료','100'],
           ['취소','100'],
         ].map(([label, cnt]) => (
-          <div key={label} style={{ display:'flex', alignItems:'center', padding:'12px', height:32, background:'#F6F7F8', borderRadius:100, gap:label.includes(' ') ? 0 : 4, flexShrink:0 }}>
+          <div key={label} style={{ display:'flex', alignItems:'center', padding:'12px', height:32, background:'#F6F7F8', borderRadius:100, gap:label.includes(' ') ? 0 : 4, flexShrink:0, whiteSpace:'nowrap', boxSizing:'border-box' }}>
             {label.includes(' ') ? (
               <>
                 <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#5C6370', whiteSpace:'nowrap' }}>{label.split(' ')[0]}</span>
@@ -442,6 +516,7 @@ function FilterSorterModule() {
             )}
           </div>
         ))}
+        </div>
       </div>
     </div>
   );
@@ -648,7 +723,10 @@ function OrderCancelModal({ orderId, onClose, onConfirm }: { orderId?: string; o
   );
 }
 
-function TableControlModule({ onCancelOrder }: { onCancelOrder: () => void }) {
+// 툴바가 한 줄에 들어가는 최소 폭 (검색창 100px 기준) — 이보다 좁으면 줄바꿈
+const TOOLBAR_ONE_LINE_MIN = 1190;
+
+function TableControlModule({ onCancelOrder, checkedCount }: { onCancelOrder: () => void; checkedCount: number }) {
   const FilterIcon = () => (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0 }}>
       <line x1="0.5" y1="4" x2="8.71" y2="4" stroke="#9197A1" strokeWidth="1.3"/>
@@ -662,54 +740,65 @@ function TableControlModule({ onCancelOrder }: { onCancelOrder: () => void }) {
       <circle cx="10.345" cy="12.495" r="1.405" stroke="#9197A1" strokeWidth="1.3"/>
     </svg>
   );
+  // 한 줄에 들어가면(검색창이 100px까지 줄어드는 폭까지) 한 줄 유지, 그보다 좁으면 줄바꿈 모드
+  //  - 줄바꿈 모드: 왼쪽 묶음은 버튼 · 검색 단위로 줄바꿈, 오른쪽 버튼(목록 표시/정렬 설정)은 다음 줄 오른쪽
+  const barRef = useRef<HTMLDivElement>(null);
+  const [wrap, setWrap] = useState(false);
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setWrap(entry.contentRect.width < TOOLBAR_ONE_LINE_MIN));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   return (
-    <div style={{ height:56, display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+    <div ref={barRef} style={{ minHeight:56, padding: wrap ? '10px 0' : 0, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, rowGap:8, flexWrap: wrap ? 'wrap' : 'nowrap', flexShrink:0, boxSizing:'border-box' }}>
       {/* Left buttons */}
-      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:12, rowGap:8, flexWrap: wrap ? 'wrap' : 'nowrap', minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
           <button style={{ padding:'0 12px', height:36, background:'#005FFF', borderRadius:4, border:'none', cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, color:'#FFFFFF', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>배차 요청</button>
           <button style={{ padding:'0 12px', height:36, background:'#FFFFFF', border:'1px solid #E4E5E9', borderRadius:4, cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>접수 확인</button>
           <button style={{ padding:'0 12px', height:36, background:'#FFFFFF', border:'1px solid #E4E5E9', borderRadius:4, cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>배차방법 변경</button>
           <button style={{ padding:'0 12px', height:36, background:'#FFFFFF', border:'1px solid #E4E5E9', borderRadius:4, cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>오더 삭제</button>
           <button style={{ padding:'0 12px', height:36, background:'#FFFFFF', border:'1px solid #E4E5E9', borderRadius:4, cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap' }}>배차 취소</button>
         </div>
-        <div style={{ width:1, height:24, background:'#D5D8DD' }} />
-        <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-          <div style={{ display:'flex', alignItems:'center' }}>
-            <div style={{ width:66, height:36, border:'1px solid #E4E5E9', borderRight:'none', borderRadius:'4px 0 0 4px', display:'flex', alignItems:'center', justifyContent:'center', padding:'0 10px', background:'#FFFFFF', cursor:'pointer', boxSizing:'border-box' }}>
+        <div style={{ width:1, height:24, background:'#D5D8DD', flexShrink:0 }} />
+        <div style={{ display:'flex', alignItems:'center', gap:4, minWidth:0 }}>
+          <div style={{ display:'flex', alignItems:'center', minWidth:0 }}>
+            <div style={{ width:66, flexShrink:0, height:36, border:'1px solid #E4E5E9', borderRight:'none', borderRadius:'4px 0 0 4px', display:'flex', alignItems:'center', justifyContent:'center', padding:'0 10px', background:'#FFFFFF', cursor:'pointer', boxSizing:'border-box' }}>
               <span style={{ fontFamily:ff, fontWeight:400, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em' }}>전체</span>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 7l4 4 4-4" stroke="#9197A1" strokeWidth="1.4" strokeLinecap="round"/></svg>
             </div>
-            <div style={{ width:180, height:36, border:'1px solid #E4E5E9', borderRadius:'0 4px 4px 0', display:'flex', alignItems:'center', padding:'0 10px', background:'#FFFFFF', boxSizing:'border-box' }}>
-              <span style={{ fontFamily:ff, fontWeight:400, fontSize:15, color:'#767D8A', letterSpacing:'-0.02em' }}>검색어를 입력하세요.</span>
+            <div style={{ flex:'0 1 180px', minWidth:100, height:36, border:'1px solid #E4E5E9', borderRadius:'0 4px 4px 0', display:'flex', alignItems:'center', padding:'0 10px', background:'#FFFFFF', boxSizing:'border-box' }}>
+              <span style={{ fontFamily:ff, fontWeight:400, fontSize:15, color:'#767D8A', letterSpacing:'-0.02em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>검색어를 입력하세요.</span>
             </div>
           </div>
-          <button style={{ padding:'0 12px', height:36, background:'#FFFFFF', border:'1px solid #E4E5E9', borderRadius:4, cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em' }}>검색</button>
-          <span style={{ fontFamily:ff, fontWeight:400, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap', marginLeft:8 }}>총 1,000건</span>
+          <button style={{ padding:'0 12px', height:36, background:'#FFFFFF', border:'1px solid #E4E5E9', borderRadius:4, cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap', flexShrink:0 }}>검색</button>
+          <span style={{ fontFamily:ff, fontWeight:400, fontSize:15, color:'#2E3238', letterSpacing:'-0.02em', whiteSpace:'nowrap', marginLeft:12, flexShrink:0 }}>총 {TOTAL_ORDERS.toLocaleString()}건 중 {checkedCount.toLocaleString()}건 선택</span>
+          <button style={{ display:'flex', flexDirection:'row', justifyContent:'center', alignItems:'center', padding:'0 12px', gap:4, height:36, marginLeft:4, borderRadius:4, border:'none', background:'transparent', cursor:'pointer', flexShrink:0 }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0 }}>
+              <line x1="8" y1="2.5" x2="8" y2="10.5" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/>
+              <polyline points="5,8 8,11 11,8" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <line x1="2.67" y1="13.33" x2="13.33" y2="13.33" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+            <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>엑셀 저장</span>
+          </button>
         </div>
       </div>
       {/* Right buttons */}
-      <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-        <button style={{ display:'flex', flexDirection:'row', justifyContent:'center', alignItems:'center', padding:'0 12px', gap:4, width:125, height:36, borderRadius:4, border:'none', background:'transparent', cursor:'pointer', flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0, marginLeft:'auto' }}>
+        <button style={{ display:'flex', flexDirection:'row', justifyContent:'center', alignItems:'center', padding:'0 12px', gap:4, height:36, borderRadius:4, border:'1px solid #E4E5E9', background:'#FFFFFF', boxSizing:'border-box', cursor:'pointer', flexShrink:0 }}>
           <FilterIcon/>
-          <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>목록표시 설정</span>
+          <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>목록 표시 설정</span>
         </button>
-        <button style={{ display:'flex', flexDirection:'row', justifyContent:'center', alignItems:'center', padding:'0 12px', gap:4, width:99, height:36, borderRadius:4, border:'none', background:'transparent', cursor:'pointer', flexShrink:0 }}>
+        <button style={{ display:'flex', flexDirection:'row', justifyContent:'center', alignItems:'center', padding:'0 12px', gap:4, height:36, borderRadius:4, border:'1px solid #E4E5E9', background:'#FFFFFF', boxSizing:'border-box', cursor:'pointer', flexShrink:0 }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0 }}>
             <line x1="5.34" y1="3.77" x2="5.34" y2="12.67" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/>
             <polyline points="3.01,5.77 5.34,3.33 7.67,5.77" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
             <line x1="10.67" y1="3.33" x2="10.67" y2="12.23" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/>
             <polyline points="8.34,10.23 10.67,12.67 13,10.23" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
           </svg>
-          <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>정렬 설정</span>
-        </button>
-        <button style={{ display:'flex', flexDirection:'row', justifyContent:'center', alignItems:'center', padding:'0 12px', gap:4, width:99, height:36, borderRadius:4, border:'none', background:'transparent', cursor:'pointer', flexShrink:0 }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0 }}>
-            <line x1="8" y1="2.5" x2="8" y2="10.5" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/>
-            <polyline points="5,8 8,11 11,8" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-            <line x1="2.67" y1="13.33" x2="13.33" y2="13.33" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round"/>
-          </svg>
-          <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>엑셀 저장</span>
+          <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>목록 정렬 설정</span>
         </button>
       </div>
     </div>
@@ -739,8 +828,21 @@ function cellText(text: string, color = '#2E3238') {
 }
 
 // ── Order Table ──
+// ── 오더의 기사 정보 (드래그앤드롭 배차) ──
+type AssignedDriver = { name: string; phone: string; plate: string };
+// 기사 배정이 된 상태(배차계획 이후)의 목업 기사
+const MOCK_DRIVER: AssignedDriver = { name:'이진아', phone:'010-1234-1234', plate:'27오1234' };
+const STATUSES_WITH_DRIVER: OrderStatus[] = ['배차계획','배차중','배차완료','운송중','운송완료'];
+function baseDriver(status: OrderStatus): AssignedDriver | null {
+  return STATUSES_WITH_DRIVER.includes(status) ? MOCK_DRIVER : null;
+}
+function rowByIdx(idx: number) {
+  const page = Math.floor(idx / PAGE_SIZE) + 1;
+  return genRows(page, (idx % PAGE_SIZE) + 1).find(r => r.idx === idx);
+}
+
 const COL_WIDTHS = {
-  check:36, orderId:120, status:100, resp:105, shipper:105, shipperGrp:138, partner:138, partnerGrp:111,
+  check:56, orderId:120, status:100, resp:105, shipper:105, shipperGrp:138, driverName:110, driverPhone:130, driverPlate:110, partner:138, partnerGrp:111,
   reqDate:140, cpt:97, depDate:111, arrDate:140, depDate2:135,
   loadName:120, loadAddr:200, loadDetail:160, loadOpt:120,
   unloadName:120, unloadAddr:200, unloadDetail:160, unloadOpt:120,
@@ -750,21 +852,41 @@ const COL_WIDTHS = {
   settleType:90, settleMeans:90, bill:110, dispatch:110, profit:110,
 };
 
-function OrderTable({ page, selectedIdx, onSelectRow, checkedIdxs, onToggleCheck, cancelledOrders }: {
+function OrderTable({ page, selectedIdx, onSelectRow, checkedIdxs, onToggleCheck, cancelledOrders, assignments, onDragRows }: {
   page: number;
   selectedIdx: number;
   onSelectRow: (idx: number) => void;
   checkedIdxs: Set<number>;
   onToggleCheck: (idx: number) => void;
   cancelledOrders: Set<number>;
+  assignments: Map<number, AssignedDriver>;
+  onDragRows: (idx: number) => number[]; // 드래그 시작한 행을 체크하고, 끌고 갈 오더 목록을 돌려줌
 }) {
   const rows = genRows(page);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  // 오더를 끌어 배차일지 기사 목록에 놓으면 그 기사에게 배차 (기사 목록 iframe이 drop을 받아 부모로 알림)
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    const idxs = onDragRows(idx);
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('application/x-lis-orders', JSON.stringify({ idxs }));
+    e.dataTransfer.setData('text/plain', `${idxs.length}개의 오더`);
+    // 끄는 동안 커서 옆 툴팁: + {n}개의 오더에 기사정보 추가
+    const tip = document.createElement('div');
+    tip.textContent = `+ ${idxs.length}개의 오더에 기사정보 추가`;
+    Object.assign(tip.style, {
+      position:'fixed', top:'-1000px', left:'-1000px', padding:'6px 10px', borderRadius:'4px', background:'#2E3238', color:'#FFFFFF',
+      fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:'600', fontSize:'14px', lineHeight:'20px', letterSpacing:'-0.02em', whiteSpace:'nowrap',
+    });
+    document.body.appendChild(tip);
+    e.dataTransfer.setDragImage(tip, -12, -18);
+    setTimeout(() => tip.remove(), 0);
+  };
   return (
     <div style={{ overflowX:'auto', overflowY:'auto', flex:1 }}>
       <div style={{ minWidth:1600 }}>
         {/* Header */}
         <div style={{ display:'flex', borderTop:'1px solid #E4E5E9' }}>
-          <div style={{ width:COL_WIDTHS.check, flexShrink:0, height:40, background:'#F6F7F8', borderRight:'1px solid #E4E5E9', borderBottom:'1px solid #E4E5E9', display:'flex', alignItems:'center', justifyContent:'center', boxSizing:'border-box' }}>
+          <div style={{ width:COL_WIDTHS.check, flexShrink:0, height:40, background:'#F6F7F8', borderRight:'1px solid #E4E5E9', borderBottom:'1px solid #E4E5E9', display:'flex', alignItems:'center', paddingLeft:14, boxSizing:'border-box' }}>
             <div style={{ width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center' }}>
               <div style={{ width:16, height:16, border:'1.3px solid #ADB1B9', borderRadius:3, background:'#FFFFFF', boxSizing:'border-box' }} />
             </div>
@@ -774,6 +896,9 @@ function OrderTable({ page, selectedIdx, onSelectRow, checkedIdxs, onToggleCheck
           <Th label="기사 응답" width={COL_WIDTHS.resp}/>
           <Th label="화주" width={COL_WIDTHS.shipper}/>
           <Th label="화주 업무그룹" width={COL_WIDTHS.shipperGrp}/>
+          <Th label="기사명" width={COL_WIDTHS.driverName}/>
+          <Th label="기사 전화번호" width={COL_WIDTHS.driverPhone}/>
+          <Th label="기사 차량번호" width={COL_WIDTHS.driverPlate}/>
           <Th label="요청협력사" width={COL_WIDTHS.partner}/>
           <Th label="요청협력사 업무그룹" width={COL_WIDTHS.partnerGrp}/>
           <Th label="상차일시(요청)" width={COL_WIDTHS.reqDate}/>
@@ -809,26 +934,40 @@ function OrderTable({ page, selectedIdx, onSelectRow, checkedIdxs, onToggleCheck
         </div>
         {/* Rows */}
         {rows.map((row, i) => {
-          const effectiveStatus: OrderStatus = cancelledOrders.has(row.idx) ? '거래취소' : row.status;
+          const assigned = assignments.get(row.idx);
+          const effectiveStatus: OrderStatus = cancelledOrders.has(row.idx) ? '거래취소' : assigned ? '배차계획' : row.status;
+          const driver = assigned ?? baseDriver(row.status);
           const isSelected = row.idx === selectedIdx;
           const isChecked = checkedIdxs.has(row.idx);
-          const rowBg = isSelected ? 'rgba(246,247,248,0.5)' : '#FFFFFF';
+          const isHover = hoverIdx === row.idx;
+          // 목록 디자인 가이드 — 체크 #CCDFFF(체크 열 #669FFF) > 선택(상세 열림) #E6EFFF > 호버 #F5F9FF > 기본 흰색(체크 열 #F6F7F8)
+          const rowBg = isChecked ? '#CCDFFF' : isSelected ? '#E6EFFF' : isHover ? '#F5F9FF' : '#FFFFFF';
+          const checkColBg = isChecked ? '#669FFF' : '#F6F7F8';
+          const handleColor = isChecked ? '#FFFFFF' : '#C7CBD1';
           return (
             <div
               key={i}
+              draggable
+              onDragStart={e => handleDragStart(e, row.idx)}
+              onMouseEnter={() => setHoverIdx(row.idx)}
+              onMouseLeave={() => setHoverIdx(h => (h === row.idx ? null : h))}
               onClick={() => onSelectRow(row.idx)}
-              style={{ display:'flex', cursor:'pointer' }}
+              style={{ display:'flex', cursor:'pointer', userSelect:'none' }}
             >
-              {/* 체크박스 열 — 클릭 독립, 배경 항상 #F6F7F8 */}
+              {/* 체크 열 — 드래그 손잡이 · 체크박스 · 펼침(>) */}
               <div
                 onClick={e => { e.stopPropagation(); onToggleCheck(row.idx); }}
-                style={{ width:COL_WIDTHS.check, flexShrink:0, height:40, borderRight:'1px solid #E4E5E9', borderBottom:'1px solid #E4E5E9', display:'flex', alignItems:'center', justifyContent:'center', background:'#F6F7F8', boxSizing:'border-box', cursor:'pointer' }}
+                style={{ width:COL_WIDTHS.check, flexShrink:0, height:40, borderRight:'1px solid #E4E5E9', borderBottom:'1px solid #E4E5E9', display:'flex', alignItems:'center', gap:2, padding:'0 0 0 4px', background:checkColBg, boxSizing:'border-box', cursor:'pointer' }}
               >
+                {/* 드래그 손잡이 — 호버 시에만 노출 (자리는 유지해 체크박스가 움직이지 않음). 행을 끌어 배차일지 기사 목록에 놓으면 배차 */}
+                <svg width="8" height="12" viewBox="0 0 8 12" fill="none" style={{ flexShrink:0, cursor:'grab', visibility: isHover ? 'visible' : 'hidden' }} aria-hidden="true">
+                  {[2,6].map(x => [2,6,10].map(y => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.2" fill={handleColor}/>))}
+                </svg>
                 <div style={{ width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                   <div style={{
                     width:16, height:16,
-                    border: isChecked ? '1.3px solid #005FFF' : '1.3px solid #ADB1B9',
-                    borderRadius:3,
+                    border: isChecked ? 'none' : '1.3px solid #ADB1B9',
+                    borderRadius:4,
                     background: isChecked ? '#005FFF' : '#FFFFFF',
                     display:'flex', alignItems:'center', justifyContent:'center',
                     boxSizing:'border-box',
@@ -840,12 +979,23 @@ function OrderTable({ page, selectedIdx, onSelectRow, checkedIdxs, onToggleCheck
                     )}
                   </div>
                 </div>
+                {/* 펼침 — 오더 상세 열기 */}
+                <button
+                  aria-label="오더 상세 보기"
+                  onClick={e => { e.stopPropagation(); onSelectRow(row.idx); }}
+                  style={{ width:16, height:16, padding:0, border:'none', background:'none', cursor:'pointer', display:'flex', flexShrink:0 }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8L6 12.5" stroke={isChecked ? '#FFFFFF' : '#9197A1'} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
               </div>
               <Td width={COL_WIDTHS.orderId} bg={rowBg}>{cellText(row.orderId, '#2E3238')}</Td>
               <Td width={COL_WIDTHS.status} center bg={rowBg}>{statusBadge(effectiveStatus)}</Td>
               <Td width={COL_WIDTHS.resp} bg={rowBg}>{cellText('-', '#767D8A')}</Td>
               <Td width={COL_WIDTHS.shipper} bg={rowBg}>{cellText(row.shipper)}</Td>
               <Td width={COL_WIDTHS.shipperGrp} bg={rowBg}>{cellText(row.org)}</Td>
+              <Td width={COL_WIDTHS.driverName} bg={rowBg}>{driver ? cellText(driver.name) : cellText('-', '#C7CBD1')}</Td>
+              <Td width={COL_WIDTHS.driverPhone} bg={rowBg}>{driver ? cellText(driver.phone) : cellText('-', '#C7CBD1')}</Td>
+              <Td width={COL_WIDTHS.driverPlate} bg={rowBg}>{driver ? cellText(driver.plate) : cellText('-', '#C7CBD1')}</Td>
               <Td width={COL_WIDTHS.partner} bg={rowBg}>{cellText(row.partner)}</Td>
               <Td width={COL_WIDTHS.partnerGrp} bg={rowBg}>{cellText(row.dest)}</Td>
               <Td width={COL_WIDTHS.reqDate} bg={rowBg}>{cellText('25.10.20 08:10')}</Td>
@@ -933,11 +1083,75 @@ export default function BaechaManagement() {
   const [cancelCloseState, setCancelCloseState] = useState<{ closeSale: boolean; closePurchase: boolean } | undefined>(undefined);
   const [cancelledOrders, setCancelledOrders] = useState<Set<number>>(new Set()); // 거래취소된 오더
   const [showCancelToast, setShowCancelToast] = useState(false);
+  // 드래그앤드롭 배차 — 오더별 배정 기사 / 다른 기사에게 배정된 오더가 있을 때의 확인 모달 / 적용 토스트(실행취소)
+  const [assignments, setAssignments] = useState<Map<number, AssignedDriver>>(new Map());
+  const assignmentsRef = useRef(assignments);
+  assignmentsRef.current = assignments;
+  const [assignConfirm, setAssignConfirm] = useState<{ idxs: number[]; conflicts: number[]; driver: AssignedDriver; driverIdx: number } | null>(null);
+  const [assignToast, setAssignToast] = useState<{ count: number; prev: Map<number, AssignedDriver>; driverIdx: number } | null>(null);
+  // 오더 등록·수정 폼 — 기본은 접어 두고 [오더 등록·수정] 버튼이나 신규등록(F1)으로 엶
+  const [orderFormOpen, setOrderFormOpen] = useState(false);
+  // UT 클릭 히트맵 — Ctrl+Shift+H로 진행자 패널 열기 (배차관리 화면에서만 기록)
+  React.useEffect(() => {
+    let alive = true;
+    import('./utHeatmap').then(m => { if (alive) m.install(); }).catch(err => console.error(err));
+    return () => { alive = false; import('./utHeatmap').then(m => m.uninstall()).catch(() => {}); };
+  }, []);
   React.useEffect(() => {
     if (!showCancelToast) return;
     const t = setTimeout(() => setShowCancelToast(false), 3000);
     return () => clearTimeout(t);
   }, [showCancelToast]);
+
+  // 오더 행을 끌기 시작 — 그 행이 체크되어 있지 않으면 자동으로 체크하고, 체크된 오더 전체를 끌고 감
+  const handleDragRows = (idx: number) => {
+    const next = new Set(checkedIdxs);
+    next.add(idx);
+    setCheckedIdxs(next);
+    return [...next];
+  };
+
+  // 배차일지 기사 목록에 기사 계획 수 반영 (+n / 실행취소 시 -n)
+  const notifyDriverPlan = (driverIdx: number, delta: number) => {
+    const frame = document.querySelector<HTMLIFrameElement>('[data-name="gs-schedule-panel"] iframe');
+    frame?.contentWindow?.postMessage({ source:'gs-schedule-host', type:'orders-assigned', driverIdx, delta }, '*');
+  };
+
+  const applyAssign = (idxs: number[], driver: AssignedDriver, driverIdx: number) => {
+    const prev = new Map(assignmentsRef.current);
+    const next = new Map(prev);
+    idxs.forEach(i => next.set(i, driver));
+    setAssignments(next);
+    setCheckedIdxs(new Set());
+    if (idxs.length) notifyDriverPlan(driverIdx, idxs.length);
+    setAssignToast({ count: idxs.length, prev, driverIdx });
+  };
+
+  // 기사 목록에 놓았을 때 (gs-schedule-flow.html → postMessage)
+  React.useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      const d = e.data;
+      if (!d || d.source !== 'gs-schedule-flow' || d.type !== 'assign-orders') return;
+      const idxs: number[] = d.idxs || [];
+      const driver: AssignedDriver = { name: d.driver.name, phone: d.driver.phone, plate: d.driver.plate };
+      // 이미 다른 기사에게 배정된(계획배차 상태) 오더
+      const conflicts = idxs.filter(i => {
+        const row = rowByIdx(i);
+        const cur = assignmentsRef.current.get(i) ?? (row ? baseDriver(row.status) : null);
+        return !!cur && cur.name !== driver.name;
+      });
+      if (conflicts.length) setAssignConfirm({ idxs, conflicts, driver, driverIdx: d.driver.idx });
+      else applyAssign(idxs, driver, d.driver.idx);
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
+  React.useEffect(() => {
+    if (!assignToast) return;
+    const t = setTimeout(() => setAssignToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [assignToast]);
 
   const handleToggleCheck = (idx: number) => {
     setCheckedIdxs(prev => {
@@ -956,6 +1170,7 @@ export default function BaechaManagement() {
   // 신규등록(F1): 폼을 기본값으로 초기화한 새 오더 등록 화면으로 전환
   const handleNewOrder = () => {
     setIsNewOrder(true);
+    setOrderFormOpen(true);
   };
   React.useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -975,10 +1190,12 @@ export default function BaechaManagement() {
   return (
     <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'row', background:'#FFFFFF' }}>
       <SharedLnb activeTabIndex={5} />
-      <div style={{ position:'absolute', left:208, right:0, top:0, bottom:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        <Header />
+      {/* 배차일지(요약보기)가 오른쪽에 붙으면 그 폭만큼 본문을 줄임 (--dispatch-log-w: aiDispatchFlow) */}
+      <div style={{ position:'absolute', left:208, right:'var(--dispatch-log-w, 0px)', top:0, bottom:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <Header orderFormOpen={orderFormOpen} onToggleOrderForm={() => setOrderFormOpen(o => !o)} />
         {/* 폼 영역: 선택된 행의 orederId/rowIdx로 갱신 */}
-        <div style={{ height:486, flexShrink:0, overflowY:'auto', overflowX:'hidden' }}>
+        {orderFormOpen && <>
+        <div style={{ height:486, flexShrink:0, overflowY:'auto', overflowX:'auto' }}>
           <OrderDetailModal
             key={isNewOrder ? 'new' : selectedIdx}
             orderId={selectedOrderId}
@@ -992,15 +1209,55 @@ export default function BaechaManagement() {
         </div>
         {/* Footer buttons SVG */}
         <FooterSvg onCancelOrder={() => setShowCancelModal(true)} orderStatus={selectedStatus} orderId={selectedOrderId} onNewOrder={handleNewOrder} />
+        </>}
         {/* ── Table section ── */}
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', padding:'0 32px', boxSizing:'border-box' }}>
           <TabModule activeTab={activeTab} setActiveTab={setActiveTab} />
           <FilterSorterModule />
-          <TableControlModule onCancelOrder={() => setShowCancelModal(true)} />
-          <OrderTable page={currentPage} selectedIdx={isNewOrder ? -1 : selectedIdx} onSelectRow={handleSelectRow} checkedIdxs={checkedIdxs} onToggleCheck={handleToggleCheck} cancelledOrders={cancelledOrders} />
+          <TableControlModule onCancelOrder={() => setShowCancelModal(true)} checkedCount={checkedIdxs.size} />
+          <OrderTable page={currentPage} selectedIdx={isNewOrder ? -1 : selectedIdx} onSelectRow={handleSelectRow} checkedIdxs={checkedIdxs} onToggleCheck={handleToggleCheck} cancelledOrders={cancelledOrders} assignments={assignments} onDragRows={handleDragRows} />
           <Pagination currentPage={currentPage} setCurrentPage={setCurrentPage} />
         </div>
       </div>
+      {/* 드래그앤드롭 배차 — 다른 기사에게 배정된 오더 포함 시 확인 (변경: 이 기사로 변경 / 취소: 기존 기사 유지) */}
+      {assignConfirm && (
+        <div style={{ position:'fixed', inset:0, zIndex:2147483100, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div role="dialog" aria-modal="true" style={{ width:400, background:'#FFFFFF', borderRadius:12, boxShadow:'0 8px 24px rgba(0,0,0,0.16)', padding:'24px 24px 20px', boxSizing:'border-box' }}>
+            <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+              <p style={{ flex:1, margin:0, fontFamily:"'Pretendard GOV:Bold'", fontWeight:700, fontSize:20, lineHeight:'30px', letterSpacing:'-0.02em', color:'#000000', wordBreak:'break-all' }}>
+                선택한 오더 {assignConfirm.idxs.length}건 중 {assignConfirm.conflicts.length}건은<br/>이미 다른 기사에게 배정되어 있어요.<br/>{assignConfirm.driver.name} 기사로 변경하시겠어요?
+              </p>
+              <button aria-label="닫기" onClick={() => setAssignConfirm(null)} style={{ width:28, height:28, padding:0, border:'none', background:'none', cursor:'pointer', flexShrink:0 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="#9197A1" strokeWidth="1.6" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:24 }}>
+              <button onClick={() => {
+                const c = assignConfirm; setAssignConfirm(null);
+                applyAssign(c.idxs.filter(i => !c.conflicts.includes(i)), c.driver, c.driverIdx);
+              }} style={{ height:44, padding:'0 16px', border:'none', borderRadius:4, background:'#FFFFFF', cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, color:'#2E3238' }}>취소</button>
+              <button onClick={() => {
+                const c = assignConfirm; setAssignConfirm(null);
+                applyAssign(c.idxs, c.driver, c.driverIdx);
+              }} style={{ height:44, padding:'0 16px', border:'none', borderRadius:4, background:'#005FFF', cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:16, color:'#FFFFFF' }}>변경</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 기사정보 적용 토스트 — 실행취소 시 직전 배정으로 되돌림 */}
+      {assignToast && (
+        <div role="status" style={{ position:'fixed', bottom:34, left:'50%', transform:'translateX(-50%)', zIndex:2147483100, width:420, minHeight:54, borderRadius:8, background:'#222222', display:'flex', alignItems:'center', gap:12, padding:'0 16px 0 20px', boxSizing:'border-box' }}>
+          <span style={{ flex:1, color:'#FFFFFF', fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em' }}>선택한 {assignToast.count}건 오더에 기사정보가 적용되었습니다.</span>
+          <button onClick={() => {
+            const t = assignToast; setAssignToast(null);
+            setAssignments(t.prev);
+            if (t.count) notifyDriverPlan(t.driverIdx, -t.count);
+          }} style={{ padding:0, border:'none', background:'none', cursor:'pointer', fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:14, color:'#669FFF', whiteSpace:'nowrap' }}>실행취소</button>
+          <button aria-label="닫기" onClick={() => setAssignToast(null)} style={{ padding:0, border:'none', background:'none', cursor:'pointer', display:'flex' }}>
+            <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M2 2l12 12M14 2L2 14" stroke="#F1F2F4" strokeWidth="1.3" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+      )}
       {/* 오더 취소 모달 */}
       {showCancelModal && (
         <OrderCancelModal
