@@ -9,7 +9,8 @@
   1) 참가자별 JSON 파일을 여러 개 넣으면 하나로 합침 (같은 기록은 자동 제외)
   2) 화면(모달·패널 상태)별로 나눠 보여 주고, 화면마다 스크린샷을 붙여 넣으면 그 위에 히트맵을 그림
      - 스크린샷은 브라우저 창의 화면 영역만(주소창 제외) 찍어야 위치가 맞음. 레티나(2배) 스크린샷도 자동으로 맞춤
-  3) 참가자×과업별 수치(클릭 수·소요 시간·빈 영역 비율)와 CSV, 장표용 PNG 저장
+  3) 참가자×과업별 수치(클릭 수·소요 시간·빈 영역 비율·스크롤)와 CSV, 장표용 PNG 저장
+  4) 스크롤 탭: 영역별 도달 깊이(몇 %까지 내려 봤는지)와 노출 히트맵(오래 보인 구간), 입력 방식·방향 전환
   데이터는 이 브라우저(IndexedDB)에만 저장되고 외부로 보내지 않음
 -->
 <style>
@@ -84,6 +85,17 @@
   .top ol{margin:0;padding:0;list-style:none;}
   .legend{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--sub2);}
   .legend i{display:block;width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,#2B4BFF,#00D2FF,#3BE36B,#FFE14D,#FF2D2D);}
+  .areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-top:16px;}
+  .area-card .meta{display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:12px;font-size:12px;color:var(--sub2);}
+  .area-card .meta b{color:var(--text);}
+  .area-body{display:grid;grid-template-columns:1fr 56px;gap:16px;align-items:start;}
+  .depth .r{display:grid;grid-template-columns:40px 1fr 38px;align-items:center;gap:8px;height:18px;font-size:11px;color:var(--sub2);}
+  .depth .bar{height:10px;border-radius:5px;background:var(--bg);overflow:hidden;}
+  .depth .bar i{display:block;height:100%;border-radius:5px;background:var(--blue);}
+  .depth .r b{text-align:right;color:var(--text);font-weight:600;}
+  .strip{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:var(--sub3);}
+  .strip canvas{width:28px;height:190px;border-radius:4px;border:1px solid var(--line);}
+  .strip.x canvas{width:190px;height:28px;}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);padding:10px 16px;border-radius:8px;background:#2E3238;color:#fff;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;}
   .toast.show{opacity:1;}
   @media (max-width:900px){.app{grid-template-columns:1fr;height:auto;}aside{border-right:none;border-bottom:1px solid var(--line);}.grid2{grid-template-columns:1fr;}main{min-height:80vh;}}
@@ -94,7 +106,7 @@
   <aside>
     <div class="brand">
       <h1>UT 히트맵 뷰어</h1>
-      <p>배차관리 UT에서 내보낸 JSON을 모아 화면별 히트맵과 수치를 봐요. 데이터는 이 브라우저에만 저장돼요.</p>
+      <p>배차관리 UT에서 내보낸 JSON을 모아 화면별 클릭 히트맵, 스크롤 분석, 수치를 봐요. 데이터는 이 브라우저에만 저장돼요.</p>
     </div>
     <div class="sec">
       <h2>1. 기록 파일 <span id="fileCount" class="muted"></span></h2>
@@ -116,7 +128,7 @@
     </div>
     <div class="sec">
       <h2>표시</h2>
-      <div class="row"><label><input type="checkbox" id="dotsChk">클릭 점 표시</label></div>
+      <div class="row"><label><input type="checkbox" id="dotsChk">클릭 점 표시</label><label><input type="checkbox" id="areasChk">스크롤 영역 표시</label></div>
       <div class="slider"><span>퍼짐 정도</span><input type="range" id="radius" min="12" max="80" value="34"><span id="radiusV">34</span></div>
       <div class="slider"><span>진하기</span><input type="range" id="opacity" min="30" max="100" value="80"><span id="opacityV">80%</span></div>
     </div>
@@ -130,7 +142,7 @@
   <main>
     <div class="bar">
       <h3 id="title">히트맵</h3>
-      <div class="tabs" id="tabs"><button data-tab="heat" class="on">히트맵</button><button data-tab="stats">과업별 수치</button></div>
+      <div class="tabs" id="tabs"><button data-tab="heat" class="on">히트맵</button><button data-tab="scroll">스크롤</button><button data-tab="stats">과업별 수치</button></div>
       <button class="btn" id="shotBtn">스크린샷 넣기</button>
       <input type="file" id="shotInput" accept="image/*" hidden>
       <button class="btn primary" id="pngBtn">PNG 저장</button>
@@ -146,14 +158,15 @@
   const $ = id => document.getElementById(id);
   const ALL = "__all__";
   const state = {
-    clicks: [],          // 모든 기록 (id로 중복 제거)
+    clicks: [],          // 모든 클릭 기록 (id로 중복 제거)
+    scrolls: [],         // 모든 스크롤 기록 (JSON version 2부터)
     files: [],           // 넣은 파일 이름
     shots: {},           // 화면 이름 → 스크린샷 dataURL
     pOff: new Set(),     // 숨긴 참가자
     task: ALL,
     screen: null,
     tab: "heat",
-    dots: false, radius: 34, opacity: 0.8,
+    dots: false, areas: false, radius: 34, opacity: 0.8,
   };
   const shotImgs = {};   // 화면 이름 → 로드된 Image
 
@@ -175,39 +188,106 @@
   }
   async function put(key, val){ try{ const d = await db(); await new Promise((res, rej) => { const tx = d.transaction("kv", "readwrite"); tx.objectStore("kv").put(val, key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }catch(e){ /* 저장 불가 환경은 무시 */ } }
   async function get(key){ try{ const d = await db(); return await new Promise((res, rej) => { const r = d.transaction("kv").objectStore("kv").get(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }catch(e){ return undefined; } }
-  function persist(){ put("data", { clicks: state.clicks, files: state.files }); put("shots", state.shots); }
+  function persist(){ put("data", { clicks: state.clicks, scrolls: state.scrolls, files: state.files }); put("shots", state.shots); }
 
   // ── 데이터 가공 ──
   const uniq = (list, k) => Array.from(new Set(list.map(c => c[k]))).sort((a, b) => String(a).localeCompare(String(b), "ko", {numeric:true}));
   function filtered(){ return state.clicks.filter(c => !state.pOff.has(c.p) && (state.task === ALL || c.task === state.task)); }
+  function filteredScrolls(){ return state.scrolls.filter(c => !state.pOff.has(c.p) && (state.task === ALL || c.task === state.task)); }
+  const allRecords = () => state.clicks.concat(state.scrolls);
   function screenList(){
     const counts = {};
     filtered().forEach(c => { counts[c.screen] = (counts[c.screen] || 0) + 1; });
-    uniq(state.clicks, "screen").forEach(s => { if(!(s in counts)) counts[s] = 0; });
+    uniq(allRecords(), "screen").forEach(s => { if(!(s in counts)) counts[s] = 0; });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }
+  // 참가자 × 과업 (클릭만 있거나 스크롤만 있는 경우도 포함)
   function taskStats(){
     const g = new Map();
-    filtered().forEach(c => { const k = c.p + "\u0000" + c.task; if(!g.has(k)) g.set(k, []); g.get(k).push(c); });
-    return Array.from(g.values()).map(l => {
+    const key = r => r.p + "\u0000" + r.task;
+    filtered().forEach(c => { const k = key(c); if(!g.has(k)) g.set(k, { c: [], s: [] }); g.get(k).c.push(c); });
+    filteredScrolls().forEach(sc => { const k = key(sc); if(!g.has(k)) g.set(k, { c: [], s: [] }); g.get(k).s.push(sc); });
+    return Array.from(g.values()).map(({ c: l, s: sc }) => {
       l.sort((a, b) => a.t - b.t);
+      const any = l[0] || sc[0], times = l.map(x => x.t).concat(sc.map(x => x.t + (x.dur || 0)));
       const empty = l.filter(c => String(c.label).endsWith("(빈 영역)")).length;
-      return { p: l[0].p, task: l[0].task, clicks: l.length, sec: Math.round((l[l.length - 1].t - l[0].t) / 1000),
-        empty, emptyPct: Math.round(empty / l.length * 100), screens: new Set(l.map(c => c.screen)).size,
-        first: l[0].label, last: l[l.length - 1].label };
+      return { p: any.p, task: any.task, clicks: l.length, sec: Math.round((Math.max.apply(null, times) - Math.min.apply(null, times)) / 1000),
+        scrolls: sc.length, scrollPx: sc.reduce((n, x) => n + x.dist, 0), turns: turnsOf(sc),
+        empty, emptyPct: l.length ? Math.round(empty / l.length * 100) : 0, screens: new Set(l.concat(sc).map(x => x.screen)).size,
+        first: l.length ? l[0].label : "-", last: l.length ? l[l.length - 1].label : "-" };
     }).sort((a, b) => String(a.task).localeCompare(String(b.task), "ko", {numeric:true}) || String(a.p).localeCompare(String(b.p), "ko", {numeric:true}));
   }
   const fmtSec = s => (s >= 60 ? Math.floor(s / 60) + "분 " : "") + (s % 60) + "초";
 
+  // ── 스크롤 분석 ──
+  // 방향 전환 = 같은 영역에서 스크롤 방향이 반대로 바뀐 횟수 (찾느라 오르내린 정도)
+  function turnsOf(list){
+    const last = new Map(); let n = 0;
+    list.slice().sort((a, b) => a.t - b.t).forEach(s => { const k = s.area + s.axis; if(last.has(k) && last.get(k) !== s.dir) n++; last.set(k, s.dir); });
+    return n;
+  }
+  const INPUT_NAMES = { wheel: "휠", drag: "끌기", touch: "터치", key: "키보드", other: "기타" };
+  // 영역별로 묶기: 참가자×과업(세션)마다 최대 도달 깊이, 노출 시간 분포
+  function areaStats(){
+    const g = new Map();
+    filteredScrolls().forEach(s => { const k = s.area + "\u0000" + s.axis; if(!g.has(k)) g.set(k, []); g.get(k).push(s); });
+    return Array.from(g.values()).map(l => {
+      l.sort((a, b) => a.t - b.t);
+      const sessions = new Map();
+      l.forEach(s => { const k = s.p + "\u0000" + s.task; sessions.set(k, Math.max(sessions.get(k) || 0, s.depth)); });
+      const depths = Array.from(sessions.values());
+      const inputs = {}; l.forEach(s => { inputs[s.input] = (inputs[s.input] || 0) + 1; });
+      return { area: l[0].area, axis: l[0].axis, list: l, count: l.length,
+        screens: uniq(l, "screen"), people: uniq(l, "p").length, sessions: depths.length,
+        avgDepth: Math.round(depths.reduce((n, d) => n + d, 0) / depths.length), maxDepth: Math.max.apply(null, depths), depths,
+        screensMoved: Math.round(l.reduce((n, s) => n + s.dist / Math.max(1, s.view), 0) * 10) / 10,
+        turns: turnsOf(l), inputs };
+    }).sort((a, b) => b.count - a.count);
+  }
+  // 노출 히트맵: 스크롤이 멈춘 뒤 다음 스크롤까지(최대 30초) 보이던 구간에 머문 시간을 더함
+  function exposure(list, bins){
+    const acc = new Float32Array(bins);
+    const bySession = new Map();
+    list.forEach(s => { const k = s.p + "\u0000" + s.task; if(!bySession.has(k)) bySession.set(k, []); bySession.get(k).push(s); });
+    bySession.forEach(l => {
+      l.sort((a, b) => a.t - b.t);
+      l.forEach((s, i) => {
+        const next = l[i + 1];
+        const dwell = Math.min(30000, Math.max(500, next ? next.t - (s.t + s.dur) : 3000));
+        const a = Math.floor(s.to / s.total * bins), b = Math.ceil((s.to + s.view) / s.total * bins);
+        for(let k = Math.max(0, a); k < Math.min(bins, b); k++) acc[k] += dwell;
+      });
+    });
+    return acc;
+  }
+  function drawStrip(cv, acc, horizontal){
+    const n = acc.length, pal = getPalette();
+    cv.width = horizontal ? n : 1; cv.height = horizontal ? 1 : n;
+    const g = cv.getContext("2d"), im = g.createImageData(cv.width, cv.height);
+    let max = 0; acc.forEach(v => { if(v > max) max = v; });
+    for(let k = 0; k < n; k++){
+      const v = max ? Math.round(acc[k] / max * 255) : 0;
+      im.data[k * 4] = v ? pal[v * 4] : 241; im.data[k * 4 + 1] = v ? pal[v * 4 + 1] : 242; im.data[k * 4 + 2] = v ? pal[v * 4 + 2] : 244; im.data[k * 4 + 3] = 255;
+    }
+    g.putImageData(im, 0, 0);
+    cv.style.imageRendering = "pixelated";
+  }
+
   // ── 파일 넣기 ──
   async function addJsonFiles(files){
-    let added = 0, dup = 0, bad = 0;
-    const ids = new Set(state.clicks.map(c => c.id));
+    let added = 0, dup = 0, bad = 0, sAdded = 0;
+    const ids = new Set(state.clicks.map(c => c.id)), sIds = new Set(state.scrolls.map(s => s.id));
     for(const f of files){
       try{
         const data = JSON.parse(await f.text());
-        const list = Array.isArray(data) ? data : data.clicks;
+        const list = Array.isArray(data) ? data : (data.clicks || []);
         if(!Array.isArray(list)) throw new Error("형식");
+        (Array.isArray(data.scrolls) ? data.scrolls : []).forEach(s => {
+          if(!s || typeof s.total !== "number") return;
+          if(!s.id) s.id = [s.p, s.t, s.area, s.axis].join(":");
+          if(sIds.has(s.id)){ dup++; return; }
+          sIds.add(s.id); state.scrolls.push(s); sAdded++;
+        });
         list.forEach(c => {
           if(!c || typeof c.x !== "number" || typeof c.y !== "number") return;
           if(!c.id) c.id = [c.p, c.t, c.x, c.y].join(":");
@@ -218,7 +298,7 @@
       }catch(e){ bad++; }
     }
     persist(); renderAll();
-    toast(`기록 ${added}건을 더했어요` + (dup ? ` · 중복 ${dup}건 제외` : "") + (bad ? ` · 읽지 못한 파일 ${bad}개` : ""));
+    toast(`클릭 ${added}건 · 스크롤 ${sAdded}건을 더했어요` + (dup ? ` · 중복 ${dup}건 제외` : "") + (bad ? ` · 읽지 못한 파일 ${bad}개` : ""));
   }
 
   function setShot(screen, dataUrl){
@@ -247,7 +327,7 @@
     return (palette = g.getImageData(0, 0, 256, 1).data);
   }
   // 기록 좌표는 기록 당시 화면 크기(vw) 기준 → 캔버스 폭에 맞춰 늘림 (레티나 스크린샷이면 2배)
-  function drawHeat(cv, img, list){
+  function drawHeat(cv, img, list, areaList){
     const vw = mostCommon(list.map(c => c.vw)) || 1600, vh = mostCommon(list.map(c => c.vh)) || 900;
     const W = img ? img.naturalWidth : vw, H = img ? img.naturalHeight : vh;
     cv.width = W; cv.height = H;
@@ -289,19 +369,34 @@
       g.fillStyle = "rgba(20,22,28,.85)"; g.strokeStyle = "#fff"; g.lineWidth = Math.max(1, scale);
       pts.forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 3 * scale, 0, Math.PI * 2); g.fill(); g.stroke(); });
     }
+    // 스크롤 영역: 이 화면에서 스크롤한 영역 테두리 + 이름 · 횟수 · 평균 도달 깊이
+    if(state.areas && areaList && areaList.length){
+      const byArea = new Map();
+      areaList.forEach(sc => { const k = sc.area; if(!byArea.has(k)) byArea.set(k, []); byArea.get(k).push(sc); });
+      g.font = `600 ${Math.round(12 * scale)}px Pretendard, sans-serif`; g.textBaseline = "top";
+      byArea.forEach((l, name) => {
+        const r = l[l.length - 1], s = W / (r.vw || vw);
+        const x = r.x * s, y = r.y * s, w = r.w * s, h = r.h * s;
+        g.setLineDash([6 * scale, 4 * scale]); g.strokeStyle = "#7733FF"; g.lineWidth = 2 * scale; g.strokeRect(x + scale, y + scale, w - 2 * scale, h - 2 * scale); g.setLineDash([]);
+        const text = `${name.split(" › ").pop()} · 스크롤 ${l.length} · 평균 ${Math.round(l.reduce((n, sc) => n + sc.depth, 0) / l.length)}%`;
+        const tw = g.measureText(text).width + 12 * scale, th = 20 * scale;
+        g.fillStyle = "rgba(119,51,255,.92)"; g.fillRect(x + 4 * scale, y + 4 * scale, tw, th);
+        g.fillStyle = "#fff"; g.fillText(text, x + 10 * scale, y + 8 * scale);
+      });
+    }
     return { vw, vh, W, H };
   }
   function mostCommon(arr){ const m = {}; let best = null, n = 0; arr.forEach(v => { m[v] = (m[v] || 0) + 1; if(m[v] > n){ n = m[v]; best = v; } }); return best == null ? null : Number(best); }
 
   // ── 화면 그리기 ──
   function renderPeople(){
-    const ps = uniq(state.clicks, "p");
+    const ps = uniq(allRecords(), "p");
     if(!ps.length){ $("pChips").innerHTML = '<span class="muted">기록 파일을 넣으면 나타나요.</span>'; return; }
     $("pChips").innerHTML = ps.map(p => {
-      const n = state.clicks.filter(c => c.p === p).length, on = !state.pOff.has(p);
+      const n = allRecords().filter(c => c.p === p).length, on = !state.pOff.has(p);
       return `<label class="chip${on ? " on" : ""}"><input type="checkbox" data-p="${esc(p)}"${on ? " checked" : ""}>${esc(p)} <span class="n">${n}</span></label>`;
     }).join("");
-    const tasks = uniq(state.clicks, "task");
+    const tasks = uniq(allRecords(), "task");
     if(state.task !== ALL && !tasks.includes(state.task)) state.task = ALL;
     $("taskSel").innerHTML = `<option value="${ALL}">전체 과업</option>` + tasks.map(t => `<option value="${esc(t)}"${t === state.task ? " selected" : ""}>${esc(t)}</option>`).join("");
   }
@@ -314,8 +409,8 @@
   }
   async function renderStage(){
     const stage = $("stage");
-    $("fileCount").textContent = state.files.length ? `${state.files.length}개 · ${state.clicks.length}건` : "";
-    const hasData = state.clicks.length > 0;
+    $("fileCount").textContent = state.files.length ? `${state.files.length}개 · 클릭 ${state.clicks.length} · 스크롤 ${state.scrolls.length}` : "";
+    const hasData = state.clicks.length + state.scrolls.length > 0;
     $("shotBtn").disabled = !hasData || state.tab !== "heat";
     $("pngBtn").disabled = !hasData || state.tab !== "heat";
     if(!hasData){
@@ -324,10 +419,12 @@
       return;
     }
     if(state.tab === "stats"){ $("title").textContent = "과업별 수치"; stage.innerHTML = statsHtml(); return; }
+    if(state.tab === "scroll"){ $("title").textContent = "스크롤 분석"; renderScrollTab(stage); return; }
 
     const screen = state.screen;
     const list = filtered().filter(c => c.screen === screen);
-    $("title").textContent = screen + " · 클릭 " + list.length + "회";
+    const sList = filteredScrolls().filter(sc => sc.screen === screen);
+    $("title").textContent = screen + " · 클릭 " + list.length + "회" + (sList.length ? " · 스크롤 " + sList.length + "회" : "");
     const img = await loadShot(screen);
     if(screen !== state.screen || state.tab !== "heat") return; // 그 사이 다른 화면을 고름
     const top = Object.entries(list.reduce((m, c) => { m[c.label] = (m[c.label] || 0) + 1; return m; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 12);
@@ -339,14 +436,39 @@
       `<div class="grid2"><div><div class="canvas-wrap"><canvas id="heatCv"></canvas></div><div class="legend">적음 <i></i> 많음</div></div>
         <div class="card"><h4>많이 누른 곳</h4>${top.length ? `<div class="top"><ol>${top.map(([k, n]) => `<li><span title="${esc(k)}">${esc(k)}</span><b>${n}</b></li>`).join("")}</ol></div>` : '<span class="muted">이 화면의 클릭이 없어요.</span>'}
         <h4 style="margin-top:16px;">참가자</h4><div class="muted">${people.length ? esc(people.join(", ")) : "-"}</div></div></div>`;
-    drawHeat($("heatCv"), img, list);
+    drawHeat($("heatCv"), img, list, sList);
+  }
+  // ── 스크롤 탭: 영역별 요약 표 + 영역 카드(도달 깊이 · 노출 히트맵) ──
+  function renderScrollTab(stage){
+    const rows = areaStats();
+    if(!rows.length){
+      stage.innerHTML = `<div class="empty"><b>스크롤 기록이 없어요</b>스크롤 기록은 기록기를 업데이트한 뒤(JSON version 2)부터 남아요.<br>참가자·과업 필터에 걸려 안 보일 수도 있어요.</div>`;
+      return;
+    }
+    const pct = (n, d) => d ? Math.round(n / d * 100) : 0;
+    const inputTxt = r => Object.entries(r.inputs).sort((a, b) => b[1] - a[1]).map(([k, n]) => (INPUT_NAMES[k] || k) + " " + pct(n, r.count) + "%").join(" · ");
+    stage.innerHTML =
+      `<div class="card"><h4>영역별 스크롤 <span class="muted" style="font-weight:400;">· 도달 깊이 = 참가자·과업마다 전체 길이 중 가장 멀리 보인 위치 · 이동 = 화면 몇 장 분량을 넘겼는지 · 방향 전환 = 반대로 되돌아간 횟수</span></h4>
+        <table><thead><tr><th>영역</th><th style="text-align:left;">화면</th><th>방향</th><th>스크롤</th><th>참가자</th><th>평균 도달</th><th>최대 도달</th><th>이동(화면)</th><th>방향 전환</th><th style="text-align:left;">입력 방식</th></tr></thead><tbody>
+        ${rows.map(r => `<tr><td class="l" title="${esc(r.area)}">${esc(r.area)}</td><td class="l" title="${esc(r.screens.join(", "))}">${esc(r.screens.join(", "))}</td><td>${r.axis === "y" ? "세로" : "가로"}</td><td>${r.count}</td><td>${r.people}</td><td class="${r.avgDepth < 50 ? "warn" : ""}">${r.avgDepth}%</td><td>${r.maxDepth}%</td><td>${r.screensMoved}</td><td class="${r.turns >= 5 ? "warn" : ""}">${r.turns}</td><td class="l">${esc(inputTxt(r))}</td></tr>`).join("")}
+        </tbody></table></div>
+      <div class="areas">${rows.slice(0, 12).map((r, i) => {
+        const steps = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+        return `<div class="card area-card"><h4 title="${esc(r.area)}">${esc(r.area)}</h4>
+          <div class="meta"><span>${r.axis === "y" ? "세로" : "가로"} 스크롤 <b>${r.count}</b>회</span><span>참가자·과업 <b>${r.sessions}</b></span><span>평균 도달 <b>${r.avgDepth}%</b></span></div>
+          <div class="area-body"><div class="depth"><div class="muted" style="font-size:11px;margin-bottom:6px;">이 위치까지 본 비율 (참가자·과업 기준)</div>
+            ${steps.map(st => { const n = r.depths.filter(d => d >= st).length, v = pct(n, r.depths.length); return `<div class="r"><span>${st}%</span><span class="bar"><i style="width:${v}%"></i></span><b>${v}%</b></div>`; }).join("")}</div>
+          <div class="strip${r.axis === "x" ? " x" : ""}"><span>${r.axis === "y" ? "위" : "왼쪽"}</span><canvas data-strip="${i}" title="오래 보인 구간일수록 진함"></canvas><span>${r.axis === "y" ? "아래" : "오른쪽"}</span></div></div></div>`;
+      }).join("")}</div>
+      <div class="legend">노출 히트맵: 짧게 보임 <i></i> 오래 보임</div>`;
+    rows.slice(0, 12).forEach((r, i) => { const cv = stage.querySelector(`[data-strip="${i}"]`); if(cv) drawStrip(cv, exposure(r.list, 100), r.axis === "x"); });
   }
   function statsHtml(){
     const rows = taskStats();
     const byScreen = screenList();
-    return `<div class="grid2"><div class="card"><h4>참가자 × 과업 <span class="muted" style="font-weight:400;">· 소요 시간 = 첫 클릭~마지막 클릭 · 빈 영역 = 버튼·셀이 아닌 곳을 누른 비율</span></h4>
-      <table><thead><tr><th>과업</th><th style="text-align:left;">참가자</th><th>클릭 수</th><th>소요 시간</th><th>빈 영역</th><th>거친 화면</th><th style="text-align:left;">첫 클릭</th></tr></thead><tbody>
-      ${rows.map(r => `<tr><td class="l">${esc(r.task)}</td><td class="l">${esc(r.p)}</td><td>${r.clicks}</td><td>${fmtSec(r.sec)}</td><td class="${r.emptyPct >= 30 ? "warn" : ""}">${r.emptyPct}%</td><td>${r.screens}</td><td class="l" title="${esc(r.first)}">${esc(r.first)}</td></tr>`).join("")}
+    return `<div class="grid2"><div class="card"><h4>참가자 × 과업 <span class="muted" style="font-weight:400;">· 소요 시간 = 첫 기록~마지막 기록(클릭·스크롤) · 빈 영역 = 버튼·셀이 아닌 곳을 누른 비율</span></h4>
+      <table><thead><tr><th>과업</th><th style="text-align:left;">참가자</th><th>클릭 수</th><th>소요 시간</th><th>빈 영역</th><th>거친 화면</th><th>스크롤</th><th>방향 전환</th><th style="text-align:left;">첫 클릭</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td class="l">${esc(r.task)}</td><td class="l">${esc(r.p)}</td><td>${r.clicks}</td><td>${fmtSec(r.sec)}</td><td class="${r.emptyPct >= 30 ? "warn" : ""}">${r.emptyPct}%</td><td>${r.screens}</td><td>${r.scrolls}</td><td class="${r.turns >= 5 ? "warn" : ""}">${r.turns}</td><td class="l" title="${esc(r.first)}">${esc(r.first)}</td></tr>`).join("")}
       </tbody></table>${taskSummary(rows)}</div>
       <div class="card"><h4>화면별 클릭</h4><table><tbody>${byScreen.map(([s, n]) => `<tr><td class="l">${esc(s)}</td><td>${n}</td></tr>`).join("")}</tbody></table></div></div>`;
   }
@@ -357,8 +479,8 @@
     const keys = Object.keys(g);
     if(!keys.length) return "";
     const avg = (l, k) => Math.round(l.reduce((s, r) => s + r[k], 0) / l.length);
-    return `<h4 style="margin-top:18px;">과업별 평균</h4><table><thead><tr><th>과업</th><th>참가자 수</th><th>평균 클릭</th><th>평균 시간</th><th>평균 빈 영역</th></tr></thead><tbody>
-      ${keys.map(k => { const l = g[k]; const e = avg(l, "emptyPct"); return `<tr><td class="l">${esc(k)}</td><td>${l.length}</td><td>${avg(l, "clicks")}</td><td>${fmtSec(avg(l, "sec"))}</td><td class="${e >= 30 ? "warn" : ""}">${e}%</td></tr>`; }).join("")}</tbody></table>`;
+    return `<h4 style="margin-top:18px;">과업별 평균</h4><table><thead><tr><th>과업</th><th>참가자 수</th><th>평균 클릭</th><th>평균 시간</th><th>평균 빈 영역</th><th>평균 스크롤</th><th>평균 방향 전환</th></tr></thead><tbody>
+      ${keys.map(k => { const l = g[k]; const e = avg(l, "emptyPct"); return `<tr><td class="l">${esc(k)}</td><td>${l.length}</td><td>${avg(l, "clicks")}</td><td>${fmtSec(avg(l, "sec"))}</td><td class="${e >= 30 ? "warn" : ""}">${e}%</td><td>${avg(l, "scrolls")}</td><td>${avg(l, "turns")}</td></tr>`; }).join("")}</tbody></table>`;
   }
   function renderAll(){ renderPeople(); renderScreens(); renderStage(); }
 
@@ -372,20 +494,24 @@
     cv.toBlob(b => b && download(`heatmap-${safe(state.screen)}${state.task === ALL ? "" : "-" + safe(state.task)}-${stamp()}.png`, b), "image/png");
   });
   $("csvBtn").addEventListener("click", () => {
-    if(!state.clicks.length){ toast("기록이 없어요."); return; }
+    if(!state.clicks.length && !state.scrolls.length){ toast("기록이 없어요."); return; }
     const cell = v => '"' + String(v).replace(/"/g, '""') + '"';
-    const head = ["과업", "참가자", "클릭 수", "소요 시간(초)", "빈 영역 클릭", "빈 영역 비율(%)", "거친 화면 수", "첫 클릭", "마지막 클릭"];
-    const rows = taskStats().map(r => [r.task, r.p, r.clicks, r.sec, r.empty, r.emptyPct, r.screens, r.first, r.last]);
-    download(`ut-stats-${stamp()}.csv`, new Blob(["﻿" + [head].concat(rows).map(r => r.map(cell).join(",")).join("\r\n")], {type: "text/csv"}));
+    const head = ["과업", "참가자", "클릭 수", "소요 시간(초)", "빈 영역 클릭", "빈 영역 비율(%)", "거친 화면 수", "첫 클릭", "마지막 클릭", "스크롤 횟수", "스크롤 이동(px)", "스크롤 방향 전환"];
+    const rows = taskStats().map(r => [r.task, r.p, r.clicks, r.sec, r.empty, r.emptyPct, r.screens, r.first, r.last, r.scrolls, r.scrollPx, r.turns]);
+    // 스크롤 영역별 수치는 아래에 이어 붙임
+    const aHead = ["영역", "화면", "방향", "스크롤 횟수", "참가자 수", "평균 도달(%)", "최대 도달(%)", "이동(화면 수)", "방향 전환"];
+    const aRows = areaStats().map(r => [r.area, r.screens.join(" / "), r.axis === "y" ? "세로" : "가로", r.count, r.people, r.avgDepth, r.maxDepth, r.screensMoved, r.turns]);
+    const lines = [head].concat(rows).concat(aRows.length ? [[], aHead].concat(aRows) : []);
+    download(`ut-stats-${stamp()}.csv`, new Blob(["﻿" + lines.map(r => r.map(cell).join(",")).join("\r\n")], {type: "text/csv"}));
   });
   $("exportBtn").addEventListener("click", () => {
-    if(!state.clicks.length){ toast("기록이 없어요."); return; }
-    download(`ut-heatmap-merged-${stamp()}.json`, new Blob([JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), participant: "all", clicks: state.clicks }, null, 2)], {type: "application/json"}));
+    if(!state.clicks.length && !state.scrolls.length){ toast("기록이 없어요."); return; }
+    download(`ut-heatmap-merged-${stamp()}.json`, new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), participant: "all", clicks: state.clicks, scrolls: state.scrolls }, null, 2)], {type: "application/json"}));
   });
   $("clearBtn").addEventListener("click", () => {
-    if(!state.clicks.length && !Object.keys(state.shots).length) return;
-    if(!confirm(`기록 ${state.clicks.length}건과 스크린샷 ${Object.keys(state.shots).length}장을 이 뷰어에서 지울까요?\n원본 JSON 파일은 그대로 남아 있어요.`)) return;
-    state.clicks = []; state.files = []; state.shots = {}; state.pOff.clear(); state.task = ALL; state.screen = null;
+    if(!state.clicks.length && !state.scrolls.length && !Object.keys(state.shots).length) return;
+    if(!confirm(`클릭 ${state.clicks.length}건 · 스크롤 ${state.scrolls.length}건과 스크린샷 ${Object.keys(state.shots).length}장을 이 뷰어에서 지울까요?\n원본 JSON 파일은 그대로 남아 있어요.`)) return;
+    state.clicks = []; state.scrolls = []; state.files = []; state.shots = {}; state.pOff.clear(); state.task = ALL; state.screen = null;
     Object.keys(shotImgs).forEach(k => delete shotImgs[k]);
     persist(); renderAll();
   });
@@ -418,13 +544,14 @@
   function syncTabs(){ document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === state.tab)); }
   $("tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(!b) return; state.tab = b.dataset.tab; syncTabs(); renderStage(); });
   $("dotsChk").addEventListener("change", e => { state.dots = e.target.checked; renderStage(); });
+  $("areasChk").addEventListener("change", e => { state.areas = e.target.checked; renderStage(); });
   $("radius").addEventListener("input", e => { state.radius = Number(e.target.value); $("radiusV").textContent = e.target.value; renderStage(); });
   $("opacity").addEventListener("input", e => { state.opacity = Number(e.target.value) / 100; $("opacityV").textContent = e.target.value + "%"; renderStage(); });
 
   // ── 시작: 지난번에 넣은 기록·스크린샷 불러오기 ──
   (async function init(){
     const data = await get("data"), shots = await get("shots");
-    if(data && Array.isArray(data.clicks)){ state.clicks = data.clicks; state.files = data.files || []; }
+    if(data && Array.isArray(data.clicks)){ state.clicks = data.clicks; state.scrolls = data.scrolls || []; state.files = data.files || []; }
     if(shots && typeof shots === "object") state.shots = shots;
     renderAll();
   })();

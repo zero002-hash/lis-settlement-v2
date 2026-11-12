@@ -360,7 +360,7 @@ function CheckDropdownChip({ label, options, disabled = [] }: { label: string; o
           position:'absolute', top:34, left:0, zIndex:50, width:170, display:'flex', flexDirection:'column', overflow:'hidden',
           background:'#FFFFFF', border:'1px solid #E3E5E9', borderRadius:8, boxShadow:'0 2px 6px 1px rgba(34,34,34,0.06)', boxSizing:'border-box',
         }}>
-          <div style={{ maxHeight:216, overflowY:'auto', padding:8, boxSizing:'border-box' }}>
+          <div data-name="filter-options" style={{ maxHeight:216, overflowY:'auto', padding:8, boxSizing:'border-box' }}>
             {options.map(v => {
               const off = disabled.includes(v);
               const on = selected.includes(v);
@@ -887,7 +887,7 @@ function OrderTable({ page, selectedIdx, onSelectRow, checkedIdxs, onToggleCheck
     setTimeout(() => tip.remove(), 0);
   };
   return (
-    <div style={{ overflowX:'auto', overflowY:'auto', flex:1 }}>
+    <div data-name="order-list" style={{ overflowX:'auto', overflowY:'auto', flex:1 }}>
       <div style={{ minWidth:1600 }}>
         {/* Header */}
         <div style={{ display:'flex', borderTop:'1px solid #E4E5E9' }}>
@@ -1200,7 +1200,7 @@ export default function BaechaManagement() {
         <Header orderFormOpen={orderFormOpen} onToggleOrderForm={() => setOrderFormOpen(o => !o)} />
         {/* 폼 영역: 선택된 행의 orederId/rowIdx로 갱신 */}
         {orderFormOpen && <>
-        <div style={{ height:486, flexShrink:0, overflowY:'auto', overflowX:'auto' }}>
+        <div data-name="order-form" style={{ height:486, flexShrink:0, overflowY:'auto', overflowX:'auto' }}>
           <OrderDetailModal
             key={isNewOrder ? 'new' : selectedIdx}
             orderId={selectedOrderId}

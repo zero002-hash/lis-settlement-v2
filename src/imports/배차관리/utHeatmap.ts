@@ -1,11 +1,12 @@
-// ── UT 클릭 히트맵 ──
-// 배차관리 화면(본문 · 배차일지 패널 · AI 배차계획 iframe 포함)에서 참가자의 클릭 위치를 기록하고,
+// ── UT 클릭 · 스크롤 히트맵 ──
+// 배차관리 화면(본문 · 배차일지 패널 · AI 배차계획 iframe 포함)에서 참가자의 클릭 위치와 스크롤을 기록하고,
 // 진행자가 단축키로 연 패널에서 화면 위에 히트맵을 겹쳐 본다.
 //  - Ctrl + Shift + H : 진행자 패널 열기/닫기 (참가자에게는 아무것도 보이지 않음)
 //  - 링크에 ?ut=1 을 붙이면 UT 모드: 기록이 바로 켜지고, 키보드 없는 기기(태블릿)용으로 왼쪽 아래에 작은 패널 버튼이 생김
 //    ?ut=1&p=P1&task=T1 처럼 참가자·과업을 링크로 지정할 수 있음
 //  - 기록은 이 브라우저(localStorage)에만 저장 → 여러 PC에서 진행했다면 JSON 내보내기 후 한 PC에서 불러오기로 합침
 //  - 같은 버튼이라도 열린 화면(모달·패널)에 따라 위치가 달라서, 클릭할 때의 '화면'을 함께 기록하고 화면별로 본다
+//  - 스크롤은 움직임이 멈출 때까지(0.3초)를 한 번으로 묶어, 어느 영역을 어느 방향으로 얼마나(몇 %까지) 봤는지 기록한다
 
 type Click = {
   id: string;
@@ -19,13 +20,33 @@ type Click = {
   input?: string; // mouse · touch · pen
 };
 
+// 스크롤 한 번 (멈출 때까지 묶음)
+type Scroll = {
+  id: string;
+  p: string; task: string; screen: string;
+  area: string; // 스크롤한 영역 이름 (예: 오더 목록, 배차일지 일정표)
+  axis: 'y' | 'x';
+  dir: 'down' | 'up' | 'right' | 'left';
+  from: number; to: number; // 스크롤 위치(px) 시작 → 끝
+  dist: number; // 이동량(px)
+  view: number; total: number; // 보이는 길이 / 전체 길이(px)
+  depth: number; // 끝 위치에서 전체 중 어디까지 보였는지(%)
+  x: number; y: number; w: number; h: number; // 영역 위치 (최상위 화면 기준)
+  vw: number; vh: number;
+  t: number; dur: number; // 시작 시각 · 걸린 시간(ms)
+  input: string; // wheel · drag(스크롤바·끌기) · touch · key · other
+};
+
 const STORE_KEY = 'lis.ut.heatmap.v1';
+const SCROLL_KEY = 'lis.ut.heatmap.scroll.v1';
+const SCROLL_MAX = 5000; // 브라우저 저장 공간을 넘지 않게 오래된 스크롤 기록부터 정리
 const SESSION_KEY = 'lis.ut.heatmap.session';
 const Z = 2147483647;
 const AUTO_SCREEN = '__auto__';
 const ALL = '__all__';
 
 let clicks: Click[] = [];
+let scrolls: Scroll[] = [];
 let session = { recording: false, p: '', task: '' };
 let installed = false;
 let panel: HTMLDivElement | null = null;
@@ -45,10 +66,15 @@ let utButton: HTMLButtonElement | null = null;
 // ── 저장 ──
 function load() {
   try { clicks = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch { clicks = []; }
+  try { scrolls = JSON.parse(localStorage.getItem(SCROLL_KEY) || '[]'); } catch { scrolls = []; }
   try { session = { ...session, ...JSON.parse(localStorage.getItem(SESSION_KEY) || '{}') }; } catch { /* 무시 */ }
 }
 function save() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(clicks)); } catch { /* 저장 불가 환경은 무시 */ }
+}
+function saveScrolls() {
+  if (scrolls.length > SCROLL_MAX) scrolls = scrolls.slice(-SCROLL_MAX);
+  try { localStorage.setItem(SCROLL_KEY, JSON.stringify(scrolls)); } catch { /* 저장 불가 환경은 무시 */ }
 }
 function saveSession() {
   try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch { /* 무시 */ }
@@ -121,6 +147,90 @@ function record(e: MouseEvent, frame: HTMLIFrameElement | null) {
   if (showHeat) scheduleDraw();
 }
 
+// ── 스크롤 기록 ──
+// 영역 이름 — 알려진 영역은 사람이 읽는 이름으로, 나머지는 id·data-name·클래스로
+const AREA_NAMES: Record<string, string> = {
+  'order-list': '오더 목록', 'order-form': '오더 등록 폼', 'filter-options': '필터 옵션 목록',
+  driverList: '배차일지 기사 목록', dpgScroll: '배차일지 일정표',
+  arGantt: 'AI 예상 결과 일정표', arDrivers: 'AI 예상 결과 기사 목록',
+  apTable: 'AI 오더/기사 선택 표', apPickTable: 'AI 선택 모아보기 표', arListTable: 'AI 예상 결과 목록', acTable: 'AI 적용 전 확인 표',
+  ldStage: 'AI 로딩 화면', apDrvBody: 'AI 기사 상세',
+};
+function areaName(el: Element, frame: HTMLIFrameElement | null) {
+  const pre = frame ? frame.title + ' › ' : '';
+  if (el === el.ownerDocument.scrollingElement || el === el.ownerDocument.body) return pre + '페이지 전체';
+  const key = (el as HTMLElement).dataset?.name || el.id;
+  if (key && AREA_NAMES[key]) return pre + AREA_NAMES[key];
+  const table = el.querySelector(':scope > table[id]'); // 표를 감싼 스크롤 영역은 표 id로
+  if (table && AREA_NAMES[table.id]) return pre + AREA_NAMES[table.id];
+  const cls = typeof el.className === 'string' ? el.className.split(/\s+/)[0] : '';
+  return pre + (key || cls || el.tagName.toLowerCase());
+}
+
+type Gesture = { el: Element; frame: HTMLIFrameElement | null; top0: number; left0: number; t0: number; maxTop: number; maxLeft: number; timer: number; input: string };
+const gestures = new Map<Element, Gesture>();
+const lastPos = new WeakMap<Element, { top: number; left: number }>();
+let lastInput = { type: 'other', t: 0 };
+const noteInput = (type: string, target?: EventTarget | null) => { lastInput = { type, t: Date.now() }; if (type !== 'wheel') prime(target); };
+// 마우스가 올라간(또는 터치·키 입력을 시작한) 곳 아래 스크롤 영역들의 현재 위치를 잡아 둠 → 처음 스크롤하는 영역도 시작 위치를 앎
+// (휠은 브라우저가 스크롤을 먼저 처리한 뒤 이벤트가 오므로 휠 시점에는 잡지 않음)
+function prime(target?: EventTarget | null) {
+  for (let el = target as Element | null; el && el.nodeType === 1; el = el.parentElement) {
+    if (!lastPos.has(el)) lastPos.set(el, { top: el.scrollTop, left: el.scrollLeft });
+  }
+}
+let primeAt = 0;
+
+function onScroll(e: Event, frame: HTMLIFrameElement | null) {
+  if (!session.recording) return;
+  const doc = frame ? safeDoc(frame) : document;
+  const t = e.target as Element | Document | null;
+  const el = !t ? null : (t as Document).nodeType === 9 ? (t as Document).scrollingElement : (t as Element);
+  if (!el || !doc) return;
+  if (!frame && panel && panel.contains(el)) return; // 진행자 패널 스크롤은 제외
+  const prev = lastPos.get(el) || { top: el.scrollTop, left: el.scrollLeft };
+  let g = gestures.get(el);
+  if (!g) {
+    // 이 영역에서 새 스크롤 시작 — 직전 위치에서 출발 (처음 보는 영역은 지금 위치)
+    g = { el, frame, top0: prev.top, left0: prev.left, t0: Date.now(), maxTop: Math.max(prev.top, el.scrollTop), maxLeft: Math.max(prev.left, el.scrollLeft), timer: 0,
+      input: Date.now() - lastInput.t < 600 ? lastInput.type : 'other' };
+    gestures.set(el, g);
+  }
+  g.maxTop = Math.max(g.maxTop, el.scrollTop); g.maxLeft = Math.max(g.maxLeft, el.scrollLeft);
+  lastPos.set(el, { top: el.scrollTop, left: el.scrollLeft });
+  clearTimeout(g.timer);
+  g.timer = window.setTimeout(() => endGesture(g!), 300);
+}
+
+function endGesture(g: Gesture) {
+  gestures.delete(g.el);
+  const el = g.el;
+  const r = el.getBoundingClientRect();
+  let ox = 0, oy = 0;
+  if (g.frame) { const fr = g.frame.getBoundingClientRect(); ox = fr.left; oy = fr.top; }
+  const isPage = el === el.ownerDocument.scrollingElement;
+  const base = {
+    p: session.p || '익명', task: session.task || '-', screen: currentScreen(), area: areaName(el, g.frame),
+    x: Math.round((isPage ? 0 : r.left) + ox), y: Math.round((isPage ? 0 : r.top) + oy),
+    w: Math.round(isPage ? el.clientWidth : r.width), h: Math.round(isPage ? el.clientHeight : r.height),
+    vw: window.innerWidth, vh: window.innerHeight, t: g.t0, dur: Date.now() - g.t0, input: g.input,
+  };
+  const add = (axis: 'y' | 'x', from: number, to: number, max: number, view: number, total: number) => {
+    const dist = Math.abs(to - from);
+    if (dist < 4 || total <= view) return;
+    scrolls.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ...base, axis,
+      dir: axis === 'y' ? (to > from ? 'down' : 'up') : (to > from ? 'right' : 'left'),
+      from: Math.round(from), to: Math.round(to), dist: Math.round(dist), view: Math.round(view), total: Math.round(total),
+      depth: Math.min(100, Math.round((max + view) / total * 100)),
+    });
+  };
+  add('y', g.top0, el.scrollTop, g.maxTop, el.clientHeight, el.scrollHeight);
+  add('x', g.left0, el.scrollLeft, g.maxLeft, el.clientWidth, el.scrollWidth);
+  saveScrolls();
+  if (panel && panel.style.display !== 'none') renderPanel();
+}
+
 function onKey(e: KeyboardEvent) {
   if (e.ctrlKey && e.shiftKey && e.code === 'KeyH') {
     e.preventDefault();
@@ -131,8 +241,13 @@ function onKey(e: KeyboardEvent) {
 function hookDoc(doc: Document, frame: HTMLIFrameElement | null) {
   if (hooked.has(doc)) return;
   hooked.add(doc);
-  doc.addEventListener('pointerdown', (e) => record(e as MouseEvent, frame), true);
-  doc.addEventListener('keydown', onKey, true);
+  doc.addEventListener('pointerdown', (e) => { record(e as MouseEvent, frame); noteInput((e as PointerEvent).pointerType === 'touch' ? 'touch' : 'drag', e.target); }, true);
+  doc.addEventListener('keydown', (e) => { onKey(e); if (/^(Arrow|Page|Home|End| )/.test(e.key)) noteInput('key', doc.activeElement); }, true);
+  // 스크롤 — 요소 안 스크롤은 버블되지 않으므로 캡처로 받음. 직전 입력(휠·끌기·터치·키)으로 방식 구분
+  doc.addEventListener('scroll', (e) => onScroll(e, frame), true);
+  doc.addEventListener('wheel', (e) => noteInput('wheel', e.target), { capture: true, passive: true });
+  doc.addEventListener('mousemove', (e) => { if (session.recording && Date.now() - primeAt > 150) { primeAt = Date.now(); prime(e.target); } }, { capture: true, passive: true });
+  doc.addEventListener('touchstart', (e) => noteInput('touch', e.target), { capture: true, passive: true });
 }
 
 function hookFrame(f: HTMLIFrameElement) {
@@ -230,21 +345,33 @@ function tick() {
 }
 
 // ── 분석 수치: 참가자 × 과업별 (화면 필터와 무관, 참가자·과업 필터만 적용) ──
-type TaskStat = { p: string; task: string; clicks: number; sec: number; empty: number; screens: number; first: string; last: string };
+type TaskStat = { p: string; task: string; clicks: number; sec: number; empty: number; screens: number; first: string; last: string; scrolls: number; scrollPx: number; turns: number };
+// 방향 전환 = 같은 영역에서 스크롤 방향이 반대로 바뀐 횟수 (찾느라 오르내린 정도)
+function turnsOf(list: Scroll[]) {
+  const last = new Map<string, string>();
+  let n = 0;
+  list.slice().sort((a, b) => a.t - b.t).forEach(s => { const k = s.area + s.axis; if (last.has(k) && last.get(k) !== s.dir) n++; last.set(k, s.dir); });
+  return n;
+}
 function taskStats(): TaskStat[] {
-  const groups = new Map<string, Click[]>();
-  clicks
-    .filter(c => (filter.p === ALL || c.p === filter.p) && (filter.task === ALL || c.task === filter.task))
-    .forEach(c => { const k = c.p + '\u0000' + c.task; if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(c); });
-  return Array.from(groups.values()).map(list => {
+  // 참가자 × 과업 — 클릭만 있거나 스크롤만 있는 경우도 포함
+  const pass = (r: { p: string; task: string }) => (filter.p === ALL || r.p === filter.p) && (filter.task === ALL || r.task === filter.task);
+  const groups = new Map<string, { c: Click[]; s: Scroll[] }>();
+  const get = (r: { p: string; task: string }) => { const k = r.p + '\u0000' + r.task; if (!groups.has(k)) groups.set(k, { c: [], s: [] }); return groups.get(k)!; };
+  clicks.filter(pass).forEach(c => get(c).c.push(c));
+  scrolls.filter(pass).forEach(s => get(s).s.push(s));
+  return Array.from(groups.values()).map(({ c: list, s: sc }) => {
     list.sort((a, b) => a.t - b.t);
+    const any = list[0] || sc[0];
+    const times = list.map(x => x.t).concat(sc.map(x => x.t + x.dur));
     return {
-      p: list[0].p, task: list[0].task, clicks: list.length,
-      // 소요 시간 = 그 과업의 첫 클릭 ~ 마지막 클릭
-      sec: Math.round((list[list.length - 1].t - list[0].t) / 1000),
+      p: any.p, task: any.task, clicks: list.length,
+      // 소요 시간 = 그 과업의 첫 기록 ~ 마지막 기록 (클릭·스크롤)
+      sec: Math.round((Math.max(...times) - Math.min(...times)) / 1000),
       empty: list.filter(c => c.label.endsWith('(빈 영역)')).length,
-      screens: new Set(list.map(c => c.screen)).size,
-      first: list[0].label, last: list[list.length - 1].label,
+      screens: new Set([...list.map(c => c.screen), ...sc.map(s => s.screen)]).size,
+      first: list[0]?.label || '-', last: list[list.length - 1]?.label || '-',
+      scrolls: sc.length, scrollPx: sc.reduce((n, s) => n + s.dist, 0), turns: turnsOf(sc),
     };
   }).sort((a, b) => a.task.localeCompare(b.task) || a.p.localeCompare(b.p));
 }
@@ -252,15 +379,15 @@ const fmtSec = (sec: number) => (sec >= 60 ? Math.floor(sec / 60) + '분 ' : '')
 
 function exportCsv() {
   const cell = (v: string | number) => '"' + String(v).replace(/"/g, '""') + '"';
-  const head: (string | number)[] = ['참가자', '과업', '클릭 수', '소요 시간(초)', '빈 영역 클릭', '빈 영역 비율(%)', '거친 화면 수', '첫 클릭', '마지막 클릭'];
-  const rows: (string | number)[][] = taskStats().map(r => [r.p, r.task, r.clicks, r.sec, r.empty, Math.round(r.empty / r.clicks * 100), r.screens, r.first, r.last]);
+  const head: (string | number)[] = ['참가자', '과업', '클릭 수', '소요 시간(초)', '빈 영역 클릭', '빈 영역 비율(%)', '거친 화면 수', '첫 클릭', '마지막 클릭', '스크롤 횟수', '스크롤 이동(px)', '스크롤 방향 전환'];
+  const rows: (string | number)[][] = taskStats().map(r => [r.p, r.task, r.clicks, r.sec, r.empty, (r.clicks ? Math.round(r.empty / r.clicks * 100) : 0), r.screens, r.first, r.last, r.scrolls, r.scrollPx, r.turns]);
   // 엑셀에서 한글이 깨지지 않도록 BOM 포함
   download(`ut-stats-${stamp()}.csv`, '\ufeff' + [head, ...rows].map(r => r.map(cell).join(',')).join('\r\n'), 'text/csv');
 }
 
 // ── 진행자 패널 ──
 const esc = (v: string) => v.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]!));
-const uniq = (key: 'p' | 'task' | 'screen') => Array.from(new Set(clicks.map(c => c[key]))).sort();
+const uniq = (key: 'p' | 'task' | 'screen') => Array.from(new Set([...clicks.map(c => c[key]), ...scrolls.map(c => c[key])])).sort(); // 클릭·스크롤 기록 모두에서
 
 function ensurePanel() {
   if (panel) return panel;
@@ -302,13 +429,18 @@ function renderPanel() {
   const sizes = Array.from(new Set(list.map(c => c.vw + '×' + c.vh)));
   const sizeWarn = sizes.some(s => s !== window.innerWidth + '×' + window.innerHeight);
   const mine = clicks.filter(c => c.p === (session.p || '익명')).length;
+  const myScroll = scrolls.filter(s => s.p === (session.p || '익명')).length;
+  // 스크롤 많이 한 영역 (참가자·과업 필터 적용) — 횟수 · 평균 도달 깊이
+  const scr = scrolls.filter(s => (filter.p === ALL || s.p === filter.p) && (filter.task === ALL || s.task === filter.task));
+  const areas = Object.entries(scr.reduce<Record<string, Scroll[]>>((m, s) => { (m[s.area] = m[s.area] || []).push(s); return m; }, {}))
+    .sort((a, b) => b[1].length - a[1].length).slice(0, 6);
   const stats = taskStats();
   const iconBtn = 'border:none;background:none;cursor:pointer;color:#9197A1;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;padding:0;';
   // 펼침/접힘 화살표 — 펼친 상태는 아래(접기), 접힌 상태는 위(펼치기)
   const chevron = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="transform:rotate(${folded ? 180 : 0}deg);"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const header = `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:${folded ? '8px 10px 8px 14px' : '12px 14px'};">
-      <button data-act="fold" title="${folded ? '펼치기' : '접기'}" style="border:none;background:none;padding:0;cursor:pointer;font:inherit;font-size:${folded ? 13 : 15}px;font-weight:700;color:#2E3238;white-space:nowrap;">UT 클릭 히트맵</button>
+      <button data-act="fold" title="${folded ? '펼치기' : '접기'}" style="border:none;background:none;padding:0;cursor:pointer;font:inherit;font-size:${folded ? 13 : 15}px;font-weight:700;color:#2E3238;white-space:nowrap;">UT 히트맵</button>
       <span style="display:flex;align-items:center;gap:8px;">
         <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;color:${session.recording ? '#E23A3A' : '#9197A1'};">
           <span style="width:8px;height:8px;border-radius:50%;background:${session.recording ? '#E23A3A' : '#C7CBD1'};"></span>${session.recording ? '기록 중' : '기록 꺼짐'}
@@ -328,7 +460,7 @@ function renderPanel() {
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
         <button data-act="rec" style="${session.recording ? css.danger : css.primary}">${session.recording ? '기록 멈추기' : '기록 시작'}</button>
-        <span style="font-size:12px;color:#767D8A;">이 참가자 ${mine}회 · 전체 ${clicks.length}회</span>
+        <span style="font-size:12px;color:#767D8A;">이 참가자 클릭 ${mine} · 스크롤 ${myScroll} · 전체 클릭 ${clicks.length}</span>
       </div>
     </div>
     <div style="${css.sec}">
@@ -350,10 +482,14 @@ function renderPanel() {
       ${top.length ? top.map(([k, n]) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(k)}</span><b>${n}</b></div>`).join('') : '<div style="color:#9197A1;">아직 기록이 없어요.</div>'}
     </div>
     <div style="${css.sec}">
-      <span style="${css.label}">과업별 수치 <span style="color:#9197A1;">(소요 시간 = 첫 클릭~마지막 클릭)</span></span>
+      <span style="${css.label}">스크롤 많이 한 영역 <span style="color:#9197A1;">(횟수 · 평균 도달 깊이)</span></span>
+      ${areas.length ? areas.map(([k, l]) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(k)}</span><b style="white-space:nowrap;">${l.length}회 · ${Math.round(l.reduce((n, s) => n + s.depth, 0) / l.length)}%</b></div>`).join('') : '<div style="color:#9197A1;">아직 스크롤 기록이 없어요.</div>'}
+    </div>
+    <div style="${css.sec}">
+      <span style="${css.label}">과업별 수치 <span style="color:#9197A1;">(소요 시간 = 첫 기록~마지막 기록)</span></span>
       ${stats.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead><tr style="color:#767D8A;text-align:right;"><th style="text-align:left;font-weight:400;padding:3px 0;">참가자 · 과업</th><th style="font-weight:400;">클릭</th><th style="font-weight:400;">시간</th><th style="font-weight:400;" title="버튼·셀이 아닌 곳을 누른 비율">빈 영역</th></tr></thead>
-        <tbody>${stats.map(r => `<tr style="border-top:1px solid #F1F2F4;text-align:right;"><td style="text-align:left;padding:4px 0;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.p)} · ${esc(r.task)}</td><td>${r.clicks}</td><td>${fmtSec(r.sec)}</td><td style="color:${r.empty / r.clicks >= 0.3 ? '#E23A3A' : 'inherit'};">${Math.round(r.empty / r.clicks * 100)}%</td></tr>`).join('')}</tbody>
+        <thead><tr style="color:#767D8A;text-align:right;"><th style="text-align:left;font-weight:400;padding:3px 0;">참가자 · 과업</th><th style="font-weight:400;">클릭</th><th style="font-weight:400;">시간</th><th style="font-weight:400;" title="버튼·셀이 아닌 곳을 누른 비율">빈 영역</th><th style="font-weight:400;" title="스크롤 횟수 (방향 전환)">스크롤</th></tr></thead>
+        <tbody>${stats.map(r => `<tr style="border-top:1px solid #F1F2F4;text-align:right;"><td style="text-align:left;padding:4px 0;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.p)} · ${esc(r.task)}</td><td>${r.clicks}</td><td>${fmtSec(r.sec)}</td><td style="color:${r.clicks && r.empty / r.clicks >= 0.3 ? '#E23A3A' : 'inherit'};">${r.clicks ? Math.round(r.empty / r.clicks * 100) : 0}%</td><td>${r.scrolls}${r.turns ? ` (${r.turns})` : ''}</td></tr>`).join('')}</tbody>
       </table>` : '<div style="color:#9197A1;">아직 기록이 없어요.</div>'}
     </div>
     <div style="${css.sec}display:flex;flex-wrap:wrap;gap:6px;">
@@ -364,7 +500,7 @@ function renderPanel() {
       <button data-act="clear" style="${css.btn}color:#E23A3A;">기록 지우기</button>
       <input type="file" accept="application/json,.json" data-file style="display:none;">
     </div>
-    <div style="padding:0 14px 12px;font-size:11px;color:#9197A1;line-height:16px;">Ctrl+Shift+H(태블릿은 왼쪽 아래 UT 버튼)로 이 패널을 열고 닫아요. 참가자 진행 중에는 패널을 닫아 두세요(기록은 계속돼요). 참가자 필터를 고르고 JSON 내보내기를 누르면 그 참가자 파일만 저장돼요.</div>`;
+    <div style="padding:0 14px 12px;font-size:11px;color:#9197A1;line-height:16px;">Ctrl+Shift+H(태블릿은 왼쪽 아래 UT 버튼)로 이 패널을 열고 닫아요. 스크롤도 함께 기록돼요. 참가자 진행 중에는 패널을 닫아 두세요(기록은 계속돼요). 참가자 필터를 고르고 JSON 내보내기를 누르면 그 참가자 파일만 저장돼요.</div>`;
 }
 
 function onPanelInput(e: Event) {
@@ -402,10 +538,12 @@ function onPanelClick(e: Event) {
   else if (act === 'import') (panel!.querySelector('[data-file]') as HTMLInputElement).click();
   else if (act === 'clear') {
     const who = filter.p === ALL ? '모든 참가자' : filter.p;
-    if (!confirm(`${who}의 클릭 기록 ${filter.p === ALL ? clicks.length : clicks.filter(c => c.p === filter.p).length}건을 지울까요? 되돌릴 수 없어요.\n(필요하면 먼저 JSON 내보내기로 백업하세요)`)) return;
+    const nScroll = filter.p === ALL ? scrolls.length : scrolls.filter(s => s.p === filter.p).length;
+    if (!confirm(`${who}의 클릭 기록 ${filter.p === ALL ? clicks.length : clicks.filter(c => c.p === filter.p).length}건과 스크롤 기록 ${nScroll}건을 지울까요? 되돌릴 수 없어요.\n(필요하면 먼저 JSON 내보내기로 백업하세요)`)) return;
     clicks = filter.p === ALL ? [] : clicks.filter(c => c.p !== filter.p);
+    scrolls = filter.p === ALL ? [] : scrolls.filter(s => s.p !== filter.p);
     if (filter.p !== ALL) filter.p = ALL;
-    save(); draw(); renderPanel();
+    save(); saveScrolls(); draw(); renderPanel();
   }
 }
 
@@ -431,8 +569,10 @@ function download(name: string, text: string, type: string) {
 function exportJson() {
   const who = filter.p === ALL ? '' : filter.p;
   const list = who ? clicks.filter(c => c.p === who) : clicks;
+  const sList = who ? scrolls.filter(s => s.p === who) : scrolls;
   const name = `ut-heatmap-${who ? who.replace(/[^\w가-힣-]/g, '_') + '-' : ''}${stamp()}.json`;
-  download(name, JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), participant: who || 'all', clicks: list }, null, 2), 'application/json');
+  // version 2: 스크롤 기록(scrolls) 추가 — 뷰어는 version 1(클릭만) 파일도 그대로 읽음
+  download(name, JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), participant: who || 'all', clicks: list, scrolls: sList }, null, 2), 'application/json');
 }
 
 function importFile(file: File) {
@@ -443,8 +583,12 @@ function importFile(file: File) {
     const ids = new Set(clicks.map(c => c.id));
     const added = incoming.filter(c => c && typeof c.x === 'number' && typeof c.y === 'number' && !ids.has(c.id));
     clicks = clicks.concat(added);
-    save(); draw(); renderPanel();
-    alert(`클릭 기록 ${added.length}건을 불러왔어요. (중복 ${incoming.length - added.length}건 제외)`);
+    const sIn: Scroll[] = Array.isArray(data.scrolls) ? data.scrolls : [];
+    const sIds = new Set(scrolls.map(s => s.id));
+    const sAdded = sIn.filter(s => s && s.id && !sIds.has(s.id));
+    scrolls = scrolls.concat(sAdded);
+    save(); saveScrolls(); draw(); renderPanel();
+    alert(`클릭 기록 ${added.length}건, 스크롤 기록 ${sAdded.length}건을 불러왔어요. (중복 제외)`);
   }).catch(() => alert('불러오지 못했어요. UT 히트맵에서 내보낸 JSON 파일인지 확인해 주세요.'));
 }
 
