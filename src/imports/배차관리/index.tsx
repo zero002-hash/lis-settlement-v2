@@ -18,8 +18,8 @@ function Header({ orderFormOpen, onToggleOrderForm }: { orderFormOpen: boolean; 
     return () => { alive = false; import('./aiDispatchFlow').then(m => m.hideSchedule()).catch(() => {}); };
   }, []);
   const pad = (n: number) => String(n).padStart(2, '0');
-  const now = new Date(2026, 5, 29, 12, 30, 21);
-  const timeStr = `06.29 ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} 기준`;
+  const now = new Date();
+  const timeStr = `${pad(now.getMonth() + 1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} 기준`;
   return (
     <div style={{ height:82, borderBottom:'1px solid #E4E5E9', background:'#FFFFFF', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'0 32px', flexShrink:0, boxSizing:'border-box' }}>
       <div style={{ display:'flex', alignItems:'center', gap:20 }}>
@@ -141,7 +141,7 @@ function statusBadge(status: OrderStatus) {
   const map: Record<OrderStatus, { bg: string; color: string }> = {
     '접수대기': { bg:'#EBEDEF', color:'#454B55' },
     '배차대기': { bg:'#EBEDEF', color:'#454B55' },
-    '배차계획': { bg:'#EEE6FF', color:'#5500FF' },
+    '배차계획': { bg:'#FCF2E9', color:'#DD8022' }, // AI 배차계획 흐름과 같은 주황
     '배차중':   { bg:'#E4FBEB', color:'#18AC42' },
     '배차완료': { bg:'#E6EFFF', color:'#005FFF' },
     '운송중':   { bg:'#E4FBEB', color:'#18AC42' },
@@ -163,6 +163,11 @@ const ORGS = ['이천센터','이천센터','이천센터','이천센터','이�
 const PARTNERS = ['케이드라이브','케이드라이브','케이드라이브','케이드라이브','케이드라이브'];
 const DEST = ['영등포센터','영등포센터','영등포센터','영등포센터','영등포센터'];
 
+// 목업 날짜 — 실제 오늘로부터 off일 뒤를 YY.MM.DD로
+const ymd = (off: number) => {
+  const d = new Date(); d.setDate(d.getDate() + off);
+  return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+};
 const LOAD_NAMES = ['이천물류센터','부천허브','구리물류센터','의왕ICD','김포공항물류'];
 const LOAD_ADDR = ['경기도 이천시 마장면 서경로 428','경기도 부천시 조마루로 385','경기도 구리시 갈매로 56','경기도 의왕시 이미로 40','경기도 김포시 하늘길 78'];
 const LOAD_DETAIL = ['A동 3층 입고장','2번 게이트','물류동 B구역','컨테이너 야드 C','화물터미널 2층'];
@@ -831,7 +836,7 @@ function cellText(text: string, color = '#2E3238') {
 // ── 오더의 기사 정보 (드래그앤드롭 배차) ──
 type AssignedDriver = { name: string; phone: string; plate: string };
 // 기사 배정이 된 상태(배차계획 이후)의 목업 기사
-const MOCK_DRIVER: AssignedDriver = { name:'이진아', phone:'010-1234-1234', plate:'27오1234' };
+const MOCK_DRIVER: AssignedDriver = { name:'양대광', phone:'010-1234-1234', plate:'27오1234' };
 const STATUSES_WITH_DRIVER: OrderStatus[] = ['배차계획','배차중','배차완료','운송중','운송완료'];
 function baseDriver(status: OrderStatus): AssignedDriver | null {
   return STATUSES_WITH_DRIVER.includes(status) ? MOCK_DRIVER : null;
@@ -998,11 +1003,11 @@ function OrderTable({ page, selectedIdx, onSelectRow, checkedIdxs, onToggleCheck
               <Td width={COL_WIDTHS.driverPlate} bg={rowBg}>{driver ? cellText(driver.plate) : cellText('-', '#C7CBD1')}</Td>
               <Td width={COL_WIDTHS.partner} bg={rowBg}>{cellText(row.partner)}</Td>
               <Td width={COL_WIDTHS.partnerGrp} bg={rowBg}>{cellText(row.dest)}</Td>
-              <Td width={COL_WIDTHS.reqDate} bg={rowBg}>{cellText('25.10.20 08:10')}</Td>
-              <Td width={COL_WIDTHS.cpt} bg={rowBg}>{cellText('25.10.28')}</Td>
-              <Td width={COL_WIDTHS.depDate} bg={rowBg}>{cellText('25.10.20 08:10')}</Td>
-              <Td width={COL_WIDTHS.arrDate} bg={rowBg}>{i < 2 ? cellText('25.10.21 19:40') : cellText('-', '#C7CBD1')}</Td>
-              <Td width={COL_WIDTHS.depDate2} bg={rowBg}>{i < 2 ? cellText('25.10.21') : cellText('-', '#C7CBD1')}</Td>
+              <Td width={COL_WIDTHS.reqDate} bg={rowBg}>{cellText(`${ymd(0)} 08:10`)}</Td>
+              <Td width={COL_WIDTHS.cpt} bg={rowBg}>{cellText(ymd(8))}</Td>
+              <Td width={COL_WIDTHS.depDate} bg={rowBg}>{cellText(`${ymd(0)} 08:10`)}</Td>
+              <Td width={COL_WIDTHS.arrDate} bg={rowBg}>{i < 2 ? cellText(`${ymd(1)} 19:40`) : cellText('-', '#C7CBD1')}</Td>
+              <Td width={COL_WIDTHS.depDate2} bg={rowBg}>{i < 2 ? cellText(ymd(1)) : cellText('-', '#C7CBD1')}</Td>
               <Td width={COL_WIDTHS.loadName} bg={rowBg}>{cellText(row.loadName)}</Td>
               <Td width={COL_WIDTHS.loadAddr} bg={rowBg}>{cellText(row.loadAddr)}</Td>
               <Td width={COL_WIDTHS.loadDetail} bg={rowBg}>{cellText(row.loadDetail)}</Td>

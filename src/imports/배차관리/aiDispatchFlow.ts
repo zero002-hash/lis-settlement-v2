@@ -7,7 +7,7 @@
 type FlowKey = 'ai' | 'gs';
 type FlowSource = { srcdoc?: string };
 // 플로우 iframe이 보내는 표시 상태 (close: 숨김, toast: 클릭 통과, 그 외(modal 등): 클릭 가능)
-type AiFlowState = 'modal' | 'toast' | 'close' | (string & {});
+type AiFlowState = 'modal' | 'toast' | 'mini' | 'close' | (string & {});
 
 // 플로우 HTML 경로 (이 모듈 기준 상대경로 → Vite가 에셋으로 처리)
 // ?v= : 화면을 새로고침할 때마다 플로우 HTML을 새로 받도록(브라우저가 이전 iframe 내용을 캐시해 수정사항이 안 보이는 문제 방지)
@@ -59,6 +59,18 @@ function applyFlowSource(frame: HTMLIFrameElement, key: FlowKey) {
   else frame.src = FLOW_URLS[key];
 }
 
+let aiFrameState: AiFlowState = 'close';
+const AI_MINI_HEIGHT = 96; // 토스트(76px) + 아래 여백
+// 작게보기 토스트 위치 — 배차일지 패널이 보이면 그 아래쪽에 패널 폭으로, 아니면 화면 오른쪽 아래
+function layoutAiMini() {
+  if (!aiFrame || aiFrameState !== 'mini') return;
+  const r = schedulePanel && isScheduleVisible() ? schedulePanel.getBoundingClientRect() : null;
+  Object.assign(aiFrame.style, r
+    ? { inset: 'auto', left: r.left + 'px', right: '', bottom: Math.max(0, window.innerHeight - r.bottom) + 'px', width: r.width + 'px', height: AI_MINI_HEIGHT + 'px' }
+    : { inset: 'auto', left: '', right: '0', bottom: '0', width: '401px', height: AI_MINI_HEIGHT + 'px' });
+}
+window.addEventListener('resize', layoutAiMini);
+
 function setAiFrameState(state: AiFlowState) {
   if (!aiFrame) return;
   if (state === 'close') {
@@ -67,6 +79,15 @@ function setAiFrameState(state: AiFlowState) {
     aiFrame.style.display = 'block';
     // 토스트 상태에서는 아래 화면을 클릭할 수 있도록 포인터 이벤트를 통과시킴
     aiFrame.style.pointerEvents = state === 'toast' ? 'none' : 'auto';
+    // 로딩 작게보기(mini) — 배차일지를 요약보기로 열고, iframe을 배차일지 패널 아래쪽 토스트 크기로 줄여
+    // 배차관리 · 배차일지를 그대로 쓸 수 있게 함
+    aiFrameState = state;
+    if (state === 'mini') {
+      if (!isScheduleVisible()) openSchedule();
+      layoutAiMini();
+    } else {
+      Object.assign(aiFrame.style, { inset: '0', left: '', right: '', bottom: '', width: '100vw', height: '100vh' });
+    }
   }
 }
 
@@ -109,6 +130,7 @@ function layoutSchedulePanel() {
   schedulePanel.style.width = width + 'px';
   setDockWidth(docked && schedulePanel.style.display !== 'none' ? width : 0);
   syncFrameLayout(width);
+  layoutAiMini(); // 패널 폭·위치가 바뀌면 작게보기 토스트도 따라감
 }
 
 // 패널 폭에 맞춰 배차일지 화면을 요약/넓게보기로 전환 (iframe에 알림)

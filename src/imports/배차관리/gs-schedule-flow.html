@@ -1,6 +1,34 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<script id="lis-dates">
+// 목업 날짜 — 실제 오늘을 기준으로 계산. LD(오늘로부터 며칠, 형식)
+(function(){
+  const T = new Date(); T.setHours(0, 0, 0, 0);
+  const p = function(n){ return String(n).padStart(2, "0"); };
+  window.LIS_TODAY = T;
+  window.LD = function(off, f){
+    const d = new Date(T); d.setDate(d.getDate() + (off || 0));
+    const m = d.getMonth() + 1, dd = d.getDate(), w = "일월화수목금토"[d.getDay()], y = String(d.getFullYear()).slice(2);
+    if(f === "date") return d;
+    if(f === "md") return p(m) + "." + p(dd);                 // 11.12
+    if(f === "mdw") return p(m) + "." + p(dd) + " " + w;      // 11.12 목
+    if(f === "slash") return m + "/" + dd;                    // 11/12
+    if(f === "ymd") return y + "." + p(m) + "." + p(dd);      // 26.11.12
+    if(f === "ymdw") return y + "." + p(m) + "." + p(dd) + " " + w;
+    if(f === "kor") return m + "월 " + dd + "일";             // 11월 12일
+    return "";
+  };
+  // 지금 시각 HH:MM:SS
+  window.LD_NOW = function(){ const n = new Date(); return p(n.getHours()) + ":" + p(n.getMinutes()) + ":" + p(n.getSeconds()); };
+  // data-ld="{0:kor} (오늘)" 처럼 적힌 정적 문구를 채움 ({now}는 지금 시각)
+  document.addEventListener("DOMContentLoaded", function(){
+    document.querySelectorAll("[data-ld]").forEach(function(el){
+      el.textContent = el.dataset.ld.replace(/\{(-?\d+):(\w+)\}/g, function(_, o, fm){ return window.LD(Number(o), fm); }).replace("{now}", window.LD_NOW());
+    });
+  });
+})();
+</script>
 <meta charset="UTF-8">
 <title>배차 관리</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-gov.min.css">
@@ -105,11 +133,12 @@
   .dim-cell{color:var(--sub3);}
   .chk{width:20px;height:20px;border-radius:4px;border:1.3px solid #adb1b9;background:var(--white);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;box-sizing:border-box;}
   .chk.checked{background:#005fff;border-color:#005fff;}
+  .chk.disabled{border:none;background:rgba(38,45,57,.08);cursor:default;} /* 선택 불가 (소속기사 배차 불가능 기사) */
   .chk.checked::after{content:"";width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px);}
   .badge{display:inline-flex;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:600;}
   .badge.gray{background:#f0f2f5;color:var(--sub1);}
   .badge.wait{background:var(--yellow-bg);color:var(--yellow);}
-  .badge.plan{background:var(--blue-soft);color:var(--blue);}
+  .badge.plan{background:#FCF2E9;color:#DD8022;} /* 배차계획 뱃지 — 주황 (배차관리 오더목록·AI 배차계획 공통) */
   .badge.searching{background:var(--green-bg);color:var(--green);display:inline-flex;gap:6px;align-items:center;}
   .badge.searching .sub-tag{background:rgba(255,255,255,.6);padding:1px 5px;border-radius:4px;font-weight:700;}
   .badge.done{background:var(--green-bg);color:var(--green);}
@@ -550,6 +579,10 @@
   .mode-summary .dl-ai-btn{width:100%;}
   .dl-ai-btn:hover{background:#EEEFF1;}
   .dl-ai-resume{color:#7733FF;margin-left:4px;}
+  /* 이어서하기 툴팁 — 피그마 '배차관리 배차 계획 버튼' */
+  .dl-ai-tip{position:fixed;z-index:100;display:none;padding:6px 8px;border-radius:4px;background:#2E3238;color:#fff;font-size:13px;line-height:19px;letter-spacing:-0.26px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.18);}
+  .dl-ai-tip.show{display:block;}
+  .dl-ai-tip::before{content:"";position:absolute;left:18px;bottom:100%;border:6px solid transparent;border-bottom-color:#2E3238;}
   .dl-ai-badge{width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#337FFF 0%,#9966FF 100%);color:#fff;font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;}
   .dl-search{display:flex;align-items:center;height:36px;border-radius:4px;background:#EBEDEF;flex:1;min-width:0;}
   .mode-wide .dl-search{flex:0 0 190px;}
@@ -723,6 +756,12 @@
   /* 넓게보기 화주 · 협력사 드롭다운 — 피그마 7089:728182 (검색창 · 섹션 · 상태 뱃지) */
   .mode-wide .dl-pill.on{color:#005FFF;}
   .mode-wide .dl-fsel.open .dl-pill{background:#E6EFFF;color:#005FFF;}
+  /* 필터값을 선택한 상태 — 피그마 10374:354786: 필터명 + 개수 뱃지, 연파랑 배경, 화살표 없음(열려 있을 때만 노출) */
+  .mode-summary .dl-detail-row .dl-pill.on,.mode-wide .dl-pill.on{background:#F5F9FF;color:#005FFF;}
+  .mode-summary .dl-detail-row .dl-pill.on:hover,.mode-wide .dl-pill.on:hover{background:#E6EFFF;}
+  .dl-fsel:not(.open) .dl-pill.on .dl-chev{display:none;}
+  .dl-fsel-lbl{display:inline-flex;align-items:center;gap:4px;}
+  .dl-fcnt{min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#CCDFFF;color:#005FFF;font-size:11px;font-weight:600;line-height:16px;letter-spacing:0;text-align:center;box-sizing:border-box;}
   .mode-wide .dl-fsel.open .dl-pill .dl-chev path{stroke:#005FFF;}
   .dl-fsel-search .dl-fmenu{width:var(--fmenu-w,247px);}
   .dl-fsearch{padding:8px 8px 2px;}
@@ -757,7 +796,7 @@
   .mode-wide .dl-legend .lg:first-child{margin-left:0;}
   .dl-legend .lg.plan{background:#EBF2FF;border-color:#B2CFFF;}
   .dl-legend .lg.done{background:#F1F2F4;border-color:#C7CBD1;}
-  .dl-legend .lg.today{background:#E8F5EC;border-color:#A5D6B4;}
+  .dl-legend .lg.today{background:#fff;border-color:#9197A1;}
   .mode-wide .dl-tools{flex-wrap:wrap;gap:12px;padding:16px 20px;}
   .mode-wide .dl-ai-btn{width:170px;height:36px;padding:0 12px;gap:4px;font-size:15px;line-height:22px;letter-spacing:-0.3px;}
   .mode-wide .dl-search{flex:0 0 264px;height:36px;background:none;margin-right:8px;}
@@ -875,10 +914,36 @@
   .mode-wide .dpg-row .dpg-cell.day-start{box-shadow:none;}
   .mode-wide .dpg-now-line{top:-50px;}
   .dpg-block{height:32px;padding:5px 8px;gap:6px;border:1px solid;border-radius:6px;box-shadow:1px 1px 1px rgba(34,34,34,.06);font-size:13px;line-height:19px;letter-spacing:-0.26px;color:#454B55;box-sizing:border-box;}
-  .dpg-block.done{background:#F1F2F4;border-color:#C7CBD1;color:#454B55;}
-  .dpg-block.plan{background:#EBF2FF;border-color:#B2CFFF;color:#454B55;}
-  .dpg-block.today-plan{background:#E8F5EC;border-color:#A5D6B4;color:#454B55;}
-  .dpg-block .dpg-num{width:auto;height:auto;border-radius:0;background:none!important;color:#454B55;font-size:13px;font-weight:600;}
+  /* 오더 막대 — 피그마 계획기준O / 배차일지 일자가 아닌 경우(10374:354962). 기준일(base)은 테두리·진한 글자, 아닌 날은 테두리 없이 흐린 글자.
+     구분: AI 배차계획(ai) · 배차완료 경고/배차계획 유효성검증(warn, 빨간 테두리)
+     시뮬레이션(연보라)은 AI 배차계획 예상 결과에서만 쓰므로 배차일지에는 없음 */
+  .dpg-block{padding:5px 8px;gap:4px;border-radius:6px;box-shadow:1px 1px 2px 1px rgba(34,34,34,.06);color:#9197A1;}
+  .dpg-block:hover{filter:none;box-shadow:1px 1px 2px 1px rgba(34,34,34,.06);}
+  .dpg-block.done{background:#F1F2F4;border-color:#F1F2F4;}
+  .dpg-block.done:hover{background:#EBEDEF;border-color:#EBEDEF;}
+  .dpg-block.plan{background:#EBF2FF;border-color:#EBF2FF;}
+  .dpg-block.plan:hover{background:#DBE9FF;border-color:#DBE9FF;}
+  .dpg-block.done,.dpg-block.plan{color:#9197A1;}
+  .dpg-block.base.done,.dpg-block.base.plan{color:#454B55;}
+  .dpg-block.base.done{border-color:#C7CBD1;}
+  .dpg-block.base.done:hover{background:#EBEDEF;border-color:#C7CBD1;}
+  .dpg-block.base.plan{border-color:#B3CFFF;}
+  .dpg-block.base.plan:hover{background:#DBE9FF;border-color:#B3CFFF;}
+  .dpg-block.warn,.dpg-block.base.warn{border-color:#E44E4E;}
+  .dpg-block.warn:hover,.dpg-block.base.warn:hover{background:#FCE9E9;border-color:#E44E4E;}
+  .dpg-block .dpg-num{width:auto;height:auto;border-radius:0;background:none!important;color:inherit;font-size:13px;font-weight:600;}
+  .dpg-ai{width:14px;height:14px;flex-shrink:0;border-radius:50%;background:linear-gradient(135deg,#337FFF 0%,#9966FF 100%);color:#fff;font-size:7px;font-weight:800;line-height:14px;text-align:center;letter-spacing:-0.2px;}
+  .dpg-block:not(.base) .dpg-ai{opacity:.45;}
+  .dpg-warn{width:14px;height:14px;flex-shrink:0;}
+  /* 오더 호버 툴팁 — 피그마 7778:341715: 유효성 검증 에러메시지(있을 때만, 말줄임 없이) · 상차 · 하차(요청/예상 시각) · 배차담당자 */
+  .dpg-tip{position:fixed;z-index:90;display:none;min-width:167px;max-width:260px;padding:10px;border-radius:6px;background:#2E3238;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:13px;line-height:19px;letter-spacing:-0.26px;color:#fff;pointer-events:none;box-sizing:border-box;}
+  .dpg-tip.show{display:block;}
+  .dpg-tip-sec + .dpg-tip-sec{margin-top:4px;padding-top:4px;border-top:1px solid #454B55;}
+  .dpg-tip-err{display:flex;align-items:flex-start;gap:4px;white-space:normal;word-break:keep-all;}
+  .dpg-tip-err svg{flex-shrink:0;margin-top:1.5px;}
+  .dpg-tip-k{margin-right:4px;color:#ADB1B9;}
+  .dpg-tip-t{display:flex;align-items:center;gap:4px;}
+  .dpg-tip-t i{width:2px;height:2px;border-radius:50%;background:#fff;}
   .dpg-label{overflow:hidden;text-overflow:ellipsis;}
   .dpg-label b{font-weight:600;}
 </style>
@@ -927,7 +992,7 @@
     <header class="topbar">
       <div class="topbar-left">
         <h1>배차 관리</h1>
-        <span class="ts">06.17 12:30:21 기준</span>
+        <span class="ts" data-ld="{0:md} {now} 기준">06.17 12:30:21 기준</span>
         <span class="divider-dot">|</span>
         <span class="auto-refresh">10초마다 자동 새로고침 <span class="switch-mini"></span></span>
         <button class="refresh-btn">⟳</button>
@@ -1011,14 +1076,14 @@
             <span class="dl-ic dl-info" tabindex="0"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14.35 8C14.35 11.507 11.507 14.35 8 14.35C4.49299 14.35 1.65 11.507 1.65 8C1.65 4.49299 4.49299 1.65 8 1.65C11.507 1.65 14.35 4.49299 14.35 8Z" stroke="#9197A1" stroke-width="1.3"/><path d="M8 8L8 10.5" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round"/><ellipse cx="8" cy="5.8" rx="0.8" ry="0.8" fill="#9197A1"/></svg><span class="dl-tip">기사별 배차 계획·완료 오더를 날짜별로 확인해요.<br>오더 목록 자동 새로고침이 켜져 있으면 같은 주기로, 꺼져 있으면 배차일지 기본 주기로 갱신해요.</span></span>
             <div class="dl-date">
               <button class="dl-ic" id="dlPrev" aria-label="이전 날짜"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8L10 13" stroke="#9197A1" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-              <b id="dlDate">10월 11일 (오늘)</b>
+              <b id="dlDate" data-ld="{0:kor} (오늘)">10월 11일 (오늘)</b>
               <button class="dl-ic" id="dlNext" aria-label="다음 날짜"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 13L11 8L6 3" stroke="#9197A1" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             </div>
           </div>
           <div class="dl-head-right">
-            <span class="dl-wide-only dl-stamp">04.14 12:30:21 기준</span>
+            <span class="dl-wide-only dl-stamp" data-ld="{0:md} {now} 기준">04.14 12:30:21 기준</span>
             <button class="dl-ic dl-wide-only dl-refresh" title="새로고침"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 1 1 11.9 4.1" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round"/><path d="M12.6 1.9L12.9 4.6L10.2 4.9" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-            <i class="dl-vsep dl-wide-only"></i><span class="dl-wide-only dl-legend"><i class="lg plan"></i>배차 계획된 오더<i class="lg done"></i>배차 완료된 오더<i class="lg today"></i><span id="dlLegendDay">10월 11일</span> 배차일지 오더</span>
+            <i class="dl-vsep dl-wide-only"></i><span class="dl-wide-only dl-legend"><i class="lg plan"></i>배차 계획된 오더<i class="lg done"></i>배차 완료된 오더<i class="lg today"></i><span id="dlLegendDay" data-ld="{0:kor}">10월 11일</span> 배차일지 오더</span>
             <button class="dl-ic" id="dlModeBtn" title="새창으로 보기" aria-label="새창으로 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 13.5L2.5 2.5" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round"/><path d="M7.5 2.5H2.5V7.5" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 13.5L13.5 13.5L13.5 8.5" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <button class="dl-ic" id="dpCloseBtn" title="닫기" aria-label="배차일지 닫기"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13 3L3 13" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round"/><path d="M3 3L13 13" stroke="#9197A1" stroke-width="1.3" stroke-linecap="round"/></svg></button>
           </div>
@@ -1134,7 +1199,7 @@
         </select>
         <div class="switchgrp">
           <button id="csDatePrev">‹</button>
-          <span class="datebox" id="csDateBox">26.07.27</span>
+          <span class="datebox" id="csDateBox" data-ld="{0:ymd}">26.07.27</span>
           <button id="csDateNext">›</button>
         </div>
       </div>
@@ -1332,10 +1397,10 @@
     <div class="rs-subhead">
       <div class="rs-daynav">
         <button>‹</button>
-        <div class="box">배차계획일 06.06.16 (오늘)</div>
+        <div class="box" data-ld="배차계획일 {0:ymd} (오늘)">배차계획일 06.06.16 (오늘)</div>
         <button>›</button>
       </div>
-      <div class="rs-daytitle">상차일 26.06.16 목</div>
+      <div class="rs-daytitle" data-ld="상차일 {0:ymdw}">상차일 26.06.16 목</div>
       <div class="rs-legend">
         <span class="rs-spinner"></span>
         <span>{로딩중 입니다...}</span>
@@ -1434,18 +1499,18 @@ const orders = [
   {id:"KMO1234", po:"CC120C08", status:["화주접수","gray"], resp:"-", driver:"-", phone:"-", plate:"-"},
   {id:"KMO1234", po:"CC120C08", status:["배차실패","fail"], resp:"-", driver:"-", phone:"-", plate:"-"},
   {id:"KMO1234", po:"CC120C08", status:["배차대기","wait"], resp:"-", driver:"-", phone:"-", plate:"-"},
-  {id:"KMO1234", po:"CC120C08", status:["배차대기","wait"], resp:"-", driver:"이진아", phone:"010-1234-1234", plate:"27오1234"},
-  {id:"KMO1234", po:"-", status:["배차계획","plan"], resp:"-", driver:"이진아", phone:"010-1234-1234", plate:"27오1234"},
+  {id:"KMO1234", po:"CC120C08", status:["배차대기","wait"], resp:"-", driver:"양대광", phone:"010-1234-1234", plate:"27오1234"},
+  {id:"KMO1234", po:"-", status:["배차계획","plan"], resp:"-", driver:"정재경", phone:"010-1234-1234", plate:"27오1234"},
   {id:"KMO1234", po:"-", status:["배차계획","plan"], resp:"-", driver:"-", phone:"-", plate:"-", method:"정보망 배차"},
-  {id:"KMO1234", po:"-", status:["기사찾는중","searching","용차"], resp:"-", driver:"이진아", phone:"010-1234-1234", plate:"27오1234", method:"협력사 위탁"},
-  {id:"KMO1234", po:"CC120C08", status:["기사찾는중","searching","위탁"], resp:"-", driver:"이진아", phone:"010-1234-1234", plate:"27오1234"},
-  {id:"KMO1234", po:"CC120C08", status:["배차완료","done"], resp:"-", driver:"이진아", phone:"010-1234-1234", plate:"27오1234"},
-  {id:"KMO1234", po:"CC120C08", status:["운송중","moving"], resp:"하차완료", driver:"이진아", phone:"010-1234-1234", plate:"27오1234"},
-  {id:"KMO1234", po:"CC120C08", status:["운송중","moving"], resp:"하차완료", driver:"이진아", phone:"010-1234-1234", plate:"27오1234"},
-  {id:"KMO1234", po:"CC120C08", status:["운송완료","done"], resp:"하차완료", driver:"이진아", phone:"010-1234-1234", plate:"27오1234"},
-  {id:"KMO1234", po:"CC120C08", status:["운송완료","done"], resp:"하차완료", driver:"이진아", phone:"010-1234-1234", plate:"27오1234"},
-  {id:"KMO1234", po:"CC120C08", status:["운송완료","done"], resp:"하차완료", driver:"이진아", phone:"010-1234-1234", plate:"27오1234"},
-  {id:"KMO1234", po:"CC120C08", status:["운송완료","done"], resp:"하차완료", driver:"이진아", phone:"010-1234-1234", plate:"27오1234"},
+  {id:"KMO1234", po:"-", status:["기사찾는중","searching","용차"], resp:"-", driver:"김지혜", phone:"010-1234-1234", plate:"27오1234", method:"협력사 위탁"},
+  {id:"KMO1234", po:"CC120C08", status:["기사찾는중","searching","위탁"], resp:"-", driver:"장호정", phone:"010-1234-1234", plate:"27오1234"},
+  {id:"KMO1234", po:"CC120C08", status:["배차완료","done"], resp:"-", driver:"한혜서", phone:"010-1234-1234", plate:"27오1234"},
+  {id:"KMO1234", po:"CC120C08", status:["운송중","moving"], resp:"하차완료", driver:"김세영", phone:"010-1234-1234", plate:"27오1234"},
+  {id:"KMO1234", po:"CC120C08", status:["운송중","moving"], resp:"하차완료", driver:"김수연", phone:"010-1234-1234", plate:"27오1234"},
+  {id:"KMO1234", po:"CC120C08", status:["운송완료","done"], resp:"하차완료", driver:"전유지", phone:"010-1234-1234", plate:"27오1234"},
+  {id:"KMO1234", po:"CC120C08", status:["운송완료","done"], resp:"하차완료", driver:"김강훈", phone:"010-1234-1234", plate:"27오1234"},
+  {id:"KMO1234", po:"CC120C08", status:["운송완료","done"], resp:"하차완료", driver:"임형원", phone:"010-1234-1234", plate:"27오1234"},
+  {id:"KMO1234", po:"CC120C08", status:["운송완료","done"], resp:"하차완료", driver:"이주호", phone:"010-1234-1234", plate:"27오1234"},
   {id:"KMO1234", po:"CC120C08", status:["운송완료","done"], resp:"배차취소", driver:"이나나", phone:"010-1234-1234", plate:"27오1234"},
   {id:"KMO1234", po:"CC120C08", status:["운송완료","done"], resp:"배차취소", driver:"이나나", phone:"010-1234-1234", plate:"27오1234"},
   {id:"KMO1234", po:"CC120C08", status:["거래취소","cancel"], resp:"배차취소", driver:"이나나", phone:"010-1234-1234", plate:"27오1234"},
@@ -1483,18 +1548,21 @@ orderBody.addEventListener("click",function(e){
 
 // 배차일지 기사 목록 — 1줄: 기사명 · 계획/완료 · 차량번호 · 톤수, 차종 / 목록 펼침 시 2줄: 차고지 · 적재합길이 · 배차금액 · 기사 메모
 // blocked: 앱에서 '배차 거부 중'으로 설정한 기사(배차요청 불가) / offDays: 파트너기사 관리에 등록된 휴무일
-const DL_NAMES = ["일이삼사오육칠팔구십","김도윤","이서준","박지훈","최현우","정민재","강도현","김선우","이지호","박준서","최유찬","김서윤","한지율","윤하준"];
+// 기사 250명: 앞 39명은 t-trucker 기사 이름, 나머지는 가상의 이름. 앞 14명은 화면 예시(차단·휴무·차고지 없음·오더 없음)용으로 값을 직접 정함
+const DL_NAMES = ["양대광","정재경","김지혜","장호정","한혜서","김세영","김수연","전유지","김강훈","임형원","이주호","안민혁","백승준","김웅기","안준엽","조성준","곽원섭","신지혜","김보경","정수현","노승주","민관우","진근영","선상구","국경","황인렬","신유성","정용우","성창훈","김태완","신정수","양현성","박종성","최혜민","하정현","조호","강서연","박경호","오창용","정상훈","하광수","이철수","원준호","최수진","국태호","조미경","채다은","김동규","이광수","이영진","국시우","이성진","최윤서","노승철","김현우","유진호","박지아","김재훈","예현준","전윤서","임병철","오경호","이민준","이창민","설지현","마준서","엄진우","오은우","예선우","나민성","설민성","윤은영","최진우","이현준","어지원","김광수","전재석","현준호","박지민","김미경","조종민","맹건우","이유준","홍지민","천재민","홍소윤","김연우","연진우","김태현","임미경","서준수","문상진","박준서","길재민","맹동현","김지환","위한결","정지현","마지민","지영진","류재민","허진호","금상민","임재현","김영진","손인호","어창민","이하윤","연예은","이재훈","조윤서","염현우","위우진","박민성","박혜진","김지현","전성민","연도윤","김예은","이현정","육승현","현지호","남현수","반철수","김영수","윤지우","모재윤","조진혁","남병철","안지민","노영수","정선영","최태현","최혜진","육정훈","채종민","성대호","김유준","김준서","주대호","김준호","임도윤","이정우","김상민","김희준","정준수","성대현","이시후","이준서","길진호","강도윤","박성수","구하준","안예은","유재현","장서준","윤윤우","정도윤","표은서","설민서","박수호","성승철","성준서","이재원","문태민","김현수","곽성호","우성진","이성민","현도윤","유우진","강동욱","안기현","표유찬","박서현","안시우","위소윤","왕정우","전희준","김창민","위정민","정예준","임인호","김종민","김재원","남형준","모지훈","김민서","최유준","국현석","우인호","염성훈","이도현","은예린","연윤호","최준수","안준수","우희준","현유찬","변서윤","정철수","용예은","최우진","임예준","임현수","강영민","김경수","편서현","탁시후","김준혁","배광수","강성진","이성훈","최승철","홍지아","김성훈","설도현","차준서","조선영","김예준","이용준","한현우","예주원","권성훈","박현우","고소윤","현태호","김재윤","류은영","윤준혁","이지환","장주원","이경호","최정민","이유찬","강서진","윤은우","김준영","유태현","김승호","이진수","방은우","신재석","임준우","임철수","구하윤","김윤서","김현준","유유준","국승현"];
+const DL_EMPTY_IDX = 13; // 배차계획 오더가 없는 기사 (기사 삭제 예시)
 const drivers = DL_NAMES.map(function(name, i){
   return {
-    name: name, plan: [3,3,3,2,2,2,2,2,2,3,2,2,2,0][i], done: [1,1,1,0,0,0,0,1,0,1,0,0,0,0][i],
+    name: name, plan: i < 14 ? [3,3,3,2,2,2,2,2,2,3,2,2,2,0][i] : 1 + (i * 7) % 3, done: i < 14 ? [1,1,1,0,0,0,0,1,0,1,0,0,0,0][i] : (i * 5) % 3 === 0 ? 1 : 0,
     phone: "010-" + String(1200 + i*37).padStart(4,"0") + "-" + String(3400 + i*53).padStart(4,"0"),
-    plate: "서울82바" + String(4922 + i*7), ton: ["5.5톤","5톤","11톤","5.5톤","2.5톤","5톤","8톤","5.5톤","11톤","5톤","5.5톤","2.5톤","5톤","8톤"][i],
-    carType: ["윙바디","카고","윙바디","탑","카고","윙바디","윙바디","탑","카고","윙바디","카고","탑","윙바디","카고"][i],
+    plate: i < 14 ? "서울82바" + String(4922 + i*7) : ["서울","경기","인천","충남"][i % 4] + (80 + (i * 7) % 20) + "가나다라마바사아자거너더러머버서어저고노도로모보소오조구누두루무부수우주"[(i * 5) % 36] + String(1000 + (i * 379) % 9000),
+    ton: ["5.5톤","5톤","11톤","5.5톤","2.5톤","5톤","8톤","5.5톤","11톤","5톤","5.5톤","2.5톤","5톤","8톤"][i % 14],
+    carType: ["윙바디","카고","윙바디","탑","카고","윙바디","윙바디","탑","카고","윙바디","카고","탑","윙바디","카고"][i < 14 ? i : (i * 3) % 14],
     group: "업무그룹" + (i % 5 + 1),
     garage: i === 6 ? "" : ["경기 이천","경기 용인","인천 서구","경기 평택","서울 송파"][i % 5],
     loadLen: (3000 - i*120).toLocaleString() + "mm", fee: (150000 + i*12000).toLocaleString() + "원",
-    memo: i % 3 === 0 ? "오전 상차 선호" : "",
-    blocked: i === 2, offDays: i === 4 ? "9/22, 9/23" : ""
+    memo: i < 14 ? (i % 3 === 0 ? "오전 상차 선호" : "") : ["오전 상차 선호","야간 운행 가능","수도권만 운행","장거리 선호","",""][(i * 13) % 6],
+    blocked: i === 2, offDays: i === 4 || (i >= 14 && i % 23 === 0) ? LD(3, "slash") + ", " + LD(4, "slash") : ""
   };
 });
 const driverList = document.getElementById("driverList");
@@ -1515,7 +1583,7 @@ drivers.forEach(function(d, idx){
   row.innerHTML =
     '<div class="dl-card">' +
     '<div class="driver-left">' +
-      '<span class="chk driver-chk"></span>' +
+      '<span class="chk driver-chk' + (d.blocked ? ' disabled" aria-disabled="true' : '') + '"></span>' + // 배차 불가 기사는 선택 안 됨
       '<div class="driver-text">' +
         '<div class="dl-line1">' +
           '<span class="dname" title="' + dlEsc(d.name) + '">' + dlEsc(d.name) + '</span>' + flag +
@@ -1530,6 +1598,7 @@ drivers.forEach(function(d, idx){
   driverList.appendChild(row);
   row.addEventListener("click",function(e){
     if(e.target.closest(".more-btn")){ dlOpenDetail(d, row); return; }
+    if(d.blocked) return; // 소속기사 배차 불가능 기사는 체크할 수 없음
     row.querySelector(".driver-chk").classList.toggle("checked");
     updateDpReqBtnState();
   });
@@ -1544,7 +1613,7 @@ const dpDriversLabel = document.getElementById("dpDriversLabel");
 
 
 function updateDpReqBtnState(){
-  const allChks = driverList.querySelectorAll(".driver-row:not([hidden]) .driver-chk");
+  const allChks = driverList.querySelectorAll(".driver-row:not([hidden]) .driver-chk:not(.disabled)");
   const checkedCount = driverList.querySelectorAll(".driver-chk.checked").length;
   dpReqBtn.disabled = checkedCount === 0;
   dpReqBtn.classList.toggle("enabled", checkedCount > 0);
@@ -1560,7 +1629,7 @@ function updateDpReqBtnState(){
 }
 dpAllDriversChk.addEventListener("click", function(){
   const turnOn = !dpAllDriversChk.classList.contains("checked");
-  driverList.querySelectorAll(".driver-row:not([hidden]) .driver-chk").forEach(function(c){ c.classList.toggle("checked", turnOn); });
+  driverList.querySelectorAll(".driver-row:not([hidden]) .driver-chk:not(.disabled)").forEach(function(c){ c.classList.toggle("checked", turnOn); }); // 배차 불가 기사는 전체선택에서도 제외
   updateDpReqBtnState();
 });
 updateDpReqBtnState();
@@ -1586,7 +1655,7 @@ const DPG_HOUR_W = 48;
 // 스케줄 날짜 범위 — 오늘 기준 과거·미래 일주일씩 (좌우 스크롤로 지난/앞으로의 오더 확인)
 const DPG_PAST_DAYS = 7, DPG_FUTURE_DAYS = 7;
 const DPG_TODAY = DPG_PAST_DAYS; // DPG_DAYS에서 오늘의 위치
-const DPG_TODAY_DATE = new Date(2027, 5, 17); // 목업 오늘 (06.17 목)
+const DPG_TODAY_DATE = new Date(LIS_TODAY); // 실제 오늘
 const DPG_DAYS = [];
 for(let i = -DPG_PAST_DAYS; i <= DPG_FUTURE_DAYS; i++){
   const dt = new Date(DPG_TODAY_DATE); dt.setDate(dt.getDate() + i);
@@ -1619,21 +1688,27 @@ for(let d=0; d<DPG_DAYS.length; d++){
 const dpgOrderData = [
   [{day:1,sh:4,eh:9,seq:1,type:"done",label:"전라광주2HUB 04:00 → 전주1[SH] 09:00"},{day:1,sh:11,eh:16,seq:2,type:"done",label:"전주1[SH] M 11:00 → 익산 16:00"}],
   [{day:1,sh:1,eh:6,seq:1,type:"done",label:"전라광주2HUB 01:00 → 전주1[SH] 06:00"},{day:1,sh:8,eh:13,seq:2,type:"done",label:"목천1HUB 08:00 → 광주2[SH] 13:00"},{day:1,sh:17,eh:22,seq:3,type:"plan",label:"광주3[SH] 17:00 → 해남HUB 22:00"}],
-  [{day:0,sh:23,eh:28,seq:1,type:"done",label:"전라광주2HUB 06.16 23:00 → 전주1[SH]…"},{day:1,sh:6,eh:11,seq:2,type:"done",label:"전주2[SH] 06:00 → 일산5[SH] 11:00"}],
-  [{day:0,sh:22,eh:27,seq:1,type:"done",label:"전라광주2HUB 06.16 22:00 → 전주1[SH]…"},{day:1,sh:5,eh:10,seq:1,type:"plan",label:"광주2[SH] 05:00 → 경산2HUB 10:00"},{day:1,sh:0,eh:5,seq:2,type:"done",label:"전라광주2000 00:00 → 전주1[SH] 05:00"},{day:1,sh:7,eh:12,seq:3,type:"plan",label:"안성5HUB 07:00 → 광주2[SH] 12:00"}],
+  [{day:0,sh:23,eh:28,seq:1,type:"done",label:"전라광주2HUB " + LD(-1, "md") + " 23:00 → 전주1[SH]…"},{day:1,sh:6,eh:11,seq:2,type:"done",label:"전주2[SH] 06:00 → 일산5[SH] 11:00"}],
+  [{day:0,sh:22,eh:27,seq:1,type:"done",label:"전라광주2HUB " + LD(-1, "md") + " 22:00 → 전주1[SH]…"},{day:1,sh:5,eh:10,seq:1,type:"plan",label:"광주2[SH] 05:00 → 경산2HUB 10:00"},{day:1,sh:0,eh:5,seq:2,type:"done",label:"전라광주2000 00:00 → 전주1[SH] 05:00"},{day:1,sh:7,eh:12,seq:3,type:"plan",label:"안성5HUB 07:00 → 광주2[SH] 12:00"}],
   [{day:1,sh:5,eh:10,seq:1,type:"plan",label:"광주2[SH] 05:00 → 경산2HUB 10:00"},{day:1,sh:13,eh:18,seq:2,type:"plan",label:"목천1HUB 13:00 → 광주2[SH] 18:00"}],
   [{day:1,sh:4,eh:9,seq:1,type:"plan",label:"광주2[SH] 04:00 → 경산2HUB 09:00"},{day:1,sh:11,eh:17,seq:2,type:"plan",label:"경산3HUB 11:00 → 목천4HUB 17:00"}],
   [{day:1,sh:1,sm:0,eh:6,seq:1,type:"plan",label:"전라광주2HUB 01:00 → 전주1[SH] 06:00"},{day:1,sh:7,eh:12,seq:2,type:"plan",label:"전주1[SH] M 07:00 → 익산1 12:00"}],
   [{day:1,sh:3,eh:8,seq:1,type:"done",label:"목천1HUB 03:00 → 광주2[SH] 08:00"},{day:1,sh:10,eh:15,seq:2,type:"plan",label:"광주3[SH] 10:00 → 해남HUB 15:00"}],
   [{day:1,sh:1,eh:6,seq:1,type:"plan",label:"전라광주2HUB 01:00 → 전주1[SH] 06:00"},{day:1,sh:9,eh:14,seq:2,type:"plan",label:"경산3HUB 09:00 → 목천4HUB 14:00"}],
   [{day:1,sh:1,eh:6,seq:1,type:"done",label:"전라광주2HUB 01:00 → 전주1[SH] 06:00"},{day:1,sh:7,eh:12,seq:2,type:"plan",label:"목천1HUB 07:00 → 광주2[SH] 12:00"},{day:1,sh:15,eh:20,seq:3,type:"plan",label:"광주3[SH] 15:00 → 해남HUB 20:00"}],
-  [{day:1,sh:3,eh:8,seq:1,type:"today-plan",label:"전라광주2HUB 03:00 → 전주1[SH] 08:00"},{day:1,sh:9,eh:14,seq:2,type:"today-plan",label:"목천1HUB 09:00 → 광주2[SH] 14:00"}],
-  [{day:0,sh:23,eh:28,seq:1,type:"done",label:"전라광주2HUB 06.16 23:00 → 전주1[SH]…"},{day:1,sh:5,eh:10,seq:2,type:"plan",label:"전주1[SH] M 05:00 → 익산 10:00"}],
+  [{day:1,sh:3,eh:8,seq:1,type:"plan",ai:true,label:"전라광주2HUB 03:00 → 전주1[SH] 08:00"},{day:1,sh:9,eh:14,seq:2,type:"plan",ai:true,label:"목천1HUB 09:00 → 광주2[SH] 14:00"}],
+  [{day:0,sh:23,eh:28,seq:1,type:"done",label:"전라광주2HUB " + LD(-1, "md") + " 23:00 → 전주1[SH]…"},{day:1,sh:5,eh:10,seq:2,type:"plan",label:"전주1[SH] M 05:00 → 익산 10:00"}],
   [{day:1,sh:4,eh:9,seq:1,type:"plan",label:"광주2[SH] 04:00 → 경산2HUB 09:00"},{day:1,sh:11,eh:17,seq:2,type:"plan",label:"경산3HUB 11:00 → 목천4HUB 17:00"}],
   [{day:1,sh:4,eh:9,seq:1,type:"plan",label:"광주2[SH] 04:00 → 경산2HUB 09:00"},{day:1,sh:11,eh:17,seq:2,type:"plan",label:"경산3HUB 11:00 → 목천4HUB 17:00"}],
 ];
 
-dpgOrderData[DL_NAMES.length - 1] = []; // 배차계획 오더가 없는 기사 (기사 삭제 예시)
+for(let i = dpgOrderData.length; i < DL_NAMES.length; i++) dpgOrderData.push([]); // 15번째 기사부터는 아래에서 목업 오더를 채움
+dpgOrderData[DL_EMPTY_IDX] = []; // 배차계획 오더가 없는 기사 (기사 삭제 예시)
+
+// 구분값 예시 — [기사 idx, 오더 순번(0부터), 구분]: ai=AI 배차계획 / warn=배차완료 경고·배차계획 유효성검증
+[[0,0,"ai"],[1,0,"warn"],[1,2,"warn"],[3,2,"ai"],[5,1,"ai"],[6,0,"warn"],[7,0,"ai"],[11,0,"warn"],[12,0,"ai"],[12,1,"warn"]].forEach(function(t){
+  const o = dpgOrderData[t[0]] && dpgOrderData[t[0]][t[1]]; if(o) o[t[2]] = true;
+});
 
 // 어제/오늘/내일 기준 day를 DPG_DAYS 위치로 옮기고, 지난 · 앞으로의 날짜에도 목업 오더를 채움 (지난 날=완료, 앞으로=계획)
 (function(){
@@ -1641,19 +1716,68 @@ dpgOrderData[DL_NAMES.length - 1] = []; // 배차계획 오더가 없는 기사 
   const pad = function(n){ return String(n % 24).padStart(2,"0") + ":00"; };
   dpgOrderData.forEach(function(orders, idx){
     orders.forEach(function(o){ o.day += DPG_TODAY - 1; });
-    if(idx === DL_NAMES.length - 1) return;
-    [-6,-5,-4,-3,-2,2,3,4,5,6].forEach(function(off){
+    if(idx === DL_EMPTY_IDX) return;
+    // 15번째 기사부터는 직접 정한 오늘 오더가 없으므로 오늘·내일(0, 1)도 채움
+    (idx < 14 ? [-6,-5,-4,-3,-2,2,3,4,5,6] : [-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6]).forEach(function(off){
       if((idx + off + 20) % 3 === 0) return; // 하루 걸러 비는 날도 둠
       const count = (idx + off + 20) % 2 === 0 ? 2 : 1;
       for(let k = 0; k < count; k++){
         const sh = 2 + ((idx*3 + off*5 + 40) % 7) + k*9, eh = sh + 5;
         const from = HUBS[(idx + k) % HUBS.length], to = HUBS[(idx + off + k + 20) % HUBS.length];
-        orders.push({day: DPG_TODAY + off, sh: sh, eh: eh, seq: k + 1, type: off < 0 ? "done" : "plan", label: from + " " + pad(sh) + " → " + to + " " + pad(eh)});
+        const r = (idx * 7 + off * 3 + k * 5 + 100) % 12, done = off < 0;
+        orders.push({day: DPG_TODAY + off, sh: sh, eh: eh, seq: k + 1, type: done ? "done" : "plan",
+          ai: r === 1 || r === 5, warn: r === 3 && idx % 2 === 0,
+          label: from + " " + pad(sh) + " → " + to + " " + pad(eh)});
       }
     });
   });
 })();
 const DPG_LANE_H = 36, DPG_LANE_TOP0 = 8, DPG_VISIBLE_LANES = 3;
+// 배차계획기준일 = 배차일지에서 고른 날짜. 이 날의 오더만 진하게(테두리) 보이고, 시뮬레이션 오더도 이 날만 노출
+let dpgBaseDay = DPG_TODAY;
+function dpgSetBaseDay(dayIdx){
+  dpgBaseDay = dayIdx;
+  document.querySelectorAll("#dpgRows .dpg-block").forEach(function(b){ b.classList.toggle("base", Number(b.dataset.day) === dayIdx); });
+}
+// ── 오더 호버 툴팁 ──
+// 유효성 검증 에러메시지 예시 (피그마 '10.3 검증 항목'의 오류 메시지 예시)
+const DPG_WARN_MSGS = [
+  "상차지 운영시간 외 배차 불가 (운영: 08:00~18:00)",
+  "하차지 위치 식별 불가 (다시 확인해주세요)",
+  "해당 상차지는 1t 이하 차량만 진입 가능",
+  "기사 휴무일 배차",
+  "해당 하차지는 양대광 기사를 거부",
+  "일 최소운임 미달 (목표 150,000원)",
+  "하차지 운영시간 외 배차 불가 (해당일 휴무)"
+];
+const DPG_MANAGERS = ["김카모","이배차","홍배차","박서진","최민호","정다은","강태우","윤지수","임채윤","한소희","오세훈","서유나","신동민","권하린","황준영","송미래","문성빈","배지원","류현석","남궁민"]; // AI 배차계획 배차담당자 목록과 같음
+const dpgTip = document.createElement("div");
+dpgTip.className = "dpg-tip";
+document.body.appendChild(dpgTip);
+function dpgHm(h, m){ const t = ((Math.round(h * 60) + (m || 0)) % 1440 + 1440) % 1440; return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); }
+function dpgShowTip(blk, o, idx){
+  const ends = dpgPlaces(o.label), seed = idx * 7 + o.seq * 3 + o.day;
+  const diff = [0, -10, 10, 0, -20, 5][seed % 6], diff2 = [-10, 0, 15, -5, 0, 10][seed % 6]; // AI 예상 시각 = 요청 ± 몇 분
+  const row = function(kind, place, h, d){
+    return '<div class="dpg-tip-sec"><div><span class="dpg-tip-k">' + kind + '</span>' + dlEsc(place) + '</div>' +
+      '<div class="dpg-tip-t">요청 ' + dpgHm(h) + '<i></i>예상 ' + dpgHm(h, d) + '</div></div>';
+  };
+  dpgTip.innerHTML =
+    (o.warn ? '<div class="dpg-tip-sec dpg-tip-err">' + DPG_WARN_ICON.replace('class="dpg-warn"', 'width="14" height="14"').replace(/#DD2222/g, "#fff") + '<span>' + DPG_WARN_MSGS[seed % DPG_WARN_MSGS.length] + '</span></div>' : "") +
+    row("상차", ends[0], o.sh, diff) + row("하차", ends[1], o.eh, diff2) +
+    '<div class="dpg-tip-sec"><span class="dpg-tip-k">배차담당자</span>' + DPG_MANAGERS[idx % DPG_MANAGERS.length] + '</div>';
+  dpgTip.classList.add("show");
+  const r = blk.getBoundingClientRect(), tw = dpgTip.offsetWidth, th = dpgTip.offsetHeight;
+  let x = r.left, y = r.bottom + 4;
+  if(x + tw > window.innerWidth - 8) x = window.innerWidth - tw - 8;
+  if(y + th > window.innerHeight - 8) y = r.top - th - 4; // 아래 공간이 없으면 막대 위로
+  dpgTip.style.left = Math.max(8, x) + "px"; dpgTip.style.top = y + "px";
+}
+function dpgHideTip(){ dpgTip.classList.remove("show"); }
+window.addEventListener("scroll", dpgHideTip, true); // 스크롤하면 툴팁을 닫음
+
+const DPG_AI_ICON = '<span class="dpg-ai" title="AI 배차계획">AI</span>';
+const DPG_WARN_ICON = '<svg class="dpg-warn" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#DD2222" stroke-width="1.2"/><path d="M7 3.8v3.8" stroke="#DD2222" stroke-width="1.3" stroke-linecap="round"/><circle cx="7" cy="9.9" r=".8" fill="#DD2222"/></svg>';
 // 간트 행 높이 — 피그마 넓게보기 행 49px(막대 32px), 차선이 늘면 36px씩 커짐
 function dpgRowH(lanes){ return Math.max(49, DPG_LANE_TOP0 + lanes*DPG_LANE_H + 5); }
 
@@ -1694,13 +1818,16 @@ drivers.forEach(function(driver, idx){
 
   orders.forEach(function(o){
     const blk = document.createElement("div");
-    blk.className = "dpg-block " + o.type;
+    blk.className = "dpg-block " + (o.type === "done" ? "done" : "plan") + (o.ai ? " ai" : "") + (o.warn ? " warn" : "") + (o.day === dpgBaseDay ? " base" : "");
+    blk.dataset.day = o.day;
+    blk.addEventListener("mouseenter", function(){ dpgShowTip(blk, o, idx); });
+    blk.addEventListener("mouseleave", dpgHideTip);
     blk.style.left = o.x1 + "px";
     blk.style.width = o.w + "px";
     blk.style.top = (DPG_LANE_TOP0 + o.lane*DPG_LANE_H) + "px";
     blk.dataset.lane = o.lane;
     if(o.lane >= DPG_VISIBLE_LANES) blk.style.display = "none";
-    blk.innerHTML = '<span class="dpg-num">' + o.seq + '</span><span class="dpg-label">' + dpgLabelHtml(o.label) + '</span>';
+    blk.innerHTML = (o.ai ? DPG_AI_ICON : "") + (o.warn ? DPG_WARN_ICON : "") + '<span class="dpg-label">' + dpgLabelHtml(o.label) + '</span>';
     const ends = dpgPlaces(o.label); blk.dataset.from = ends[0]; blk.dataset.to = ends[1]; // 상차지 · 하차지 (예상거리/시간 확인용)
     blk.addEventListener("contextmenu", function(e){ dpgOnBlockContextMenu(e, o, blk, idx); });
     row.appendChild(blk);
@@ -1780,7 +1907,7 @@ function dpgLabelHtml(label){
     e.preventDefault();
     let data; try { data = JSON.parse(raw); } catch(err){ return; }
     const d = drivers[Number(row.dataset.idx)];
-    row.querySelector(".driver-chk").classList.add("checked");
+    if(!row.classList.contains("blocked")) row.querySelector(".driver-chk").classList.add("checked");
     if(typeof updateDpReqBtnState === "function") updateDpReqBtnState();
     try {
       (window.parent !== window ? window.parent : window.opener).postMessage({
@@ -2081,7 +2208,7 @@ document.getElementById("allOrders").addEventListener("click",function(e){
       grp: groupPool[i % groupPool.length],
       manager: managerPool[i % managerPool.length],
       place: placePool[i % placePool.length],
-      up:"26.10.20 08:10", loadName:"알파돔타워", loadTag: i===0 ? "WAREHOUSE" : null, loadAddr:"경기 이천시 백사면…",
+      up:LD(0, "ymd") + " 08:10", loadName:"알파돔타워", loadTag: i===0 ? "WAREHOUSE" : null, loadAddr:"경기 이천시 백사면…",
       down:"26.10.20 08:10", unloadName:"알파돔타워", unloadAddr:"경기 이천시 백사면…",
       waypoints: i % 4 === 0 ? 2 : (i % 3 === 0 ? 1 : 0)
     });
@@ -2107,7 +2234,7 @@ document.getElementById("allOrders").addEventListener("click",function(e){
       const tr = document.createElement("tr");
       const statusCls = o.status === "배차계획" ? "plan" : "wait";
       const statusColor = o.status === "배차계획"
-        ? 'background:var(--purple-soft);color:var(--purple);'
+        ? 'background:#FCF2E9;color:#DD8022;'
         : 'background:var(--yellow-bg);color:var(--yellow);';
       const loadNameCell = o.loadTag
         ? '<td>' + o.loadName + ' <span style="background:#eef0f2;color:var(--sub2);font-size:10.5px;padding:1px 5px;border-radius:4px;font-weight:700;">' + o.loadTag + '</span></td>'
@@ -2255,7 +2382,7 @@ document.getElementById("allOrders").addEventListener("click",function(e){
   });
 
   // ── 날짜 네비게이션 (배차계획기준일/상차일/하차일/등록일 공통) ──
-  let csDate = new Date(2026, 6, 27); // 26.07.27
+  let csDate = new Date(LIS_TODAY); // 오늘
   const csDateBox = document.getElementById("csDateBox");
   function renderCsDate(){
     const yy = String(csDate.getFullYear()).slice(2);
@@ -2283,16 +2410,16 @@ document.getElementById("allOrders").addEventListener("click",function(e){
   // 스크린샷 10개 행을 그대로 반영: checked(체크 여부)와 conflict(빨간 경고 표시 여부)는
   // Figma 원본에서도 서로 독립적으로 손수 지정된 값이라, 규칙으로 유도하지 않고 그대로 고정값으로 둠.
   const csDrivers = [
-    {name:"김카모", plate:"서울82바4922", phone:"010-1111-2222", group:"기사그룹1", plan:0, done:1, fee:"50,000원", checked:true,  conflict:false},
-    {name:"김카모", plate:"서울82바4922", phone:"010-1111-2223", group:"기사그룹2", plan:0, done:0, fee:"0원",      checked:true,  conflict:false},
-    {name:"김카모", plate:"서울82바4922", phone:"010-1111-2224", group:"기사그룹1", plan:0, done:1, fee:"50,000원", checked:false, conflict:true},
-    {name:"김카모", plate:"서울82바4922", phone:"010-1111-2225", group:"기사그룹3", plan:4, done:1, fee:"150,000원", checked:false, conflict:true},
-    {name:"김카모", plate:"서울82바4922", phone:"010-1111-2226", group:"기사그룹3", plan:4, done:1, fee:"150,000원", checked:false, conflict:false},
-    {name:"김카모", plate:"서울82바4922", phone:"010-1111-2227", group:"기사그룹4", plan:4, done:1, fee:"150,000원", checked:false, conflict:true},
-    {name:"김카모", plate:"서울82바4922", phone:"010-1111-2228", group:"기사그룹4", plan:4, done:0, fee:"150,000원", checked:false, conflict:false},
-    {name:"김카모", plate:"서울82바4922", phone:"010-1111-2229", group:"기사그룹5", plan:0, done:0, fee:"0원",      checked:true,  conflict:false},
-    {name:"김카모", plate:"서울82바4922", phone:"010-1111-2230", group:"기사그룹5", plan:0, done:0, fee:"0원",      checked:true,  conflict:false},
-    {name:"김카모", plate:"서울82바4922", phone:"010-1111-2231", group:"기사그룹2", plan:0, done:0, fee:"0원",      checked:true,  conflict:false},
+    {name:"안민혁", plate:"서울82바4922", phone:"010-1111-2222", group:"기사그룹1", plan:0, done:1, fee:"50,000원", checked:true,  conflict:false},
+    {name:"백승준", plate:"서울82바4922", phone:"010-1111-2223", group:"기사그룹2", plan:0, done:0, fee:"0원",      checked:true,  conflict:false},
+    {name:"김웅기", plate:"서울82바4922", phone:"010-1111-2224", group:"기사그룹1", plan:0, done:1, fee:"50,000원", checked:false, conflict:true},
+    {name:"안준엽", plate:"서울82바4922", phone:"010-1111-2225", group:"기사그룹3", plan:4, done:1, fee:"150,000원", checked:false, conflict:true},
+    {name:"조성준", plate:"서울82바4922", phone:"010-1111-2226", group:"기사그룹3", plan:4, done:1, fee:"150,000원", checked:false, conflict:false},
+    {name:"곽원섭", plate:"서울82바4922", phone:"010-1111-2227", group:"기사그룹4", plan:4, done:1, fee:"150,000원", checked:false, conflict:true},
+    {name:"신지혜", plate:"서울82바4922", phone:"010-1111-2228", group:"기사그룹4", plan:4, done:0, fee:"150,000원", checked:false, conflict:false},
+    {name:"김보경", plate:"서울82바4922", phone:"010-1111-2229", group:"기사그룹5", plan:0, done:0, fee:"0원",      checked:true,  conflict:false},
+    {name:"정수현", plate:"서울82바4922", phone:"010-1111-2230", group:"기사그룹5", plan:0, done:0, fee:"0원",      checked:true,  conflict:false},
+    {name:"노승주", plate:"서울82바4922", phone:"010-1111-2231", group:"기사그룹2", plan:0, done:0, fee:"0원",      checked:true,  conflict:false},
   ];
 
   function getDriverSearchScope(){
@@ -2322,7 +2449,7 @@ document.getElementById("allOrders").addEventListener("click",function(e){
       const row = document.createElement("div");
       row.className = "cs-drow";
       const holidayHtml = d.conflict
-        ? '<span class="holiday-warn">휴무일 8/5 ⚠</span>'
+        ? '<span class="holiday-warn">휴무일 ' + LD(3, "slash") + ' ⚠</span>'
         : '<span>휴무일 8/5</span>';
       row.innerHTML =
         '<span class="chk cs-driver-chk' + (d.checked ? " checked" : "") + '"></span>' +
@@ -2439,7 +2566,7 @@ document.getElementById("allOrders").addEventListener("click",function(e){
     const row = document.createElement("div");
     row.className = "rs-row";
     row.innerHTML =
-      '<div class="rs-driver-info"><div class="n">김카모 <span class="cnt">계획 0 · 0원</span></div><div class="sub">서울82바4922 · 5.5톤 · 3,000m · 일이삼사오육칠팔구…</div></div>' +
+      '<div class="rs-driver-info"><div class="n">정재경 <span class="cnt">계획 0 · 0원</span></div><div class="sub">서울82바4922 · 5.5톤 · 3,000m · 일이삼사오육칠팔구…</div></div>' +
       '<div class="rs-track"></div>';
     rsUnassignedRows.appendChild(row);
   }
@@ -2460,7 +2587,7 @@ document.getElementById("allOrders").addEventListener("click",function(e){
       blk.innerHTML = '<span class="seq">' + (bi+1) + '</span><span>분당HUB 11:00 → 부산HUB 14:35</span>';
       track.appendChild(blk);
     });
-    row.innerHTML = '<div class="rs-driver-info"><div class="n">김카모 <span class="cnt">계획 3 · 150,000원</span></div><div class="sub">서울82바4922 · 5.5톤 · 3,000m · 일이삼사오육칠팔구…</div></div>';
+    row.innerHTML = '<div class="rs-driver-info"><div class="n">양대광 <span class="cnt">계획 3 · 150,000원</span></div><div class="sub">서울82바4922 · 5.5톤 · 3,000m · 일이삼사오육칠팔구…</div></div>';
     row.appendChild(track);
     rsDoneRows.appendChild(row);
   }
@@ -2502,7 +2629,7 @@ document.getElementById("allOrders").addEventListener("click",function(e){
     {status:"excl", cls:"excl", reason:"오더 상태 변경: {오더 취소}"},
     {status:"excl", cls:"excl", reason:"배차방법 변경: {협력사 위탁}"},
     {status:"applyreview", cls:"review", reason:"오더정보 수정 (엔진이 수정): 상하차 예상시간 변경"},
-    {status:"applyreview", cls:"review", reason:"기사정보 변경: {김카모 → 홍길동}"},
+    {status:"applyreview", cls:"review", reason:"기사정보 변경: {김지혜 → 장호정}"},
     {status:"applyreview", cls:"review", reason:"기사정보 변경: {휴무} 전환"},
   ];
   for(let i=0;i<9;i++) cfRowsData.push({status:"apply", cls:"ok", reason:""});
@@ -2562,10 +2689,11 @@ document.getElementById("allOrders").addEventListener("click",function(e){
   const rsListBody = document.getElementById("rsListBody");
   const rsListRowsData = [
     {plan:"notdone", driver:"-", plate:"-"},
-    {plan:"notdone", driver:"김카모", plate:"27오1234"},
+    {plan:"notdone", driver:"민관우", plate:"27오1234"},
     {plan:"notdone", driver:"-", plate:"-"},
   ];
-  for(let i=0;i<12;i++) rsListRowsData.push({plan:"done", driver:"김카모", plate:"27오1234"});
+  const RS_NAMES = ["양대광","정재경","김지혜","장호정","한혜서","김세영","김수연","전유지","김강훈","임형원","이주호","안민혁","백승준","김웅기","안준엽","조성준","곽원섭","신지혜","김보경","정수현","노승주","민관우","진근영","선상구","국경","황인렬","신유성","정용우","성창훈","김태완","신정수","양현성","박종성","최혜민","하정현","조호","강서연","박경호","오창용"];
+  for(let i=0;i<12;i++) rsListRowsData.push({plan:"done", driver:RS_NAMES[i % RS_NAMES.length], plate:"27오1234"});
 
   function rsRenderListRows(mode){
     const filtered = rsListRowsData.filter(function(r){
@@ -2625,7 +2753,7 @@ document.getElementById("allOrders").addEventListener("click",function(e){
       const card = document.createElement("div");
       card.className = "rs-map-card" + (idx===0 ? " active" : "");
       card.innerHTML =
-        '<div class="n">{김카모} <b>계획 ' + c.plan + '</b> · ' + c.fee + '</div>' +
+        '<div class="n">' + ["양대광","정재경","김지혜","장호정","한혜서","김세영","김수연","전유지","김강훈","임형원","이주호","안민혁","백승준","김웅기","안준엽","조성준","곽원섭","신지혜","김보경","정수현","노승주","민관우","진근영","선상구","국경","황인렬","신유성","정용우","성창훈","김태완","신정수","양현성","박종성","최혜민","하정현","조호","강서연","박경호","오창용"][idx % 39] + ' <b>계획 ' + c.plan + '</b> · ' + c.fee + '</div>' +
         '<div class="sub">서울82바4922 · 5.5톤 · 3,000m · 일이삼사오육…</div>';
       card.addEventListener("click", function(){
         document.querySelectorAll(".rs-map-card").forEach(function(cc){ cc.classList.remove("active"); });
@@ -2865,7 +2993,7 @@ document.getElementById("allOrders").addEventListener("click",function(e){
     }).join("")+'</div><div class="dl-ffoot"><button class="dl-freset">필터 초기화</button></div>';
     function renderLabel(){
       var sel=filterSel[key];
-      lbl.textContent = sel.length===0 ? pill.dataset.label : sel.length===1 ? sel[0] : sel[0]+" 외 "+(sel.length-1);
+      lbl.innerHTML = pill.dataset.label + (sel.length ? '<span class="dl-fcnt">'+sel.length+'</span>' : ""); // 선택하면 필터명 + 선택 개수 (피그마 10374:354786)
       pill.classList.toggle("on", sel.length>0);
     }
     pill.addEventListener("click", function(e){ e.stopPropagation(); closeFilterMenus(f); f.classList.toggle("open"); });
@@ -2923,7 +3051,7 @@ document.getElementById("allOrders").addEventListener("click",function(e){
       }).join("");
     }
     function renderLabel(){
-      lbl.textContent = sel.length===0 ? pill.dataset.label : sel.length===1 ? sel[0] : sel[0]+" 외 "+(sel.length-1);
+      lbl.innerHTML = pill.dataset.label + (sel.length ? '<span class="dl-fcnt">'+sel.length+'</span>' : ""); // 선택하면 필터명 + 선택 개수 (피그마 10374:354786)
       pill.classList.toggle("on", sel.length>0);
     }
     renderList();
@@ -3103,8 +3231,8 @@ document.getElementById("allOrders").addEventListener("click",function(e){
   });
 
   // 날짜 이동 (목업: 라벨만 바꿈)
-  var day=11, dateEl=document.getElementById("dlDate"), legendDay=document.getElementById("dlLegendDay");
-  function renderDate(){ var t=day===11; dateEl.textContent="10월 "+day+"일"+(t?" (오늘)":""); legendDay.textContent="10월 "+day+"일"; }
+  var day=0, dateEl=document.getElementById("dlDate"), legendDay=document.getElementById("dlLegendDay"); // day: 오늘로부터 며칠
+  function renderDate(){ dateEl.textContent=LD(day,"kor")+(day===0?" (오늘)":""); legendDay.textContent=LD(day,"kor"); if(typeof dpgSetBaseDay==="function") dpgSetBaseDay(DPG_TODAY + day); }
   document.getElementById("dlPrev").addEventListener("click", function(){ day--; renderDate(); });
   document.getElementById("dlNext").addEventListener("click", function(){ day++; renderDate(); });
 
@@ -3139,8 +3267,23 @@ document.getElementById("allOrders").addEventListener("click",function(e){
   var aiBtn=document.getElementById("dlAiBtn");
   function setAiResume(on){
     aiBtn.innerHTML='<svg class="dl-ai-badge" width="16" height="16" viewBox="0 0 16 16" fill="none"><defs><linearGradient id="dlAiG1" x1="0" y1="0" x2="19.18" y2="6.26" gradientUnits="userSpaceOnUse"><stop stop-color="#337FFF"/><stop offset="1" stop-color="#9966FF"/></linearGradient><linearGradient id="dlAiG2" x1="0" y1="0.8" x2="12.27" y2="6.09" gradientUnits="userSpaceOnUse"><stop stop-color="white" stop-opacity="0.5"/><stop offset="1" stop-color="white" stop-opacity="0"/></linearGradient></defs><rect x="0.5" y="0.5" width="15" height="15" rx="7.5" fill="url(#dlAiG1)"/><rect x="0.5" y="0.5" width="15" height="15" rx="7.5" stroke="url(#dlAiG2)"/><path d="M7.14631 6.0261L5.40374 11H4L6.38064 5H7.27393L7.14631 6.0261ZM8.59406 11L6.84708 6.0261L6.70627 5H7.60836L10.0022 11H8.59406ZM8.51485 8.76648V9.73489H5.13091V8.76648H8.51485Z" fill="white"/><path d="M12 5V11H10.6843V5H12Z" fill="white"/></svg>배차계획 '+(on?'<span class="dl-ai-resume">이어서하기</span>':'실행하기');
-    aiBtn.title=on?"진행 중이던 배차 계획을 이어서 진행할 수 있어요.":"";
+    // 이어서하기 안내 툴팁 — 유효시간은 결과를 닫은 때로부터 6시간
+    if(on){
+      var u=new Date(Date.now()+6*3600*1000), p2=function(n){ return String(n).padStart(2,"0"); };
+      aiResumeUntil=p2(u.getMonth()+1)+"."+p2(u.getDate())+" "+p2(u.getHours())+":"+p2(u.getMinutes());
+    }
+    aiBtn.classList.toggle("resume", on);
   }
+  var aiResumeUntil="";
+  var aiTip=document.createElement("div"); aiTip.className="dl-ai-tip"; document.body.appendChild(aiTip);
+  aiBtn.addEventListener("mouseenter", function(){
+    if(!aiBtn.classList.contains("resume")) return;
+    aiTip.innerHTML="진행 중이던 배차 계획을 이어서 진행할 수 있어요.<br>(유효시간: "+aiResumeUntil+"까지)";
+    aiTip.classList.add("show");
+    var r=aiBtn.getBoundingClientRect();
+    aiTip.style.left=Math.max(8, Math.min(r.left+r.width/2-24, window.innerWidth-aiTip.offsetWidth-8))+"px"; aiTip.style.top=(r.bottom+8)+"px";
+  });
+  aiBtn.addEventListener("mouseleave", function(){ aiTip.classList.remove("show"); });
   window.addEventListener("message",function(e){
     var d=e.data; if(!d||d.source!=="gs-schedule-host") return;
     if(d.type==="open") gsBtn.click();
