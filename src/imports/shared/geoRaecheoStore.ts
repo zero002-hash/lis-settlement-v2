@@ -37,6 +37,7 @@ export type PartnerContact = {
   fax: string;    // 팩스번호
   email: string;  // 이메일
   memo: string;   // 담당 업무
+  note?: string;  // 메모
   scheduleId?: string; // 이 직원에게 거래명세서·세금계산서를 보낼 정산스케줄 (미지정이면 첫 번째 스케줄)
 };
 
@@ -213,7 +214,9 @@ function genPartners(): TradePartner[] {
     const tTrucker = r > 0.45; // 시스템 가입 여부 — 공유그룹 노출 기준
     const defaultSchedule = makeSchedule('기본스케줄', i + 1);
     const settleSchedules = i % 4 === 0 ? [defaultSchedule, makeSchedule('추가스케줄', i + 51)] : [defaultSchedule];
-    const groupNames = tTrucker ? SHARED_GROUP_POOLS[i % SHARED_GROUP_POOLS.length] : [];
+    // 업무그룹 공유 여부 시연용: 가입 거래처 중 일부는 상대가 우리에게 업무그룹을 공유하지 않음
+    const sharesWithMe = tTrucker && i % 5 !== 2;
+    const groupNames = sharesWithMe ? SHARED_GROUP_POOLS[i % SHARED_GROUP_POOLS.length] : [];
     // 공유그룹이 2개 이상인 거래처는 마지막 그룹을 '새로 공유한 그룹'으로 둔다
     const sharedGroups: SharedGroupMapping[] = groupNames.map((groupName, gi) => ({ groupName, scheduleId: defaultSchedule.id, ...(groupNames.length > 1 && gi === groupNames.length - 1 ? { isNew: true } : {}) }));
     const contacts: PartnerContact[] = i % 3 === 0 ? [] : [
@@ -269,6 +272,11 @@ export function addPartner(p: TradePartner): void {
 
 export function updatePartner(updated: TradePartner): void {
   _partners = _partners.map(p => p.id === updated.id ? updated : p);
+  notify();
+}
+
+export function removePartner(id: number): void {
+  _partners = _partners.filter(p => p.id !== id);
   notify();
 }
 

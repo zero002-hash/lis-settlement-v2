@@ -4,10 +4,10 @@ import {
   type WorkGroup, type Employee,
   COMPANY_TAX_EMAIL, EMPLOYEE_ROLES,
   getGroups, addGroup, updateGroup, deleteGroup, getDefaultGroup,
-  getEmployees, setGroupMembers, getSharedPartnerIds, setSharedPartnerIds,
+  getEmployees, setGroupMembers,
   subscribeCompany,
 } from "../shared/companyStore";
-import { type TradePartner, getPartners, subscribePartners, replaceGroupInPartners } from "../shared/geoRaecheoStore";
+import { type TradePartner, getPartners, subscribePartners, replaceGroupInPartners, updatePartner } from "../shared/geoRaecheoStore";
 
 const ff = "'Pretendard GOV:Regular'";
 const ffSemiBold = "'Pretendard GOV:SemiBold'";
@@ -35,15 +35,6 @@ function SearchIcon() {
     <svg width={16} height={16} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
       <circle cx="7.2" cy="7.2" r="5" stroke="#767D8A" strokeWidth="1.3" />
       <path d="M11 11l3 3" stroke="#767D8A" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function GearIcon() {
-  return (
-    <svg width={16} height={16} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-      <circle cx="8" cy="8" r="2.2" stroke="#5C6370" strokeWidth="1.2" />
-      <path d="M8 1.8v1.6M8 12.6v1.6M14.2 8h-1.6M3.4 8H1.8M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1M12.4 12.4l-1.1-1.1M4.7 4.7L3.6 3.6" stroke="#5C6370" strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -154,9 +145,10 @@ function useEscapeKey(onEscape: () => void) {
 const modalBoxShadow = `0 0 0 1px ${BORDER}, 0 2px 6px 1px rgba(34,34,34,0.06)`;
 
 // 모달 공통 껍데기 — 헤더(타이틀+닫기) / 스크롤 본문 / 하단 버튼 영역
-function Modal({ title, width, onClose, children, footer, name, z = 0 }: {
+function Modal({ title, width, fixedHeight, onClose, children, footer, name, z = 0 }: {
   title: React.ReactNode;
   width: number;
+  fixedHeight?: number; // 내용과 관계없이 높이 고정 (화면보다 크면 화면 높이에 맞춤)
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
@@ -173,7 +165,7 @@ function Modal({ title, width, onClose, children, footer, name, z = 0 }: {
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: height == null ? 0 : undefined, height: height ?? undefined, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'safe center', justifyContent: 'safe center', padding: 16, boxSizing: 'border-box', overflow: 'auto', zIndex: 99999 + z }}
     >
-      <div role="dialog" style={{ width, maxHeight: height ? height - 32 : 'calc(100vh - 32px)', flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 12, boxShadow: modalBoxShadow, overflow: 'hidden' }}>
+      <div role="dialog" style={{ width, height: fixedHeight, maxHeight: height ? height - 32 : 'calc(100vh - 32px)', flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 12, boxShadow: modalBoxShadow, overflow: 'hidden' }}>
         <style>{FORM_CSS}</style>
         <div style={{ minHeight: 72, padding: '24px 24px 16px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0 }}>
           <div style={{ margin: 0, fontFamily: ffBold, fontWeight: 700, fontSize: 22, lineHeight: '32px', letterSpacing: ls, color: '#2E3238', minWidth: 0 }}>{title}</div>
@@ -364,10 +356,15 @@ function SearchBox<T extends string>({ types, type, setType, keyword, setKeyword
   );
 }
 
-function Th({ label, width, flex, minWidth = 200 }: { label: string; width?: number; flex?: boolean; minWidth?: number }) {
+function Th({ label, width, flex, minWidth = 200, info }: { label: string; width?: number; flex?: boolean; minWidth?: number; info?: string }) {
   return (
-    <div style={{ width, flex: flex ? '1 0 0' : '0 0 auto', minWidth: flex ? minWidth : undefined, height: 40, padding: 8, boxSizing: 'border-box', display: 'flex', alignItems: 'center', background: '#F6F7F8', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}` }}>
+    <div style={{ width, flex: flex ? '1 0 0' : '0 0 auto', minWidth: flex ? minWidth : undefined, height: 40, padding: 8, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 4, background: '#F6F7F8', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}` }}>
       <span style={{ fontFamily: ffSemiBold, fontWeight: 600, fontSize: 15, lineHeight: '22px', color: '#5C6370', letterSpacing: ls, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{label}</span>
+      {info && (
+        <span title={info} style={{ display: 'flex', alignItems: 'center', cursor: 'help', flexShrink: 0 }}>
+          <svg width={16} height={16} viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="#9197A1" strokeWidth="1.2" /><path d="M8 7.2v3.6" stroke="#9197A1" strokeWidth="1.2" strokeLinecap="round" /><circle cx="8" cy="5.2" r=".75" fill="#9197A1" /></svg>
+        </span>
+      )}
     </div>
   );
 }
@@ -498,7 +495,7 @@ function TextField({ value, onChange, placeholder, required, error, inputMode }:
 function TextArea({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <div className="wg-field" style={{ padding: '10px 12px', boxSizing: 'border-box', border: `1px solid ${BORDER}`, borderRadius: 4, background: '#F6F7F8' }}>
-      <textarea className="wg-input" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={2} style={{ ...fieldTextStyle, width: '100%', border: 'none', outline: 'none', background: 'transparent', padding: 0, resize: 'none', display: 'block' }} />
+      <textarea className="wg-input" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={2} style={{ ...fieldTextStyle, width: '100%', minHeight: 48, border: 'none', outline: 'none', background: 'transparent', padding: 0, resize: 'none', display: 'block' }} />
     </div>
   );
 }
@@ -506,12 +503,13 @@ function TextArea({ value, onChange, placeholder }: { value: string; onChange: (
 // 체크박스 목록 — 전체 선택 + "선택/전체" 개수 + 검색. 업무그룹 추가, 소속 직원/운송사 추가·변경 모달에서 공용
 type CheckItem = { id: string; label: React.ReactNode; search: string };
 
-function CheckList({ items, selected, onChange, emptyText, height = 200 }: {
+function CheckList({ items, selected, onChange, emptyText, height = 200, searchPlaceholder = '검색' }: {
   items: CheckItem[];
   selected: string[];
   onChange: (ids: string[]) => void;
   emptyText: string;
   height?: number;
+  searchPlaceholder?: string;
 }) {
   const [query, setQuery] = useState('');
   const q = query.trim();
@@ -539,7 +537,7 @@ function CheckList({ items, selected, onChange, emptyText, height = 200 }: {
       <div style={{ padding: '8px 8px 4px' }}>
         <div className="wg-field" style={{ height: 36, padding: '0 10px', border: `1px solid ${BORDER}`, borderRadius: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
           <SearchIcon />
-          <input className="wg-input" value={query} onChange={e => setQuery(e.target.value)} placeholder="검색" style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', padding: 0, fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238' }} />
+          <input className="wg-input" value={query} onChange={e => setQuery(e.target.value)} placeholder={searchPlaceholder} style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', padding: 0, fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238' }} />
         </div>
       </div>
       <div className="wg-scroll" style={{ height, overflowY: 'auto', padding: '0 4px 4px' }}>
@@ -614,38 +612,32 @@ function GroupFields({ form }: { form: ReturnType<typeof useGroupDraft> }) {
 
 // ─── 업무그룹 추가 모달 ──────────────────────────────────────────────────────
 
-function GroupAddModal({ employees, carriers, onClose, notify }: { employees: Employee[]; carriers: TradePartner[]; onClose: () => void; notify: Notify }) {
+// 피그마 개편 2 (953:126596) — 업무그룹명·설명·소속 직원. 이용 가능한 운송사는 거래처 상세 또는 업무그룹 상세에서 지정
+function GroupAddModal({ employees, onClose, notify }: { employees: Employee[]; onClose: () => void; notify: Notify }) {
   const form = useGroupDraft({ name: '', memo: '' });
   const [memberIds, setMemberIds] = useState<string[]>([]);
-  const [carrierIds, setCarrierIds] = useState<string[]>([]);
 
   const handleAdd = () => {
     if (!form.valid) return;
     const d = form.draft;
     // 세금계산서 이메일·인수증 설정·종사업장번호는 화면에서 빠져 회사 기본값으로 둔다
-    const g = addGroup({ name: d.name.trim(), memo: d.memo.trim(), taxEmail: COMPANY_TAX_EMAIL, receiptSetting: '원본/사진 필수', subBizNumber: '', carrierIds: carrierIds.map(Number) });
+    const g = addGroup({ name: d.name.trim(), memo: d.memo.trim(), taxEmail: COMPANY_TAX_EMAIL, receiptSetting: '원본/사진 필수', subBizNumber: '', carrierIds: [] });
     if (memberIds.length) setGroupMembers(g.id, memberIds);
     notify('업무그룹을 추가했습니다.');
     onClose();
   };
 
   return (
-    <Modal title="업무그룹 추가" width={784} onClose={onClose} name="work-group-add-modal" footer={<>
+    <Modal title="업무그룹 추가" width={480} onClose={onClose} name="work-group-add-modal" footer={<>
       <span style={{ flex: 1 }} />
       <ModalButton ghost h={52} size={18} px={20} onClick={onClose}>닫기</ModalButton>
       <ModalButton primary h={52} size={18} px={20} disabled={!form.valid} onClick={handleAdd}>업무그룹 추가</ModalButton>
     </>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <GroupFields form={form} />
-        {/* 소속 직원 · 위탁 가능한 협력사 목록은 좌우로 나란히 */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <FormField label="소속 직원">
-            <CheckList items={employeeItems(employees)} selected={memberIds} onChange={setMemberIds} emptyText="소속된 직원이 없습니다." height={202} />
-          </FormField>
-          <FormField label="위탁 가능한 협력사">
-            <CheckList items={carrierItems(carriers)} selected={carrierIds} onChange={setCarrierIds} emptyText="계약된 협력사가 없습니다." height={202} />
-          </FormField>
-        </div>
+        <FormField label="소속 직원">
+          <CheckList items={employeeItems(employees)} selected={memberIds} onChange={setMemberIds} emptyText="소속된 직원이 없습니다." height={360} searchPlaceholder="소속 직원 검색" />
+        </FormField>
       </div>
     </Modal>
   );
@@ -740,17 +732,19 @@ function GroupDeleteModal({ group, groups, onClose, onDeleted, notify }: { group
 
 type MemberSearch = '직원명' | '직함/직책' | '휴대전화번호' | '업무 전화번호' | '이메일';
 const MEMBER_SEARCH_TYPES: MemberSearch[] = ['직원명', '직함/직책', '휴대전화번호', '업무 전화번호', '이메일'];
-type CarrierSearch = '협력사명' | '사업자등록번호' | '사업장 주소';
-const CARRIER_SEARCH_TYPES: CarrierSearch[] = ['협력사명', '사업자등록번호', '사업장 주소'];
-type PartnerSearch = '거래처명' | '사업자등록번호' | '사업장 주소';
-const PARTNER_SEARCH_TYPES: PartnerSearch[] = ['거래처명', '사업자등록번호', '사업장 주소'];
+type CarrierSearch = '거래처명' | '사업자등록번호';
+const CARRIER_SEARCH_TYPES: CarrierSearch[] = ['거래처명', '사업자등록번호'];
+type PartnerSearch = '거래처명' | '사업자등록번호';
+const PARTNER_SEARCH_TYPES: PartnerSearch[] = ['거래처명', '사업자등록번호'];
+// 거래처 유형 표시 — 데이터 값 '협력사'는 화면에서 '운송사'로 보여줌
+const partnerTypeLabel = (t: string) => t === '협력사' ? '운송사' : t;
 const DETAIL_PAGE_SIZE = 10;
 
 function memberField(e: Employee, t: MemberSearch) {
   return t === '직원명' ? e.name : t === '직함/직책' ? (e.title || '') : t === '휴대전화번호' ? e.phone : t === '업무 전화번호' ? (e.workPhone || '') : e.email;
 }
 function carrierField(p: TradePartner, t: CarrierSearch | PartnerSearch) {
-  return t === '협력사명' || t === '거래처명' ? `${p.alias} ${p.bizName}` : t === '사업자등록번호' ? p.bizNumber : [p.address, p.addressDetail].join(' ');
+  return t === '거래처명' ? `${p.alias} ${p.bizName}` : p.bizNumber;
 }
 
 function InfoItem({ label, value }: { label: string; value: string }) {
@@ -780,7 +774,7 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
   notify: Notify;
 }) {
   const [tab, setTab] = useState<'member' | 'partner' | 'carrier'>('member');
-  const [sub, setSub] = useState<'edit' | 'members' | 'carriers' | 'delete' | null>(null);
+  const [sub, setSub] = useState<'edit' | 'members' | 'partners' | 'carriers' | 'delete' | null>(null);
 
   // 소속 직원 탭
   const members = sortedEmployees(employees.filter(e => e.groupIds.includes(group.id)));
@@ -795,7 +789,7 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
     return true;
   });
 
-  // 담당하는 거래처 탭 — 거래처 상세 > 담당 업무그룹에 이 그룹이 지정된 거래처
+  // 담당 거래처 탭 — 거래처의 담당 업무그룹에 이 그룹이 지정된 거래처. [거래처 변경]으로 여기서도 지정/해제
   const groupPartners = sortedPartners(partners.filter(p => (p.assignedGroupIds || []).includes(group.id)));
   const [pType, setPType] = useState<PartnerSearch>('거래처명');
   const [pKeyword, setPKeyword] = useState('');
@@ -804,11 +798,11 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
   const partnerRows = groupPartners.filter(p => !pApplied.keyword || carrierField(p, pApplied.type).toLowerCase().includes(pApplied.keyword.toLowerCase()));
   const pPageClamped = Math.min(pPage, Math.max(1, Math.ceil(partnerRows.length / DETAIL_PAGE_SIZE)));
 
-  // 위탁 가능한 협력사 탭
+  // 위탁 가능한 운송사 탭
   const groupCarriers = sortedPartners(carriers.filter(p => group.carrierIds.includes(p.id)));
-  const [cType, setCType] = useState<CarrierSearch>('협력사명');
+  const [cType, setCType] = useState<CarrierSearch>('거래처명');
   const [cKeyword, setCKeyword] = useState('');
-  const [cApplied, setCApplied] = useState({ type: '협력사명' as CarrierSearch, keyword: '' });
+  const [cApplied, setCApplied] = useState({ type: '거래처명' as CarrierSearch, keyword: '' });
   const [cPage, setCPage] = useState(1);
   const carrierRows = groupCarriers.filter(p => !cApplied.keyword || carrierField(p, cApplied.type).toLowerCase().includes(cApplied.keyword.toLowerCase()));
 
@@ -816,6 +810,7 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
   const cPageClamped = Math.min(cPage, Math.max(1, Math.ceil(carrierRows.length / DETAIL_PAGE_SIZE)));
   const memberVerb = members.length === 0 ? '추가' : '변경';
   const carrierVerb = groupCarriers.length === 0 ? '추가' : '변경';
+  const partnerVerb = groupPartners.length === 0 ? '추가' : '변경';
 
   const tabBtn = (key: 'member' | 'partner' | 'carrier', label: string) => {
     const on = tab === key;
@@ -828,7 +823,7 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
 
   return (
     <>
-      <Modal title="업무그룹 정보" width={886} onClose={sub ? () => {} : onClose} name="work-group-detail-modal" footer={<>
+      <Modal title="업무그룹 상세" width={886} fixedHeight={800} onClose={sub ? () => {} : onClose} name="work-group-detail-modal" footer={<>
         {!group.isDefault && <ModalButton h={52} size={18} px={20} onClick={() => setSub('delete')}>업무그룹 삭제</ModalButton>}
         <span style={{ flex: 1 }} />
         <ModalButton ghost h={52} size={18} px={20} onClick={onClose}>닫기</ModalButton>
@@ -838,7 +833,6 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
           <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontFamily: ffBold, fontWeight: 700, fontSize: 18, letterSpacing: ls, color: '#2E3238' }}>{group.name}</span>
-              {group.isDefault && <GrayBadge>기본</GrayBadge>}
               <span style={{ flex: 1 }} />
               <button type="button" onClick={() => setSub('edit')} style={{ height: 28, padding: '0 8px', borderRadius: 2, border: `1px solid ${BORDER}`, background: '#FFFFFF', cursor: 'pointer', fontFamily: ffSemiBold, fontWeight: 600, fontSize: 14, letterSpacing: ls, color: '#2E3238' }}>정보 수정</button>
             </div>
@@ -847,8 +841,8 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
 
           <div style={{ display: 'flex', borderBottom: `1px solid ${BORDER}` }}>
             {tabBtn('member', '소속 직원')}
-            {tabBtn('partner', '담당하는 거래처')}
-            {tabBtn('carrier', '위탁 가능한 협력사')}
+            {tabBtn('partner', '담당 거래처')}
+            {tabBtn('carrier', '이용 가능한 운송사')}
           </div>
 
           {tab === 'member' ? (
@@ -892,17 +886,17 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 36 }}>
                 <SearchBox types={PARTNER_SEARCH_TYPES} type={pType} setType={t => setPType(t as PartnerSearch)} keyword={pKeyword} setKeyword={setPKeyword} onSearch={() => { setPApplied({ type: pType, keyword: pKeyword.trim() }); setPPage(1); }} selectWidth={140} />
                 <span style={{ flex: 1 }} />
-                <span style={{ fontFamily: ff, fontSize: 13, letterSpacing: ls, color: '#767D8A' }}>담당 업무그룹은 거래처 관리 &gt; 거래처 상세에서 지정해요.</span>
+                <SmallButton onClick={() => setSub('partners')}>{`거래처 ${partnerVerb}`}</SmallButton>
               </div>
               <div style={{ borderLeft: `1px solid ${BORDER}`, borderTop: `1px solid ${BORDER}` }}>
                 <div style={{ display: 'flex' }}>
-                  <Th label="번호" width={60} /><Th label="거래처명" width={220} /><Th label="거래처 유형" width={100} /><Th label="사업자등록번호" width={140} /><Th label="사업장 주소" flex minWidth={180} />
+                  <Th label="번호" width={50} /><Th label="거래처명" flex minWidth={300} /><Th label="사업자번호" width={316} /><Th label="거래처 유형" width={130} />
                 </div>
-                {partnerRows.length === 0 ? <EmptyRows text={groupPartners.length === 0 ? '담당하는 거래처가 없습니다.' : '검색 결과가 없습니다.'} /> :
+                {partnerRows.length === 0 ? <EmptyRows text={groupPartners.length === 0 ? '담당 거래처가 없습니다.' : '검색 결과가 없습니다.'} /> :
                   partnerRows.slice((pPageClamped - 1) * DETAIL_PAGE_SIZE, pPageClamped * DETAIL_PAGE_SIZE).map((p, i) => (
                     <div key={p.id} style={{ display: 'flex' }}>
-                      <Td width={60} align="center">{(pPageClamped - 1) * DETAIL_PAGE_SIZE + i + 1}</Td>
-                      <Td width={220}>
+                      <Td width={50} align="center">{(pPageClamped - 1) * DETAIL_PAGE_SIZE + i + 1}</Td>
+                      <Td flex minWidth={300}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                             <span title={p.alias} style={{ fontFamily: ffSemiBold, fontWeight: 600, fontSize: 15, lineHeight: '22px', letterSpacing: ls, color: '#2E3238', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.alias}</span>
@@ -911,9 +905,8 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
                           {p.status === '거래중지' && <GrayBadge>거래중지</GrayBadge>}
                         </div>
                       </Td>
-                      <Td width={100}>{p.partnerType}</Td>
-                      <Td width={140}>{p.bizNumber}</Td>
-                      <Td flex minWidth={180}>{[p.address, p.addressDetail].filter(Boolean).join(', ')}</Td>
+                      <Td width={316}>{p.bizNumber}</Td>
+                      <Td width={130}>{partnerTypeLabel(p.partnerType)}</Td>
                     </div>
                   ))}
               </div>
@@ -926,17 +919,17 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <SearchBox types={CARRIER_SEARCH_TYPES} type={cType} setType={t => setCType(t as CarrierSearch)} keyword={cKeyword} setKeyword={setCKeyword} onSearch={() => { setCApplied({ type: cType, keyword: cKeyword.trim() }); setCPage(1); }} selectWidth={140} />
                 <span style={{ flex: 1 }} />
-                <SmallButton onClick={() => setSub('carriers')}>{`협력사 ${carrierVerb}`}</SmallButton>
+                <SmallButton onClick={() => setSub('carriers')}>{`운송사 ${carrierVerb}`}</SmallButton>
               </div>
               <div style={{ borderLeft: `1px solid ${BORDER}`, borderTop: `1px solid ${BORDER}` }}>
                 <div style={{ display: 'flex' }}>
-                  <Th label="번호" width={60} /><Th label="협력사명" width={240} /><Th label="사업자등록번호" width={140} /><Th label="사업장 주소" flex minWidth={200} />
+                  <Th label="번호" width={50} /><Th label="위탁 운송사" flex minWidth={300} /><Th label="사업자번호" width={386} />
                 </div>
-                {carrierRows.length === 0 ? <EmptyRows text={groupCarriers.length === 0 ? '위탁 가능한 협력사가 없습니다.' : '검색 결과가 없습니다.'} /> :
+                {carrierRows.length === 0 ? <EmptyRows text={groupCarriers.length === 0 ? '이용 가능한 운송사가 없습니다.' : '검색 결과가 없습니다.'} /> :
                   carrierRows.slice((cPageClamped - 1) * DETAIL_PAGE_SIZE, cPageClamped * DETAIL_PAGE_SIZE).map((p, i) => (
                     <div key={p.id} style={{ display: 'flex' }}>
-                      <Td width={60} align="center">{(cPageClamped - 1) * DETAIL_PAGE_SIZE + i + 1}</Td>
-                      <Td width={240}>
+                      <Td width={50} align="center">{(cPageClamped - 1) * DETAIL_PAGE_SIZE + i + 1}</Td>
+                      <Td flex minWidth={300}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                             <span title={p.alias} style={{ fontFamily: ffSemiBold, fontWeight: 600, fontSize: 15, lineHeight: '22px', letterSpacing: ls, color: '#2E3238', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.alias}</span>
@@ -945,8 +938,7 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
                           {p.status === '거래중지' && <GrayBadge>거래중지</GrayBadge>}
                         </div>
                       </Td>
-                      <Td width={140}>{p.bizNumber}</Td>
-                      <Td flex minWidth={200}>{[p.address, p.addressDetail].filter(Boolean).join(', ')}</Td>
+                      <Td width={386}>{p.bizNumber}</Td>
                     </div>
                   ))}
               </div>
@@ -971,12 +963,35 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
       )}
       {sub === 'carriers' && (
         <PickerModal
-          title="위탁 가능한 협력사"
+          title="이용 가능한 운송사"
           items={carrierItems(carriers)}
           initial={group.carrierIds.map(String)}
-          emptyText="위탁 가능한 협력사가 없습니다."
+          emptyText="계약된 운송사가 없습니다."
           onClose={() => setSub(null)}
-          onSubmit={(ids, verb) => { updateGroup(group.id, { carrierIds: ids.map(Number) }); notify(`위탁 가능한 협력사를 ${verb}했습니다.`); }}
+          onSubmit={(ids, verb) => { updateGroup(group.id, { carrierIds: ids.map(Number) }); notify(`이용 가능한 운송사를 ${verb}했습니다.`); }}
+        />
+      )}
+      {sub === 'partners' && (
+        <PickerModal
+          title="담당 거래처"
+          items={carrierItems(partners)}
+          initial={groupPartners.map(p => String(p.id))}
+          emptyText="등록된 거래처가 없습니다."
+          onClose={() => setSub(null)}
+          onSubmit={(ids, verb) => {
+            // 거래처마다 담당 업무그룹에 이 그룹을 넣거나 뺀다. 빼서 비면 기본그룹, 대표였다면 남은 첫 그룹이 대표
+            const defaultId = groups.find(g => g.isDefault)?.id ?? '';
+            partners.forEach(p => {
+              const has = (p.assignedGroupIds || []).includes(group.id);
+              const want = ids.includes(String(p.id));
+              if (has === want) return;
+              let assigned = want ? [...(p.assignedGroupIds || []), group.id] : (p.assignedGroupIds || []).filter(x => x !== group.id);
+              if (assigned.length === 0 && defaultId) assigned = [defaultId];
+              const mainGroupId = assigned.includes(p.mainGroupId) ? p.mainGroupId : assigned[0] ?? '';
+              updatePartner({ ...p, assignedGroupIds: assigned, mainGroupId });
+            });
+            notify(`담당 거래처를 ${verb}했습니다.`);
+          }}
         />
       )}
       {sub === 'delete' && <GroupDeleteModal group={group} groups={groups} onClose={() => setSub(null)} onDeleted={() => { setSub(null); onClose(); }} notify={notify} />}
@@ -984,76 +999,28 @@ function GroupDetailModal({ group, groups, employees, partners, carriers, onClos
   );
 }
 
-// ─── 거래처 공유 설정 모달 ───────────────────────────────────────────────────
-// 우리 업무그룹을 공유할 거래처를 고른다. 왼쪽(전체 거래처)에서 체크 → [추가 >], 오른쪽에서 체크 → [< 제외]
-
-function TransferList({ title, items, checked, onCheck, markRegistered }: { title: string; items: TradePartner[]; checked: string[]; onCheck: (ids: string[]) => void; markRegistered?: boolean }) {
-  // 가입 거래처 중 우리를 거래처로 등록해 업무그룹을 공유해 준 곳
-  const list: CheckItem[] = sortedPartners(items).map(p => ({
-    id: String(p.id),
-    search: p.alias,
-    label: <><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.alias}</span>{markRegistered && p.tTrucker && (p.sharedGroups || []).length > 0 && <GrayBadge>나를 등록한 거래처</GrayBadge>}</>,
-  }));
-  return (
-    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <FormLabel>{title}</FormLabel>
-      <CheckList items={list} selected={checked} onChange={onCheck} emptyText="거래처가 없습니다." height={420} />
-    </div>
-  );
-}
-
-function ShareSettingModal({ partners, onClose, notify }: { partners: TradePartner[]; onClose: () => void; notify: Notify }) {
-  const initial = getSharedPartnerIds();
-  const [shared, setShared] = useState<number[]>(initial);
-  const [leftChecked, setLeftChecked] = useState<string[]>([]);
-  const [rightChecked, setRightChecked] = useState<string[]>([]);
-  const left = partners.filter(p => !shared.includes(p.id));
-  const right = partners.filter(p => shared.includes(p.id));
-  const changed = !sameSet(shared.map(String), initial.map(String));
-
-  const moveRight = () => { setShared(s => [...s, ...leftChecked.map(Number)]); setLeftChecked([]); };
-  const moveLeft = () => { setShared(s => s.filter(id => !rightChecked.includes(String(id)))); setRightChecked([]); };
-  const arrowBtn = (label: React.ReactNode, onClick: () => void, disabled: boolean) => (
-    <button type="button" onClick={onClick} disabled={disabled} style={{ width: 70, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, border: `1px solid ${BORDER}`, borderRadius: 4, background: '#FFFFFF', cursor: disabled ? 'default' : 'pointer', fontFamily: ffSemiBold, fontWeight: 600, fontSize: 14, letterSpacing: ls, color: disabled ? '#C7CBD1' : '#2E3238' }}>{label}</button>
-  );
-
-  return (
-    <Modal title="거래처 공유 설정" width={1000} onClose={onClose} name="partner-share-modal" footer={<>
-      <span style={{ flex: 1 }} />
-      <ModalButton ghost h={52} size={18} px={20} onClick={onClose}>닫기</ModalButton>
-      <ModalButton primary h={52} size={18} px={20} disabled={!changed} onClick={() => { setSharedPartnerIds(shared); notify('거래처 공유 설정을 저장했습니다.'); onClose(); }}>저장</ModalButton>
-    </>}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <TransferList title="전체 거래처" items={left} checked={leftChecked} onCheck={setLeftChecked} markRegistered />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 26 }}>
-          {arrowBtn(<>추가<Chevron size={12} dir="right" color={leftChecked.length ? '#2E3238' : '#C7CBD1'} /></>, moveRight, leftChecked.length === 0)}
-          {arrowBtn(<><Chevron size={12} dir="left" color={rightChecked.length ? '#2E3238' : '#C7CBD1'} />제외</>, moveLeft, rightChecked.length === 0)}
-        </div>
-        <TransferList title="업무그룹을 공유할 거래처" items={right} checked={rightChecked} onCheck={setRightChecked} />
-      </div>
-    </Modal>
-  );
-}
-
 // ─── 목록 화면 ───────────────────────────────────────────────────────────────
 
 type ListSearch = '업무그룹명';
 const LIST_SEARCH_TYPES: ListSearch[] = ['업무그룹명'];
-const COL_WIDTHS = { no: 50, name: 310 };
+// 피그마 개편 2 (953:124190) 열 너비
+const COL_WIDTHS = { no: 50, name: 260 };
 
 function GroupTable({ rows, offset, employees, partners, onRowClick }: { rows: WorkGroup[]; offset: number; employees: Employee[]; partners: TradePartner[]; onRowClick: (g: WorkGroup) => void }) {
   return (
     <div className="wg-scroll" style={{ flex: 1, minHeight: 0, overflow: 'auto', marginTop: 12, borderLeft: `1px solid ${BORDER}` }}>
-      <div style={{ minWidth: 1000 }}>
+      <div style={{ minWidth: 1100 }}>
         <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 2, borderTop: `1px solid ${BORDER}` }}>
           <Th label="번호" width={COL_WIDTHS.no} />
           <Th label="업무그룹명" width={COL_WIDTHS.name} />
           <Th label="소속 직원" flex minWidth={300} />
-          <Th label="담당 거래처" flex minWidth={240} />
+          <Th label="담당 거래처" flex minWidth={240} info="이 업무그룹이 오더를 담당하는 거래처예요. 거래처 관리에서 지정해요." />
+          <Th label="이용 가능한 운송사" flex minWidth={240} info="이 업무그룹에서 배차할 수 있는 운송사예요. 거래처 관리 > 거래처 상세에서 지정해요." />
         </div>
         {rows.map((g, i) => {
           const members = sortedEmployees(employees.filter(e => e.groupIds.includes(g.id))).map(e => e.name);
           const assigned = sortedPartners(partners.filter(p => p.assignedGroupIds.includes(g.id))).map(p => p.alias);
+          const usable = sortedPartners(partners.filter(p => g.carrierIds.includes(p.id))).map(p => p.alias);
           return (
             <div key={g.id} onClick={() => onRowClick(g)} className="wg-row" style={{ display: 'flex', cursor: 'pointer', background: '#FFFFFF' }}>
               <Td width={COL_WIDTHS.no} align="center">{offset + i + 1}</Td>
@@ -1065,6 +1032,7 @@ function GroupTable({ rows, offset, employees, partners, onRowClick }: { rows: W
               </Td>
               <Td flex minWidth={300}><NameListCell unit="명" names={members} /></Td>
               <Td flex minWidth={240}><NameListCell unit="개" names={assigned} /></Td>
+              <Td flex minWidth={240}><NameListCell unit="개" names={usable} /></Td>
             </div>
           );
         })}
@@ -1084,11 +1052,11 @@ export default function EopmuGroupManagement() {
   const [searchType, setSearchType] = useState<ListSearch>('업무그룹명');
   const [keyword, setKeyword] = useState('');
   const [applied, setApplied] = useState({ type: '업무그룹명' as ListSearch, keyword: '' });
-  const [memberFilter, setMemberFilter] = useState<string[]>([]);
   const [partnerFilter, setPartnerFilter] = useState<string[]>([]);
+  const [carrierFilter, setCarrierFilter] = useState<string[]>([]); // 이용 가능한 운송사
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(200);
-  const [modal, setModal] = useState<'add' | 'share' | null>(null);
+  const [modal, setModal] = useState<'add' | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const notify: Notify = (msg, tone = 'dark') => setToast({ msg, tone });
@@ -1103,16 +1071,16 @@ export default function EopmuGroupManagement() {
     if (applied.keyword) {
       if (!g.name.toLowerCase().includes(applied.keyword.toLowerCase())) return false;
     }
-    if (memberFilter.length && !employees.some(e => memberFilter.includes(e.id) && e.groupIds.includes(g.id))) return false;
     if (partnerFilter.length && !partners.some(p => partnerFilter.includes(String(p.id)) && p.assignedGroupIds.includes(g.id))) return false;
+    if (carrierFilter.length && !g.carrierIds.some(id => carrierFilter.includes(String(id)))) return false;
     return true;
   });
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const rows = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const hasCondition = applied.keyword !== '' || memberFilter.length > 0 || partnerFilter.length > 0;
-  const resetAll = () => { setKeyword(''); setApplied({ type: searchType, keyword: '' }); setMemberFilter([]); setPartnerFilter([]); setPage(1); };
+  const hasCondition = applied.keyword !== '' || partnerFilter.length > 0 || carrierFilter.length > 0;
+  const resetAll = () => { setKeyword(''); setApplied({ type: searchType, keyword: '' }); setPartnerFilter([]); setCarrierFilter([]); setPage(1); };
 
   const detailGroup = detailId ? groups.find(g => g.id === detailId) ?? null : null;
 
@@ -1122,21 +1090,20 @@ export default function EopmuGroupManagement() {
       <SharedLnb activeTabIndex={11} />
       <div data-name="work-group-management" style={{ position: 'absolute', left: 208, right: 0, top: 0, bottom: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '0 24px 0 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, height: 44, marginTop: 36, flexShrink: 0 }}>
+          {/* 거래처 공유 설정은 거래처 관리 > 거래처 상세(업무그룹 공유 여부)로 옮김 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: 72, marginTop: 36, flexShrink: 0 }}>
             <span style={{ fontFamily: ffBold, fontWeight: 700, fontSize: 28, lineHeight: '40px', letterSpacing: ls, color: '#000000' }}>업무그룹 관리</span>
-            <button type="button" onClick={() => setModal('share')} style={{ height: 32, padding: '0 4px', display: 'flex', alignItems: 'center', gap: 4, border: 'none', borderRadius: 4, background: 'none', cursor: 'pointer', fontFamily: ffSemiBold, fontWeight: 600, fontSize: 14, letterSpacing: ls, color: '#2E3238' }}>
-              <GearIcon />거래처 공유 설정
-            </button>
+            <span style={{ fontFamily: ff, fontSize: 16, lineHeight: '24px', letterSpacing: ls, color: '#5C6370' }}>우리 회사에서 같은 오더를 처리하는 직원들을 업무그룹으로 관리할 수 있어요.</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24, flexShrink: 0, flexWrap: 'wrap' }}>
-            <button type="button" onClick={() => setModal('add')} style={{ height: 36, padding: '0 12px', display: 'flex', alignItems: 'center', gap: 4, border: `1px solid ${BORDER}`, borderRadius: 4, background: '#FFFFFF', cursor: 'pointer', fontFamily: ffSemiBold, fontWeight: 600, fontSize: 15, letterSpacing: ls, color: '#2E3238', whiteSpace: 'nowrap' }}>
-              <svg width={14} height={14} viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="#2E3238" strokeWidth="1.4" strokeLinecap="round" /></svg>
+            <button type="button" onClick={() => setModal('add')} style={{ height: 36, padding: '0 12px', display: 'flex', alignItems: 'center', border: 'none', borderRadius: 4, background: '#005FFF', cursor: 'pointer', fontFamily: ffSemiBold, fontWeight: 600, fontSize: 15, letterSpacing: ls, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
               업무그룹 추가
             </button>
+            <div style={{ width: 1, height: 20, background: BORDER, flexShrink: 0 }} />
             <SearchBox types={LIST_SEARCH_TYPES} type={searchType} setType={t => setSearchType(t as ListSearch)} keyword={keyword} setKeyword={setKeyword} onSearch={() => { setApplied({ type: searchType, keyword: keyword.trim() }); setPage(1); }} selectWidth={150} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <MultiFilterChip label="소속 직원" options={sortedEmployees(employees).map(e => ({ v: e.id, l: e.name }))} values={memberFilter} onChange={v => { setMemberFilter(v); setPage(1); }} searchPlaceholder="소속 직원 검색" />
               <MultiFilterChip label="담당 거래처" options={sortedPartners(partners).map(p => ({ v: String(p.id), l: p.alias }))} values={partnerFilter} onChange={v => { setPartnerFilter(v); setPage(1); }} searchPlaceholder="거래처 검색" width={240} />
+              <MultiFilterChip label="이용 가능한 운송사" options={sortedPartners(carriers).map(p => ({ v: String(p.id), l: p.alias }))} values={carrierFilter} onChange={v => { setCarrierFilter(v); setPage(1); }} searchPlaceholder="운송사 검색" width={240} />
             </div>
             {hasCondition && (
               <>
@@ -1152,8 +1119,7 @@ export default function EopmuGroupManagement() {
         <Pagination total={filtered.length} page={currentPage} setPage={setPage} size={pageSize} setSize={setPageSize} />
       </div>
 
-      {modal === 'add' && <GroupAddModal employees={employees} carriers={carriers} onClose={() => setModal(null)} notify={notify} />}
-      {modal === 'share' && <ShareSettingModal partners={sortedPartners(partners)} onClose={() => setModal(null)} notify={notify} />}
+      {modal === 'add' && <GroupAddModal employees={employees} onClose={() => setModal(null)} notify={notify} />}
       {detailGroup && (
         <GroupDetailModal
           key={detailGroup.id}

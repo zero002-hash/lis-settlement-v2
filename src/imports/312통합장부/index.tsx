@@ -2424,6 +2424,14 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   useEffect(() => { const g = shipperGroupOptions[0] ?? ''; setShipperGroupSel(g); setShipperSettleSel(linkedScheduleName(shipperPartnerRecord, g)); }, [shipperPartnerRecord?.id]);
   useEffect(() => { const g = partnerGroupOptions[0] ?? ''; setPartnerGroupSel(g); setPartnerSettleSel(linkedScheduleName(partnerPartnerRecord, g)); }, [partnerPartnerRecord?.id]);
   const [detailPartnerId, setDetailPartnerId] = useState<number | null>(null);
+  // 원청화주사(원청 화주사) 줄 펼침/접힘 — 기본은 접힘. 펼칠 때는 빈 칸에서 시작해 등록된 화주사를 고르고(↗·공유그룹 활성),
+  // [− 원청화주사 정보 제외]하면 입력한 화주사 정보를 비운다
+  const [sharedShipperOpen, setSharedShipperOpen] = useState(false);
+
+  const toggleSharedShipper = () => {
+    setPartnerInput(''); setPartnerReqName(''); setPartnerReqPhone('');
+    setSharedShipperOpen(o => !o);
+  };
   const detailPartner = detailPartnerId != null ? getPartners().find(p => p.id === detailPartnerId) : undefined;
   const partnerSettle = pick(partnerSettleOptions, 42);
   const driverName = isNew ? '' : pick(DRIVER_NAMES, 7);
@@ -2571,6 +2579,9 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   );
 
   const lbl: React.CSSProperties = { fontSize:13, fontWeight:700, color:'#666', letterSpacing:'-0.01em', width:60, flexShrink:0 };
+  // 매출거래처/화주사 줄 칸 — 거래처명 · 공유그룹 · 청구 기준 · 담당자 · 연락처 · 주문번호 · [원청화주사 추가/제외]. 공유그룹·청구 기준은 최소 104px 유지
+  // 피그마처럼 6칸 120px 고정, 끝에 원청화주사 추가/제외(아이콘+텍스트)
+  const PARTY_GRID = 'repeat(6, 120px) auto';
   const partyInputStyle: React.CSSProperties = { height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box', width:'100%' };
   const partySelectStyle: React.CSSProperties = { ...partyInputStyle, paddingRight:24, background:`${selArrow} no-repeat right 8px center, #FFFFFF`, cursor:'pointer', appearance:'none' as const };
   const partyLinkedSelectStyle: React.CSSProperties = { ...partySelectStyle, background:`${selArrow} no-repeat right 8px center, #E8F3FE`, textOverflow:'ellipsis' };
@@ -2590,7 +2601,8 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
           onChange={e => (field === 'name' ? onNameChange : onPhoneChange)(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
-          placeholder={field === 'name' ? '배차요청자 이름' : '배차요청자 전화번호'}
+          placeholder={field === 'name' ? '담당자명' : '담당자 전화번호'}
+          title={field === 'name' ? '담당자명' : '담당자 전화번호'}
           style={partyInputStyle}
         />
         {focused && filtered.length > 0 && (
@@ -2624,7 +2636,8 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
   // 배차담당(담당그룹/배차담당자명/전화번호) — 담당그룹은 현재 로그인한 담당자가 속한 업무그룹 중에서만 선택 가능,
   // 배차담당자명은 선택된 담당그룹에 속한 직원 중에서 선택 (회사 > 업무그룹/직원 관리에서 등록한 데이터를 참조)
   const _defaultDispatchGroupId = (() => {
-    const candidateIds = [...(shipperPartnerRecord?.assignedGroupIds ?? []), ...(partnerPartnerRecord?.assignedGroupIds ?? [])];
+    // 원청화주사 줄을 접어 두면(제외) 그 화주사는 배차담당 후보 계산에서 뺀다
+    const candidateIds = [...(shipperPartnerRecord?.assignedGroupIds ?? []), ...((sharedShipperOpen ? partnerPartnerRecord : undefined)?.assignedGroupIds ?? [])];
     return myGroupIds.find(id => candidateIds.includes(id)) ?? myGroupIds[0] ?? '';
   })();
   const [dispatchGroupId, setDispatchGroupId] = useState(_defaultDispatchGroupId);
@@ -2737,43 +2750,55 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
         {/* BODY */}
         <div style={{ background:'#F9FAFC', padding:'12px 0 12px 16px', flex:1, display:'flex', flexDirection:'row' }}>
 
-          {/* LEFT SECTION */}
-          <div style={{ width:758, display:'flex', flexDirection:'column', gap:8 }}>
+          {/* LEFT SECTION — 피그마(955:142071) 폭 949px 고정. 칸은 120px 고정이라 화면이 좁으면 칸을 줄이지 않고 폼이 가로 스크롤됨 */}
+          {/* 원청화주사 추가/제외는 항상 아이콘+텍스트 (피그마) */}
+          <style>{`.od-left{container-type:inline-size}`}</style>
+          <div className="od-left" style={{ flex:'0 0 949px', width:949, display:'flex', flexDirection:'column', gap:8 }}>
 
-            {/* Row 1: 화주 — 거래처를 고르면 [▶ 거래처 상세] · 공유그룹 · 정산스케줄이 붙는다 */}
-            <div style={row}>
-              <span style={lbl}>화주</span>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:6, flex:1, minWidth:0 }}>
-                <PartyNameField value={shipperInput} onChange={setShipperInput} partners={visiblePartners} placeholder="화주사명" record={shipperPartnerRecord} onOpen={setDetailPartnerId} inputStyle={partyInputStyle} />
-                {shipperPartnerRecord && <>
-                  <select value={shipperGroupSel} onChange={e => { setShipperGroupSel(e.target.value); setShipperSettleSel(linkedScheduleName(shipperPartnerRecord, e.target.value)); }} title="공유그룹" style={partyLinkedSelectStyle}>
-                    {shipperGroupOptions.map(o => <option key={o} value={o}>{o}</option>)}
+            {/* 원청화주사 (피그마 955:142418) — [+ 원청화주사 정보 추가]로 펼친 경우에만. 매출거래처가 공유한 원청 화주사와 그 공유그룹·주문번호 */}
+            {sharedShipperOpen && (
+              <div style={row} data-name="shared-shipper-row">
+                <span style={lbl}>원청화주사</span>
+                <div style={{ display:'grid', gridTemplateColumns:PARTY_GRID, gap:6, flex:1, minWidth:0 }}>
+                  <PartyNameField value={partnerInput} onChange={setPartnerInput} partners={visiblePartners} placeholder="원청화주사명" record={partnerPartnerRecord} onOpen={setDetailPartnerId} inputStyle={partyInputStyle} />
+                  <select value={partnerGroupSel} disabled={!partnerPartnerRecord} onChange={e => { setPartnerGroupSel(e.target.value); setPartnerSettleSel(linkedScheduleName(partnerPartnerRecord, e.target.value)); }} title="공유그룹" style={{ ...partyLinkedSelectStyle, color: partnerPartnerRecord ? undefined : '#9197A1' }}>
+                    {partnerPartnerRecord ? partnerGroupOptions.map(o => <option key={o} value={o}>{o}</option>) : <option value="">공유그룹</option>}
                   </select>
-                  <select value={shipperSettleSel} onChange={e => setShipperSettleSel(e.target.value)} title="정산스케줄" style={partyLinkedSelectStyle}>
-                    {shipperSettleOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </>}
-                <input defaultValue={isNew ? '' : `ORD-${rowIdx.toString().padStart(5,'0')}`} placeholder="화주주문번호" style={partyInputStyle} />
+                  <input defaultValue={isNew ? '' : `SO-${rowIdx.toString().padStart(5,'0')}`} placeholder="화주주문번호" title="화주주문번호" style={partyInputStyle} />
+                </div>
+              </div>
+            )}
+
+            {/* 매출거래처 — 거래처명[▶ 거래처 상세] · 공유그룹 · 청구조건 · 담당자명 · 담당자 전화번호 · 화주주문번호, 끝에 원청화주사 펼침/접힘 */}
+            <div style={row} data-name="sales-partner-row">
+              <span style={lbl}>매출거래처</span>
+              <div style={{ display:'grid', gridTemplateColumns:PARTY_GRID, gap:6, flex:1, minWidth:0, alignItems:'center' }}>
+                <PartyNameField value={shipperInput} onChange={setShipperInput} partners={visiblePartners} placeholder="매출거래처명" record={shipperPartnerRecord} onOpen={setDetailPartnerId} inputStyle={partyInputStyle} />
+                <select value={shipperGroupSel} disabled={!shipperPartnerRecord} onChange={e => { setShipperGroupSel(e.target.value); setShipperSettleSel(linkedScheduleName(shipperPartnerRecord, e.target.value)); }} title="공유그룹" style={{ ...partyLinkedSelectStyle, color: shipperPartnerRecord ? undefined : '#9197A1' }}>
+                  {shipperPartnerRecord ? shipperGroupOptions.map(o => <option key={o} value={o}>{o}</option>) : <option value="">공유그룹</option>}
+                </select>
+                <select value={shipperSettleSel} disabled={!shipperPartnerRecord} onChange={e => setShipperSettleSel(e.target.value)} title="청구조건" style={{ ...partyLinkedSelectStyle, color: shipperPartnerRecord ? undefined : '#9197A1' }}>
+                  {shipperPartnerRecord ? shipperSettleOptions.map(o => <option key={o} value={o}>{o}</option>) : <option value="">청구조건</option>}
+                </select>
                 <ContactPickerField field="name" value={shipperReqName} onNameChange={setShipperReqName} onPhoneChange={setShipperReqPhone} contacts={shipperPartnerContacts} />
                 <ContactPickerField field="phone" value={shipperReqPhone} onNameChange={setShipperReqName} onPhoneChange={setShipperReqPhone} contacts={shipperPartnerContacts} />
-              </div>
-            </div>
-
-            {/* Row 2: 요청거래처 */}
-            <div style={row}>
-              <span style={lbl}>요청거래처</span>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:6, flex:1, minWidth:0 }}>
-                <PartyNameField value={partnerInput} onChange={setPartnerInput} partners={visiblePartners} placeholder="협력사명" record={partnerPartnerRecord} onOpen={setDetailPartnerId} inputStyle={partyInputStyle} />
-                {partnerPartnerRecord && <>
-                  <select value={partnerGroupSel} onChange={e => { setPartnerGroupSel(e.target.value); setPartnerSettleSel(linkedScheduleName(partnerPartnerRecord, e.target.value)); }} title="공유그룹" style={partyLinkedSelectStyle}>
-                    {partnerGroupOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                  <select value={partnerSettleSel} onChange={e => setPartnerSettleSel(e.target.value)} title="정산스케줄" style={partyLinkedSelectStyle}>
-                    {partnerSettleOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </>}
-                <ContactPickerField field="name" value={partnerReqName} onNameChange={setPartnerReqName} onPhoneChange={setPartnerReqPhone} contacts={partnerPartnerContacts} />
-                <ContactPickerField field="phone" value={partnerReqPhone} onNameChange={setPartnerReqName} onPhoneChange={setPartnerReqPhone} contacts={partnerPartnerContacts} />
+                <input defaultValue={isNew ? '' : `ORD-${rowIdx.toString().padStart(5,'0')}`} placeholder="화주주문번호" title="화주주문번호" style={partyInputStyle} />
+                <button
+                  type="button"
+                  data-name="shared-shipper-toggle"
+                  aria-expanded={sharedShipperOpen}
+                  aria-label={sharedShipperOpen ? '원청화주사 정보 제외' : '원청화주사 정보 추가'}
+                  title={sharedShipperOpen ? '원청화주사 정보 제외' : '원청화주사 정보 추가'}
+                  onClick={toggleSharedShipper}
+                  className="shs-btn"
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:3, height:28, padding:0, border:'none', borderRadius:2, background:'none', cursor:'pointer', whiteSpace:'nowrap', fontFamily:"'Pretendard GOV', sans-serif", fontSize:13, letterSpacing:'-0.02em', color:'#454B55', boxSizing:'border-box' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6h8" stroke="#2C6EDB" strokeWidth="1.4" strokeLinecap="round"/>
+                    {!sharedShipperOpen && <path d="M6 2v8" stroke="#2C6EDB" strokeWidth="1.4" strokeLinecap="round"/>}
+                  </svg>
+                  <span className="shs-text">{sharedShipperOpen ? '원청화주사 정보 제외' : '원청화주사 정보 추가'}</span>
+                </button>
               </div>
             </div>
 
@@ -2781,13 +2806,11 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
             <div style={row}>
               <span style={lbl}>상차지</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1, minWidth:0 }}>
-                <input defaultValue={loadLoc} placeholder="상차지명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                <input defaultValue={loadWorkType} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E6E6E6', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                <input defaultValue={loadAddr} placeholder="상차지 주소" style={{ flex:2, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={loadLoc} placeholder="상차지명" style={{ width:120, flexShrink:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={loadWorkType} style={{ width:120, flexShrink:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E6E6E6', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={loadAddr} placeholder="상차지 주소" style={{ width:246, flexShrink:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <input defaultValue={loadDetailAddr} placeholder="상세주소" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <svg width="20" height="28" viewBox="0 0 20 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, cursor:'pointer' }}><rect x="0.5" y="0.5" width="19" height="27" rx="1.5" fill="white"/><rect x="0.5" y="0.5" width="19" height="27" rx="1.5" stroke="#CCCCCC"/><path d="M9.85858 8.64142L6.34142 12.1586C6.21543 12.2846 6.30466 12.5 6.48284 12.5H13.5172C13.6953 12.5 13.7846 12.2846 13.6586 12.1586L10.1414 8.64142C10.0633 8.56332 9.93668 8.56332 9.85858 8.64142Z" fill="#2C6EDB" fillOpacity="0.8"/><path d="M10.1414 19.3586L13.6586 15.8414C13.7846 15.7154 13.6953 15.5 13.5172 15.5L6.48284 15.5C6.30466 15.5 6.21543 15.7154 6.34142 15.8414L9.85858 19.3586C9.93668 19.4367 10.0633 19.4367 10.1414 19.3586Z" fill="#2C6EDB" fillOpacity="0.8"/></svg>
-                {/* 경유 자리 spacer (하차지명과 정렬 맞춤) */}
-                <div style={{ width:44, flexShrink:0 }} />
               </div>
             </div>
 
@@ -2795,12 +2818,11 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
             <div style={row}>
               <span style={lbl}>하차지</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1, minWidth:0 }}>
-                <input defaultValue={unloadLoc} placeholder="하차지명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                <input defaultValue={unloadWorkType} style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E6E6E6', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
-                <input defaultValue={unloadAddr} placeholder="하차지 주소" style={{ flex:2, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={unloadLoc} placeholder="하차지명" style={{ width:120, flexShrink:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={unloadWorkType} style={{ width:120, flexShrink:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E6E6E6', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={unloadAddr} placeholder="하차지 주소" style={{ width:246, flexShrink:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <input defaultValue={unloadDetailAddr} placeholder="상세주소" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <svg width="20" height="28" viewBox="0 0 20 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, cursor:'pointer' }}><rect x="0.5" y="0.5" width="19" height="27" rx="1.5" fill="white"/><rect x="0.5" y="0.5" width="19" height="27" rx="1.5" stroke="#CCCCCC"/><path d="M9.85858 8.64142L6.34142 12.1586C6.21543 12.2846 6.30466 12.5 6.48284 12.5H13.5172C13.6953 12.5 13.7846 12.2846 13.6586 12.1586L10.1414 8.64142C10.0633 8.56332 9.93668 8.56332 9.85858 8.64142Z" fill="#2C6EDB" fillOpacity="0.8"/><path d="M10.1414 19.3586L13.6586 15.8414C13.7846 15.7154 13.6953 15.5 13.5172 15.5L6.48284 15.5C6.30466 15.5 6.21543 15.7154 6.34142 15.8414L9.85858 19.3586C9.93668 19.4367 10.0633 19.4367 10.1414 19.3586Z" fill="#2C6EDB" fillOpacity="0.8"/></svg>
-                <button style={{ width:44, height:28, border:'1px solid #CCCCCC', borderRadius:2, background:'#FFFFFF', cursor:'pointer', fontSize:15, color:'#1A1A1A', flexShrink:0 }}>경유</button>
               </div>
             </div>
 
@@ -2808,14 +2830,14 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
             <div style={row}>
               <span style={lbl}>요청차량</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1 }}>
-                <select defaultValue={tonType} style={{ flex:1, minWidth:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #CCCCCC', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
+                <select defaultValue={tonType} style={{ width:120, flexShrink:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #CCCCCC', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
                   {['1톤','2.5톤','3.5톤','5톤','8톤'].map(o=><option key={o}>{o}</option>)}
                 </select>
-                <select defaultValue={cargoTypeModal} style={{ flex:1, minWidth:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #CCCCCC', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
-                  {['카고','윙바디','탑차','리프트'].map(o=><option key={o}>{o}</option>)}
+                <select defaultValue={cargoTypeModal} style={{ width:120, flexShrink:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #CCCCCC', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
+                  {['카고/윙','카고','윙바디','탑차','리프트'].map(o=><option key={o}>{o}</option>)}
                 </select>
-                <select defaultValue={cargoFeature} style={{ flex:1, minWidth:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #CCCCCC', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
-                  {['상온','냉장','냉동','호출불가','우선배차'].map(o=><option key={o}>{o}</option>)}
+                <select defaultValue={cargoFeature || ''} style={{ width:120, flexShrink:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #FFFFFF`, border:'1px solid #CCCCCC', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
+                  <option value="" disabled>차량특성</option>{['상온','냉장','냉동','호출불가','우선배차'].map(o=><option key={o}>{o}</option>)}
                 </select>
                 <span style={{ fontSize:13, color:'#666', flexShrink:0 }}>총 중량</span>
                 {/* 총중량 + tO SVG 버튼 */}
@@ -2848,7 +2870,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
             <div style={row}>
               <span style={lbl}>물품정보</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1, minWidth:0 }}>
-                <input defaultValue={goodsName} placeholder="물품명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
+                <input defaultValue={goodsName} placeholder="물품정보(ex: 4인용 식탁)" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                 <span style={{ fontSize:13, color:'#999', flexShrink:0 }}>총 갯수</span>
                 {/* 통합 갯수+단위 컴포넌트 (135px) - SVG 스펙 */}
                 <div style={{ width:135, height:28, border:'1px solid #CCCCCC', borderRadius:2, display:'flex', overflow:'hidden', flexShrink:0, boxSizing:'border-box' }}>
@@ -2886,7 +2908,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                       </select>
                     )}
                     {(dispatchType === '협력사위탁' || (dispatchType === '장부기록' && ledgerChannel === '협력사위탁(정보망 이용안함)')) && (
-                      <div style={{ width: dispatchType === '협력사위탁' ? 200 : undefined, flex: dispatchType === '협력사위탁' ? 'none' : 1, minWidth:0 }}>
+                      <div style={{ width: dispatchType === '협력사위탁' ? 180 : undefined, flex: dispatchType === '협력사위탁' ? 'none' : 1, minWidth:0 }}>
                         <PartyNameField
                           value={dispatchPartnerName}
                           onChange={setDispatchPartnerName}
@@ -2909,8 +2931,8 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                     )}
                   </div>
                 )}
-                {/* Row B: inputs */}
-                <fieldset disabled={vehicleLocked} style={{ display:'flex', gap:6, alignItems:'center', border:'none', margin:0, padding:0, minWidth:0 }}>
+                {/* Row B: inputs — 협력사위탁은 협력사명만 보여줌 (피그마) */}
+                {dispatchType !== '협력사위탁' && <fieldset disabled={vehicleLocked} style={{ display:'flex', gap:6, alignItems:'center', border:'none', margin:0, padding:0, minWidth:0 }}>
                   <input defaultValue={plate} placeholder="차량번호" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background: vehicleLocked ? '#EEEFF1' : '#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                   <input defaultValue={driverName} placeholder="기사명" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background: vehicleLocked ? '#EEEFF1' : '#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
                   <input defaultValue={driverContact} placeholder="기사 휴대전화" style={{ flex:1, minWidth:0, height:28, padding:'0 8px', fontSize:15, fontFamily:"'Pretendard GOV', sans-serif", letterSpacing:'-0.02em', color:'#1A1A1A', background: vehicleLocked ? '#EEEFF1' : '#E8F3FE', border:'1px solid #DFDFDF', borderRadius:2, outline:'none', boxSizing:'border-box' }} />
@@ -2920,9 +2942,9 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                   <select defaultValue={cargoTypeModal} style={{ flex:1, minWidth:0, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, ${vehicleLocked ? '#EEEFF1' : '#FFFFFF'}`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor: vehicleLocked ? 'default' : 'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>
                     {['카고','윙바디','탑차','리프트'].map(o => <option key={o}>{o}</option>)}
                   </select>
-                </fieldset>
+                </fieldset>}
                 {/* Row C: note */}
-                <div style={{ display:'flex', alignItems:'center', gap:2, height:20 }}>
+                {dispatchType !== '협력사위탁' && <div style={{ display:'flex', alignItems:'center', gap:2, height:20 }}>
                   {/* ⓘ 아이콘 */}
                   <div style={{ width:16, height:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, position:'relative' }}>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -2933,7 +2955,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                   </div>
                   {/* 텍스트 */}
                   <span style={{ fontSize:14, fontWeight:400, color:'#999999', letterSpacing:'-0.02em', lineHeight:'20px', fontFamily:"'Pretendard GOV', sans-serif", whiteSpace:'nowrap' }}>배차완료 시 차량정보가 자동입력됩니다.</span>
-                </div>
+                </div>}
               </div>
             </div>
 
@@ -2941,18 +2963,10 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
             <div style={row}>
               <span style={lbl}>정산방법</span>
               <div style={{ display:'flex', gap:6, alignItems:'center', flex:1 }}>
-                <select defaultValue={billingMethod} style={{ width:140, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>{['후불','선착불'].map(o=><option key={o}>{o}</option>)}</select>
-                <select defaultValue={settlementType} style={{ width:140, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>{['별도정산','예치금','한도','현장결제'].map(o=><option key={o}>{o}</option>)}</select>
+                <select defaultValue={billingMethod} style={{ width:120, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>{['후불','선착불'].map(o=><option key={o}>{o}</option>)}</select>
+                <select defaultValue={settlementType} style={{ width:120, height:28, padding:'0 28px 0 8px', fontSize:15, fontFamily:ff, letterSpacing:'-0.02em', color:'#1A1A1A', background:`${selArrow} no-repeat right 8px center, #E8F3FE`, border:'1px solid #DFDFDF', borderRadius:2, outline:'none', cursor:'pointer', boxSizing:'border-box', flexShrink:0, appearance:'none' as const }}>{['별도정산','예치금','한도','현장결제'].map(o=><option key={o}>{o}</option>)}</select>
                 <span style={{ fontSize:13, color:'#666', flexShrink:0 }}>인수증</span>
                 <Sel options={['필요 없음','필요','완료']} width={140} bg="#E8F3FE" />
-                <div style={{ flex:1 }} />
-                <svg width="138" height="28" viewBox="0 0 138 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, cursor:'pointer', marginRight:16 }}>
-                  <rect x="0.5" y="0.5" width="137" height="27" rx="1.5" fill="#F2F2F2"/>
-                  <rect x="0.5" y="0.5" width="137" height="27" rx="1.5" stroke="#DFDFDF"/>
-                  <path d="M14.9527 10.83H17.2537V7.814H18.3327V14.756H17.2537V11.701H14.9527V10.83ZM15.6027 13.482L15.0697 14.314C13.7697 13.846 12.7687 12.884 12.2617 11.688C11.7677 13.04 10.6887 14.132 9.3237 14.652L8.7647 13.807C10.5067 13.17 11.7027 11.597 11.7027 9.92V9.517H9.1027V8.659H15.3297V9.517H12.7687V9.92C12.7687 11.415 13.9127 12.884 15.6027 13.482ZM14.4847 18.63C16.2397 18.63 17.3057 18.136 17.3057 17.291C17.3057 16.446 16.2397 15.939 14.4847 15.939C12.7297 15.939 11.6637 16.446 11.6637 17.291C11.6637 18.136 12.7297 18.63 14.4847 18.63ZM14.4847 15.12C16.8767 15.12 18.3717 15.913 18.3717 17.291C18.3717 18.669 16.8767 19.462 14.4847 19.462C12.0927 19.462 10.5977 18.669 10.5977 17.291C10.5977 15.913 12.0927 15.12 14.4847 15.12ZM27.2237 13.664L26.6907 14.509C25.3777 14.028 24.3637 13.053 23.8437 11.831C23.3627 13.209 22.3227 14.275 20.9317 14.795L20.3727 13.95C22.1537 13.313 23.2847 11.753 23.2847 9.946V8.503H24.3507V9.972C24.3507 11.571 25.5077 13.053 27.2237 13.664ZM23.3107 15.588V18.331H29.9797V19.202H22.2447V15.588H23.3107ZM29.4727 11.376H31.1887V12.26H29.4727V16.407H28.4067V7.788H29.4727V11.376ZM36.9597 13.053V11.129H33.6577V13.053H36.9597ZM37.9997 8.542V13.911H32.6047V8.542H33.6577V10.297H36.9597V8.542H37.9997ZM37.4667 18.617C39.1827 18.617 40.2357 18.123 40.2357 17.291C40.2357 16.459 39.1827 15.978 37.4667 15.978C35.7247 15.978 34.6847 16.459 34.6847 17.291C34.6847 18.123 35.7247 18.617 37.4667 18.617ZM37.4667 15.12C39.8327 15.12 41.3017 15.913 41.3017 17.291C41.3017 18.669 39.8327 19.462 37.4667 19.462C35.0877 19.462 33.6187 18.669 33.6187 17.291C33.6187 15.913 35.0877 15.12 37.4667 15.12ZM41.1717 10.739H42.9007V11.623H41.1717V14.821H40.1057V7.801H41.1717V10.739ZM52.3637 18.435V16.979H47.0077V18.435H52.3637ZM52.3637 16.147V14.73H53.4167V19.293H45.9547V14.73H47.0077V16.147H52.3637ZM48.6067 12.871V11.025H45.4607V12.871H48.6067ZM52.3507 7.814H53.4297V14.184H52.3507V11.545H49.6597V13.742H44.4077V8.412H45.4607V10.193H48.6067V8.412H49.6597V10.674H52.3507V7.814ZM59.8155 9.25781L55.9625 19.2935H54.9532L58.8126 9.25781H59.8155ZM65.8968 8.958C64.1158 8.958 62.9328 9.517 62.9328 10.44C62.9328 11.35 64.1158 11.909 65.8968 11.909C67.6908 11.909 68.8608 11.35 68.8608 10.44C68.8608 9.517 67.6908 8.958 65.8968 8.958ZM65.8968 12.78C63.4268 12.78 61.8148 11.883 61.8148 10.44C61.8148 8.997 63.4268 8.1 65.8968 8.1C68.3668 8.1 69.9788 8.997 69.9788 10.44C69.9788 11.883 68.3668 12.78 65.8968 12.78ZM63.0368 15.796V18.318H70.0308V19.202H61.9708V15.796H63.0368ZM60.6188 13.716H71.1878V14.587H66.5338V16.94H65.4548V14.587H60.6188V13.716ZM80.8327 7.814H81.8987V14.483H80.8327V7.814ZM74.3587 15.107H81.8987V19.306H74.3587V15.107ZM80.8587 15.952H75.3987V18.448H80.8587V15.952ZM75.6327 8.425C77.4007 8.425 78.6877 9.53 78.6877 11.142C78.6877 12.754 77.4007 13.859 75.6327 13.859C73.8777 13.859 72.6037 12.754 72.6037 11.142C72.6037 9.53 73.8777 8.425 75.6327 8.425ZM75.6327 9.309C74.4757 9.309 73.6437 10.076 73.6437 11.142C73.6437 12.221 74.4757 12.975 75.6327 12.975C76.8027 12.975 77.6477 12.221 77.6477 11.142C77.6477 10.076 76.8027 9.309 75.6327 9.309ZM88.2553 11.493C88.2553 12.637 89.1133 13.443 90.2573 13.443C91.4013 13.443 92.2593 12.637 92.2593 11.493C92.2593 10.349 91.4013 9.543 90.2573 9.543C89.1133 9.543 88.2553 10.349 88.2553 11.493ZM93.2993 11.493C93.2993 13.183 91.9993 14.366 90.2573 14.366C88.5153 14.366 87.2153 13.183 87.2153 11.493C87.2153 9.803 88.5153 8.62 90.2573 8.62C91.9993 8.62 93.2993 9.803 93.2993 11.493ZM89.8543 15.51V18.331H96.5623V19.202H88.7883V15.51H89.8543ZM96.0423 11.35H97.7583V12.234H96.0423V16.381H94.9763V7.801H96.0423V11.35ZM100.331 9.218V15.51C101.449 15.497 102.684 15.419 104.075 15.146L104.179 16.069C102.606 16.368 101.267 16.433 100.006 16.433H99.2653V9.218H100.331ZM107.559 7.801H108.586V19.449H107.559V13.43H105.908V18.864H104.907V8.061H105.908V12.546H107.559V7.801Z" fill="#333333"/>
-                  <circle cx="122" cy="14" r="7.5" fill="#222222" fillOpacity="0.4"/>
-                  <path d="M121.093 15.5375H122.523V15.3096C122.523 14.7815 122.722 14.5036 123.437 14.0756C124.196 13.6142 124.588 13.0306 124.588 12.1968V12.1912C124.588 10.9183 123.566 10.04 122.034 10.04C120.383 10.04 119.463 11.0017 119.42 12.3079V12.3635H120.878L120.883 12.3191C120.915 11.7465 121.319 11.3296 121.937 11.3296C122.545 11.3296 122.959 11.7076 122.959 12.2412V12.2468C122.959 12.7637 122.749 13.0417 122.055 13.4697C121.313 13.9199 121.033 14.4258 121.087 15.2151L121.093 15.5375ZM121.829 18.2C122.319 18.2 122.711 17.8165 122.711 17.3273C122.711 16.8382 122.319 16.4546 121.829 16.4546C121.345 16.4546 120.953 16.8382 120.953 17.3273C120.953 17.8165 121.345 18.2 121.829 18.2Z" fill="white"/>
-                </svg>
               </div>
             </div>
 
@@ -3001,7 +3015,7 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
                       <input defaultValue={fmt(profitAmt)} disabled style={inputSt('#E6E6E6')} />
                     </div>
                   </div>
-                  <button onClick={() => setShowExtraFareModal(true)} style={{ fontSize:14, color:'#666666', background:'none', border:'none', cursor:'pointer', letterSpacing:'-0.02em', padding:'6px 0', whiteSpace:'nowrap', width:80 }}>운임 추가하기</button>
+                  <button onClick={() => setShowExtraFareModal(true)} style={{ height:28, padding:'0 8px', fontSize:14, color:'#1A1A1A', background:'#FFFFFF', border:'1px solid #CCCCCC', borderRadius:2, cursor:'pointer', letterSpacing:'-0.02em', whiteSpace:'nowrap', flexShrink:0, boxSizing:'border-box' }}>운임 추가</button>
                 </div>
               );
 
@@ -3120,8 +3134,8 @@ export function OrderDetailModal({ orderId, rowIdx, onClose, __pageMode, baechaS
           {/* CENTER DIVIDER */}
           <div style={{ width:1, background:'#E6E6E6', alignSelf:'stretch', margin:'0 16px', flexShrink:0 }} />
 
-          {/* RIGHT SECTION */}
-          <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8 }}>
+          {/* RIGHT SECTION — 최소 520px는 지키고(줄지 않음), 남는 폭은 오른쪽이 가져감. 좁으면 왼쪽이 758px까지 줄어듦 */}
+          <div style={{ flex:'1 0 640px', minWidth:0, display:'flex', flexDirection:'column', gap:8 }}>
 
             {/* 물품옵션 */}
             <div style={row}>

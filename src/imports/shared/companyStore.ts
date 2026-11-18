@@ -218,7 +218,7 @@ export function setGroupMembers(groupId: string, employeeIds: string[]): void {
 // ─── 거래처 공유 설정 ────────────────────────────────────────────────────────
 // 우리 업무그룹을 공유할 거래처(거래처관리의 거래처 id). 공유받은 거래처는 우리 업무그룹을 공유그룹으로 본다.
 
-let _sharedPartnerIds: number[] = [1, 2, 4];
+let _sharedPartnerIds: number[] = [1, 2, 3, 4, 6, 8, 11, 12, 14, 16, 19, 23];
 
 export function getSharedPartnerIds(): number[] {
   return _sharedPartnerIds;
