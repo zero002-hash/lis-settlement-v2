@@ -1,12 +1,11 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import SharedLnb from "../shared/SharedLnb";
 import {
-  type TradeStatus, type PartnerType, type SettleSchedule, type PartnerContact, type SharedGroupMapping, type TradePartner, type BizRecord, type PartnerDocKey, type MainVehicle, type MainRoute,
+  type TradeStatus, type PartnerType, type SettleSchedule, type PartnerContact, type SharedGroupMapping, type TradePartner, type BizRecord, type PartnerDocKey,
   MOCK_BIZ_REGISTRY, makeSchedule, genId,
-  getPartners, addPartner, updatePartner, subscribePartners,
+  getPartners, addPartner, updatePartner, subscribePartners, removePartner,
 } from "../shared/geoRaecheoStore";
-import { type WorkGroup, getGroups, subscribeCompany } from "../shared/companyStore";
-import { TON_OPTIONS, CAR_TYPE_OPTIONS } from "../shared/contractRateStore";
+import { type WorkGroup, getGroups, subscribeCompany, getSharedPartnerIds, setSharedPartnerIds, updateGroup } from "../shared/companyStore";
 
 const ff = "'Pretendard GOV:Regular'";
 const ffSemiBold = "'Pretendard GOV:SemiBold'";
@@ -196,7 +195,8 @@ function ModalButton({ children, onClick, primary, ghost, disabled, h = 44, size
 
 const LIST_CSS = '.pm-opt:hover{background:#F6F7F8!important}.pm-row:hover{background:#F9FAFB!important}.pm-search-input::placeholder{color:#767D8A}.pm-table-scroll::-webkit-scrollbar{width:10px;height:10px}.pm-table-scroll::-webkit-scrollbar-thumb{background:#C7CBD1;border-radius:10px;border:2px solid #FFFFFF}.pm-table-scroll::-webkit-scrollbar-track{background:#FFFFFF}';
 
-const COL_WIDTHS = { status: 120, type: 120, join: 140, alias: 490, bizNumber: 140, registeredAt: 150 };
+// 피그마 개편 2 (953:131059) 열 너비
+const COL_WIDTHS = { status: 150, type: 150, alias: 372, bizNumber: 150, join: 150, share: 150, registeredAt: 150 };
 
 // 거래상태 표시 라벨 — 데이터상 '정상'/'거래중지'를 화면에선 '거래중'/'거래중지'로 노출
 const STATUS_BADGE: Record<TradeStatus, { label: string; bg: string; color: string }> = {
@@ -208,6 +208,22 @@ const STOPPED_TOOLTIP = '거래중지 상태인 거래처에는 배차요청 불
 type FilterOption = { v: string; l: string };
 const STATUS_FILTER_OPTIONS: FilterOption[] = [{ v: '정상', l: '거래중' }, { v: '거래중지', l: '거래 중지' }];
 const JOIN_FILTER_OPTIONS: FilterOption[] = [{ v: 'Y', l: '가입' }, { v: 'N', l: '미가입' }];
+const TYPE_FILTER_OPTIONS: FilterOption[] = [{ v: '화주사', l: '화주사' }, { v: '협력사', l: '운송사' }];
+// 화면 표시용 유형 이름 — 데이터 값 '협력사'는 다른 화면(정산 장부 등)과 공유하므로 그대로 두고 표시만 '운송사'
+const partnerTypeLabel = (t: PartnerType) => t === '협력사' ? '운송사' : t;
+const SHARE_FILTER_OPTIONS: FilterOption[] = ['서로 공유함', '공유 함', '공유 받음', '공유 안 함'].map(v => ({ v, l: v }));
+
+// 업무그룹 공유 여부 — 가입 거래처만 해당. 우리가 공유하는지(함: 회사 > 업무그룹 관리의 거래처 공유 설정)와
+// 상대가 공유해 준 그룹이 있는지(받음)를 합쳐 보여줌
+function shareLabel(p: TradePartner): string {
+  if (!p.tTrucker) return '-';
+  const mine = getSharedPartnerIds().includes(p.id);
+  const theirs = (p.sharedGroups?.length ?? 0) > 0;
+  if (mine && theirs) return '서로 공유함';
+  if (mine) return '공유 함';
+  if (theirs) return '공유 받음';
+  return '공유 안 함';
+}
 const PAGE_SIZE_OPTIONS = [200, 100, 50];
 
 // 목록 상단 필터 칩 — 체크박스 다중 선택, 선택 즉시 목록 반영, 선택 시 파란색 + 선택 개수 뱃지
@@ -264,81 +280,25 @@ function FilterChip({ label, options, value, onChange }: { label: string; option
   );
 }
 
-// 클릭하면 열리는 검정 툴팁 (닫기 버튼 포함) — 메뉴 설명용
-function ClickTooltip({ title, children }: { title: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+function Header() {
   return (
-    <span ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
-      <button type="button" aria-label={`${title} 설명`} onClick={() => setOpen(o => !o)} style={{ width: 26, height: 26, border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <InfoIcon />
-      </button>
-      {open && (
-        <div role="tooltip" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: -4, zIndex: 30, width: 320, background: '#2E3238', borderRadius: 6, padding: '10px 32px 10px 12px', boxSizing: 'border-box', boxShadow: '0 4px 16px rgba(0,0,0,.18)' }}>
-          <p style={{ margin: 0, fontFamily: ffSemiBold, fontWeight: 600, fontSize: 14, lineHeight: '20px', color: '#FFFFFF', letterSpacing: ls }}>{title}</p>
-          <p style={{ margin: '2px 0 0', fontFamily: ff, fontSize: 13, lineHeight: '19px', color: '#E3E5E9', letterSpacing: ls }}>{children}</p>
-          <button type="button" aria-label="닫기" onClick={() => setOpen(false)} style={{ position: 'absolute', top: 8, right: 8, border: 'none', background: 'none', padding: 2, cursor: 'pointer', display: 'flex' }}>
-            <svg width={12} height={12} viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" /></svg>
-          </button>
-        </div>
-      )}
-    </span>
-  );
-}
-
-function Header({ onRegisterClick }: { onRegisterClick: () => void }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 44, marginTop: 36, flexShrink: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <span style={{ fontFamily: ffBold, fontWeight: 700, fontSize: 28, lineHeight: '40px', letterSpacing: ls, color: '#000000' }}>거래처 관리</span>
-        <ClickTooltip title="거래처 관리">나에게 오더를 주는 매출 거래처와 내가 오더를 주는 매입 거래처를 구분해 등록하고, 거래처별 담당 업무그룹과 정산스케줄을 관리해요.</ClickTooltip>
-      </div>
-      <button
-        onClick={onRegisterClick}
-        style={{ padding: '0 16px', height: 44, background: '#005FFF', borderRadius: 4, border: 'none', cursor: 'pointer', fontFamily: ffSemiBold, fontWeight: 600, fontSize: 16, color: '#FFFFFF', letterSpacing: ls, whiteSpace: 'nowrap' }}
-      >
-        거래처 등록
-      </button>
-    </div>
-  );
-}
-
-// 거래처 유형 탭 — 전체/화주사/협력사 (개수는 검색·필터와 무관한 전체 기준)
-type TypeTab = '전체' | PartnerType;
-
-function TypeTabs({ value, onChange, counts }: { value: TypeTab; onChange: (t: TypeTab) => void; counts: Record<TypeTab, number> }) {
-  const tabs: TypeTab[] = ['전체', '화주사', '협력사'];
-  return (
-    <div role="tablist" style={{ display: 'flex', borderBottom: `1px solid ${BORDER}`, marginTop: 24, flexShrink: 0 }}>
-      {tabs.map(t => {
-        const on = value === t;
-        return (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={on}
-            onClick={() => onChange(t)}
-            style={{ height: 48, padding: '0 12px', marginBottom: -1, border: 'none', borderBottom: `2px solid ${on ? '#2E3238' : 'transparent'}`, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <span style={{ fontFamily: on ? ffSemiBold : ff, fontWeight: on ? 600 : 400, fontSize: 16, lineHeight: '24px', letterSpacing: ls, color: on ? '#2E3238' : '#5C6370', whiteSpace: 'nowrap' }}>{t}</span>
-            <span style={{ height: 20, padding: '0 6px', borderRadius: 10, background: '#EBEDEF', display: 'inline-flex', alignItems: 'center', fontFamily: ff, fontSize: 12, letterSpacing: ls, color: on ? '#454B55' : '#767D8A' }}>{counts[t].toLocaleString()}</span>
-          </button>
-        );
-      })}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: 72, marginTop: 36, flexShrink: 0 }}>
+      <span style={{ fontFamily: ffBold, fontWeight: 700, fontSize: 28, lineHeight: '40px', letterSpacing: ls, color: '#000000' }}>거래처 관리</span>
+      <span style={{ fontFamily: ff, fontSize: 16, lineHeight: '24px', letterSpacing: ls, color: '#5C6370' }}>
+        우리 회사가 운송서비스를 판매하는 화주사 혹은 운송서비스를 이용하는 운송사를 등록하고 관리할 수 있습니다.
+      </span>
     </div>
   );
 }
 
 type SearchType = '거래처별칭' | '사업자명' | '담당자명';
 
-function SearchBar({ searchType, setSearchType, keyword, setKeyword, onSearch, status, setStatus, join, setJoin }: {
+function SearchBar({ onRegisterClick, searchType, setSearchType, keyword, setKeyword, onSearch, status, setStatus, type, setType, join, setJoin, share, setShare }: {
+  onRegisterClick: () => void;
+  type: string[];
+  setType: (v: string[]) => void;
+  share: string[];
+  setShare: (v: string[]) => void;
   searchType: SearchType;
   setSearchType: (t: SearchType) => void;
   keyword: string;
@@ -351,7 +311,14 @@ function SearchBar({ searchType, setSearchType, keyword, setKeyword, onSearch, s
 }) {
   const fieldBase: React.CSSProperties = { height: 36, border: `1px solid ${BORDER}`, background: '#FFFFFF', boxSizing: 'border-box', fontSize: 15, fontFamily: ff, letterSpacing: ls, color: '#2E3238', outline: 'none' };
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, flexShrink: 0, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24, flexShrink: 0, flexWrap: 'wrap' }}>
+      <button
+        onClick={onRegisterClick}
+        style={{ height: 36, padding: '0 12px', background: '#005FFF', borderRadius: 4, border: 'none', cursor: 'pointer', fontFamily: ffSemiBold, fontWeight: 600, fontSize: 15, color: '#FFFFFF', letterSpacing: ls, whiteSpace: 'nowrap' }}
+      >
+        거래처 등록
+      </button>
+      <div style={{ width: 1, height: 20, background: BORDER, flexShrink: 0 }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ display: 'flex' }}>
           <select
@@ -381,18 +348,20 @@ function SearchBar({ searchType, setSearchType, keyword, setKeyword, onSearch, s
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <FilterChip label="거래 상태" options={STATUS_FILTER_OPTIONS} value={status} onChange={setStatus} />
+        <FilterChip label="거래처 유형" options={TYPE_FILTER_OPTIONS} value={type} onChange={setType} />
         <FilterChip label="시스템 가입 여부" options={JOIN_FILTER_OPTIONS} value={join} onChange={setJoin} />
+        <FilterChip label="업무그룹 공유 여부" options={SHARE_FILTER_OPTIONS} value={share} onChange={setShare} />
       </div>
     </div>
   );
 }
 
-function Th({ label, width, flex, info }: { label: string; width?: number; flex?: boolean; info?: boolean }) {
+function Th({ label, width, flex, info }: { label: string; width?: number; flex?: boolean; info?: string }) {
   return (
     <div style={{ width, flex: flex ? '1 0 0' : '0 0 auto', minWidth: flex ? 200 : undefined, height: 40, padding: 8, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 4, background: '#F6F7F8', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}` }}>
       <span style={{ fontFamily: ffSemiBold, fontWeight: 600, fontSize: 15, lineHeight: '22px', color: '#5C6370', letterSpacing: ls, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{label}</span>
       {info && (
-        <span title="T 트럭커 운송관리시스템 가입 여부" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 26, flexShrink: 0, cursor: 'help' }}>
+        <span title={info} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 26, flexShrink: 0, cursor: 'help' }}>
           <InfoIcon />
         </span>
       )}
@@ -459,26 +428,28 @@ function EmptySearchIcon() {
 function PartnerTable({ rows, onRowClick, empty }: { rows: TradePartner[]; onRowClick: (p: TradePartner) => void; empty?: React.ReactNode }) {
   return (
     <div className="pm-table-scroll" style={{ flex: 1, minHeight: 0, overflow: 'auto', marginTop: 12, borderLeft: `1px solid ${BORDER}` }}>
-      <div style={{ minWidth: 1170 }}>
+      <div style={{ minWidth: 1630 }}>
         <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 2 }}>
           <Th label="거래 상태" width={COL_WIDTHS.status} />
           <Th label="거래처 유형" width={COL_WIDTHS.type} />
-          <Th label="시스템 가입 여부" width={COL_WIDTHS.join} info />
           <Th label="거래처 별칭" width={COL_WIDTHS.alias} />
           <Th label="사업자등록번호" width={COL_WIDTHS.bizNumber} />
           <Th label="사업장 주소" flex />
+          <Th label="시스템 가입 여부" width={COL_WIDTHS.join} info="T 트럭커 운송관리시스템 가입 여부" />
+          <Th label="업무그룹 공유 여부" width={COL_WIDTHS.share} info="가입 거래처와 서로 업무그룹을 공유하는지 여부" />
           <Th label="등록일시" width={COL_WIDTHS.registeredAt} />
         </div>
         {rows.map(row => (
           <div key={row.id} onClick={() => onRowClick(row)} className="pm-row" style={{ display: 'flex', cursor: 'pointer', background: '#FFFFFF' }}>
             <Td width={COL_WIDTHS.status} align="center" visible><StatusBadge status={row.status} /></Td>
-            <Td width={COL_WIDTHS.type}>{row.partnerType}</Td>
-            <Td width={COL_WIDTHS.join}>{row.tTrucker ? '가입' : '미가입'}</Td>
+            <Td width={COL_WIDTHS.type}>{partnerTypeLabel(row.partnerType)}</Td>
             <Td width={COL_WIDTHS.alias} bold>{row.alias}</Td>
             <Td width={COL_WIDTHS.bizNumber} align="center">{row.bizNumber}</Td>
-            <Td flex>{[row.address, row.addressDetail].filter(Boolean).join(' ')}</Td>
-            {/* 등록일시는 날짜만 노출 */}
-            <Td width={COL_WIDTHS.registeredAt} align="center">{String(row.registeredAt || '').split(' ')[0]}</Td>
+            <Td flex>{[row.address, row.addressDetail].filter(Boolean).join(' ') || '-'}</Td>
+            <Td width={COL_WIDTHS.join}>{row.tTrucker ? '가입' : '미가입'}</Td>
+            <Td width={COL_WIDTHS.share}>{shareLabel(row)}</Td>
+            {/* 등록일시는 피그마처럼 날짜와 시간을 함께 노출 */}
+            <Td width={COL_WIDTHS.registeredAt} align="center">{String(row.registeredAt || '')}</Td>
           </div>
         ))}
         {rows.length === 0 && (empty ?? (
@@ -735,7 +706,6 @@ function SegmentField<T extends string>({ value, options, onChange, label }: { v
   );
 }
 
-const PARTNER_TYPE_SEGMENTS: { v: PartnerType; l: string }[] = [{ v: '화주사', l: '화주' }, { v: '협력사', l: '협력사' }];
 const STATUS_SEGMENTS: { v: TradeStatus; l: string }[] = [{ v: '정상', l: '거래중' }, { v: '거래중지', l: '거래중지' }];
 
 function isValidEmail(v: string) {
@@ -835,7 +805,7 @@ function AddressField({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
-// 파일 첨부 — 최대 5개, pdf/doc/jpg/jpeg/png, 파일당 10MB. 첨부한 파일은 아래 목록에 1행씩 노출
+// 파일 첨부 — pdf/doc/jpg/jpeg/png, 파일당 10MB (서류정보 탭)
 const ATTACH_EXTS = ['pdf', 'doc', 'jpg', 'jpeg', 'png'];
 const ATTACH_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -856,45 +826,6 @@ function acceptFiles(list: FileList | null, files: string[], max: number, onChan
   }
 }
 
-function FileAttachField({ files, onChange, onToast, max = 5 }: { files: string[]; onChange: (files: string[]) => void; onToast: (msg: string, tone?: ToastTone) => void; max?: number }) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const handleClick = () => {
-    if (files.length >= max) { onToast(`총 ${max}개까지만 첨부할 수 있습니다.`, 'error'); return; }
-    fileRef.current?.click();
-  };
-  const handlePick = (list: FileList | null) => {
-    acceptFiles(list, files, max, onChange, onToast);
-    if (fileRef.current) fileRef.current.value = '';
-  };
-  const remove = (idx: number) => {
-    onChange(files.filter((_, i) => i !== idx));
-    onToast('첨부된 파일이 삭제되었습니다.', 'error');
-  };
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <div style={{ ...fieldBoxStyle(false), flex: 1, width: 'auto', minWidth: 0 }}>
-          <span style={{ ...fieldTextStyle, color: '#767D8A', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {`최대 ${max}개 첨부 가능(pdf, doc, jpg, jpeg, png)`}
-          </span>
-        </div>
-        <input ref={fileRef} type="file" multiple={max > 1} accept=".pdf,.doc,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={e => handlePick(e.target.files)} />
-        <ModalButton onClick={handleClick} style={{ width: 130, padding: 0 }}><ClipIcon />파일 첨부하기</ModalButton>
-      </div>
-      {files.length > 0 && (
-        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 4 }}>
-          {files.map((name, i) => (
-            <div key={name + i} style={{ height: 40, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', borderTop: i ? '1px solid #F1F2F4' : 'none' }}>
-              <span title={name} style={{ flex: 1, minWidth: 0, fontFamily: ff, fontSize: 14, color: '#2E3238', letterSpacing: ls, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
-              <button type="button" aria-label={`${name} 삭제`} onClick={() => remove(i)} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}><RemoveIcon /></button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function RemoveIcon() {
   return (
     <svg width={16} height={16} viewBox="0 0 16 16" fill="none">
@@ -904,10 +835,7 @@ function RemoveIcon() {
   );
 }
 
-// ─── 거래처 담당 업무그룹 지정 (등록 모달 / 상세 > 부가 정보 수정에서 공용) ─────
-
-const GROUP_PICKER_CSS = '.pmg-opt:hover{background:#F6F7F8!important}.pmg-row.pmg-sub:hover{background:#F6F7F8!important}';
-
+// 체크박스 (목록 필터 칩에서 사용)
 function Checkbox({ on, disabled }: { on: boolean; disabled?: boolean }) {
   if (disabled) {
     return (
@@ -929,6 +857,7 @@ function Checkbox({ on, disabled }: { on: boolean; disabled?: boolean }) {
   );
 }
 
+// 대표 업무그룹 딱지 (등록 모달 업무그룹 박스)
 function RepresentativeBadge({ short }: { short?: boolean }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 4px', borderRadius: 2, background: '#E6EFFF', fontFamily: ffSemiBold, fontWeight: 600, fontSize: 12, lineHeight: '18px', letterSpacing: ls, color: '#005FFF', whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -937,132 +866,165 @@ function RepresentativeBadge({ short }: { short?: boolean }) {
   );
 }
 
-// 기본값은 기본그룹(대표). 드롭다운에서 체크박스로 여러 그룹을 고른 뒤 [추가]하면 아래 목록에 쌓이고,
-// 목록 행을 클릭하면 그 그룹이 대표가 된다(대표는 항상 1개). 기본그룹은 삭제할 수 없다.
-function WorkGroupPicker({ groups, value, mainId, onChange, onMainChange, hideLabel }: {
-  groups: WorkGroup[];
-  value: string[];
-  mainId: string;
-  onChange: (ids: string[]) => void;
-  onMainChange: (id: string) => void;
-  hideLabel?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [checked, setChecked] = useState<string[]>([]);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+// ─── 거래처 등록 모달 ────────────────────────────────────────────────────────
 
-  const defaultId = groups.find(g => g.isDefault)?.id ?? '';
-  const groupName = (id: string) => groups.find(g => g.id === id)?.name ?? id;
-  // 노출 순서: 기본그룹 → 추가 순
-  const ordered = [...value.filter(id => id === defaultId), ...value.filter(id => id !== defaultId)];
-  const effectiveMainId = value.includes(mainId) ? mainId : (ordered[0] ?? '');
+// 등록 모달 > 거래처 관계 설정 — 화주사 / 운송사(데이터상 협력사) 카드형 라디오
+const RELATION_OPTIONS: { v: PartnerType; l: string; desc: string }[] = [
+  { v: '화주사', l: '화주사', desc: '우리 회사에 오더를 맡겨요' },
+  { v: '협력사', l: '운송사', desc: '오더를 맡기기도 하고, 받기도 해요' },
+];
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    dropdownRef.current?.scrollIntoView({ block: 'nearest' });
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+function RadioDot({ on }: { on: boolean }) {
+  return on ? (
+    <svg width={20} height={20} viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+      <circle cx="10" cy="10" r="8" fill="#005FFF" />
+      <circle cx="10" cy="10" r="3.5" fill="#FFFFFF" />
+    </svg>
+  ) : (
+    <svg width={20} height={20} viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+      <circle cx="10" cy="10" r="7.35" fill="#FFFFFF" stroke="#ADB1B9" strokeWidth="1.3" />
+    </svg>
+  );
+}
 
-  const toggleChecked = (id: string) => setChecked(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-
-  const handleAdd = () => {
-    if (checked.length === 0) { setOpen(o => !o); return; }
-    const next = [...value, ...groups.filter(g => checked.includes(g.id) && !value.includes(g.id)).map(g => g.id)];
-    onChange(next);
-    if (!next.includes(mainId)) onMainChange(next[0]);
-    setChecked([]);
-    setOpen(false);
-  };
-
-  const handleRemove = (id: string) => {
-    const next = value.filter(x => x !== id);
-    onChange(next);
-    if (id === effectiveMainId) onMainChange(defaultId && next.includes(defaultId) ? defaultId : next[0] ?? '');
-  };
-
+function StarIcon({ on }: { on: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
-      <style>{GROUP_PICKER_CSS}</style>
-      {!hideLabel && (
-        <div>
-          <FormLabel>거래처 담당 업무그룹 지정</FormLabel>
-          <p style={{ margin: 0, fontFamily: ff, fontSize: 12, lineHeight: '18px', letterSpacing: ls, color: '#767D8A' }}>우리 회사에서 이 거래처를 담당할 업무그룹을 추가해 주세요.</p>
-        </div>
-      )}
-      <div ref={wrapRef} style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button
-            type="button"
-            data-name="group-select"
-            onClick={() => setOpen(o => !o)}
-            style={{ ...fieldBoxStyle(false), flex: 1, width: 'auto', minWidth: 0, cursor: 'pointer', textAlign: 'left', borderColor: open ? '#005FFF' : BORDER }}
-          >
-            <span style={{ ...fieldTextStyle, flex: 1, minWidth: 0, color: checked.length ? '#2E3238' : '#767D8A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {checked.length === 0 ? '업무그룹 선택' : checked.length === 1 ? groupName(checked[0]) : `${groupName(checked[0])} 외 ${checked.length - 1}개`}
-            </span>
-            {open && <span style={{ display: 'flex', transform: 'rotate(180deg)' }}><Chevron size={16} color="#5C6370" /></span>}
-          </button>
-          <ModalButton onClick={handleAdd}>추가</ModalButton>
-        </div>
-        {open && (
-          <div ref={dropdownRef} data-name="group-dropdown" style={{ position: 'absolute', top: 48, left: 0, width: 'calc(100% - 68px)', zIndex: 10, background: '#FFFFFF', border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: '0 2px 6px 1px rgba(34,34,34,0.06)', overflow: 'hidden' }}>
-            {/* 5개 이상이면 스크롤 */}
-            <div style={{ maxHeight: 37 * 5 + 8, overflowY: 'auto', padding: 4 }}>
-              {groups.map(g => {
-                const added = value.includes(g.id);
-                const disabled = g.isDefault || added;
-                return (
-                  <div
-                    key={g.id}
-                    className={disabled ? undefined : 'pmg-opt'}
-                    onClick={disabled ? undefined : () => toggleChecked(g.id)}
-                    role="checkbox"
-                    aria-checked={added || checked.includes(g.id)}
-                    aria-disabled={disabled}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, height: 37, padding: '0 8px', borderRadius: 4, cursor: disabled ? 'default' : 'pointer' }}
-                  >
-                    <Checkbox on={added || checked.includes(g.id)} disabled={disabled} />
-                    <span style={{ flex: 1, minWidth: 0, fontFamily: ff, fontSize: 15, lineHeight: '22px', letterSpacing: ls, color: disabled ? '#9197A1' : '#2E3238', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-      {ordered.length > 0 && (
-        <div data-name="group-list" style={{ border: `1px solid ${BORDER}`, borderRadius: 4, padding: 4, maxHeight: 224, overflowY: 'auto', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {ordered.map(id => {
-            const isMain = id === effectiveMainId;
-            return (
-              <div
-                key={id}
-                className={'pmg-row' + (isMain ? '' : ' pmg-sub')}
-                onClick={() => onMainChange(id)}
-                title={isMain ? '대표 업무그룹' : '클릭하여 대표 업무그룹으로 지정'}
-                style={{ height: 40, flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px', borderRadius: 4, cursor: isMain ? 'default' : 'pointer', background: isMain ? '#F5F9FF' : '#FFFFFF', border: `1px solid ${isMain ? '#005FFF' : 'transparent'}` }}
-              >
-                {isMain && <RepresentativeBadge short />}
-                <span style={{ flex: 1, minWidth: 0, fontFamily: ff, fontSize: 14, lineHeight: '20px', letterSpacing: ls, color: '#2E3238', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{groupName(id)}</span>
-                {id !== defaultId && (
-                  <button type="button" aria-label={`${groupName(id)} 지정 해제`} onClick={e => { e.stopPropagation(); handleRemove(id); }} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
-                    <RemoveIcon />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+    <svg width={20} height={20} viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M10 2.6l2.25 4.7 5.1.65-3.75 3.55.95 5.05L10 14.1l-4.55 2.45.95-5.05L2.65 7.95l5.1-.65L10 2.6z" fill={on ? '#005FFF' : 'none'} stroke={on ? '#005FFF' : '#ADB1B9'} strokeWidth="1.2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function HelpIcon() {
+  return (
+    <svg width={16} height={16} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+      <circle cx="8" cy="8" r="6.3" stroke="#767D8A" strokeWidth="1.2" />
+      <path d="M6.3 6.3a1.75 1.75 0 013.4.55c0 1.15-1.7 1.4-1.7 2.4" stroke="#767D8A" strokeWidth="1.2" strokeLinecap="round" />
+      <circle cx="8" cy="11.1" r=".7" fill="#767D8A" />
+    </svg>
+  );
+}
+
+// 방향 태그 (우리 회사 → 거래처 / 거래처 → 우리 회사)
+function DirectionTag({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', height: 24, padding: '0 6px', borderRadius: 2, background: '#E6EFFF', fontFamily: ffSemiBold, fontWeight: 600, fontSize: 13, lineHeight: '19px', letterSpacing: ls, color: '#005FFF', whiteSpace: 'nowrap' }}>
+      {children}
+    </span>
+  );
+}
+
+function QuestionTitle({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+      <p style={{ margin: 0, fontFamily: ffBold, fontWeight: 700, fontSize: 16, lineHeight: '24px', letterSpacing: ls, color: '#2E3238' }}>{title}</p>
+      <p style={{ margin: 0, fontFamily: ff, fontSize: 13, lineHeight: '20px', letterSpacing: ls, color: '#767D8A', whiteSpace: 'pre-line' }}>{desc}</p>
     </div>
   );
 }
 
-// ─── 거래처 등록 모달 ────────────────────────────────────────────────────────
+// 선택한 업무그룹 박스 — 검색창에서 그룹을 찾아 추가하고, 목록의 (x)로 뺀다.
+// withMain이면 별(★)로 대표 업무그룹을 하나 정하고, 대표 업무그룹은 뺄 수 없다.
+function GroupSelectBox({ groups, value, onChange, withMain, mainId, onMainChange, height }: {
+  groups: WorkGroup[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+  withMain?: boolean;
+  mainId?: string;
+  onMainChange?: (id: string) => void;
+  height?: number;
+}) {
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const defaultId = groups.find(g => g.isDefault)?.id ?? '';
+  const groupName = (id: string) => groups.find(g => g.id === id)?.name ?? id;
+  // 기본그룹 → 추가 순으로 노출. 대표를 바꿔도 행 순서는 그대로 두고 별과 대표 딱지만 옮김
+  const effectiveMain = withMain ? (value.includes(mainId ?? '') ? mainId! : value[0] ?? '') : '';
+  const ordered = withMain ? [...value.filter(id => id === defaultId), ...value.filter(id => id !== defaultId)] : value;
+  const candidates = groups.filter(g => !value.includes(g.id) && g.name.toLowerCase().includes(q.trim().toLowerCase()));
 
+  const add = (id: string) => {
+    const next = [...value, id];
+    onChange(next);
+    if (withMain && !next.includes(mainId ?? '')) onMainChange?.(next[0]);
+    setQ('');
+    setOpen(false);
+  };
+  const remove = (id: string) => {
+    const next = value.filter(x => x !== id);
+    onChange(next);
+    if (withMain && id === effectiveMain) onMainChange?.(next.includes(defaultId) ? defaultId : next[0] ?? '');
+  };
+
+  return (
+    <div data-name="group-select-box" style={{ border: `1px solid ${BORDER}`, borderRadius: 4, display: 'flex', flexDirection: 'column', height, boxSizing: 'border-box', background: '#FFFFFF' }}>
+      <div style={{ height: 44, flexShrink: 0, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${BORDER}` }}>
+        <span style={{ fontFamily: ffSemiBold, fontWeight: 600, fontSize: 15, lineHeight: '22px', letterSpacing: ls, color: '#2E3238', whiteSpace: 'nowrap' }}>
+          선택한 업무그룹 <span style={{ color: '#005FFF' }}>{value.length}</span>
+        </span>
+        {withMain && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: ff, fontSize: 13, lineHeight: '20px', letterSpacing: ls, color: '#5C6370', whiteSpace: 'nowrap' }}>
+            <HelpIcon />대표 업무그룹은 하나만 정할 수 있습니다.
+          </span>
+        )}
+      </div>
+      <div style={{ padding: 8, paddingBottom: 0, position: 'relative', flexShrink: 0 }}>
+        <div className="pmr-field" style={{ height: 36, padding: '0 10px', border: `1px solid ${BORDER}`, borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, boxSizing: 'border-box' }}>
+          <SearchIcon />
+          <input
+            className="pmr-input"
+            value={q}
+            onChange={e => { setQ(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+            placeholder="업무그룹 검색"
+            style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', padding: 0, fontFamily: ff, fontSize: 15, lineHeight: '22px', letterSpacing: ls, color: '#2E3238' }}
+          />
+        </div>
+        {open && (
+          <div data-name="group-search-dropdown" style={{ ...suggestBoxStyle, left: 8, right: 8, top: 48, maxHeight: 37 * 5 + 8, overflowY: 'auto' }}>
+            {candidates.length === 0 ? (
+              <div style={{ padding: '8px 10px', fontFamily: ff, fontSize: 14, color: '#9197A1', letterSpacing: ls }}>{groups.length === value.length ? '모든 업무그룹을 선택했어요.' : '검색 결과가 없습니다.'}</div>
+            ) : candidates.map(g => (
+              <div key={g.id} className="pmr-sug" onMouseDown={() => add(g.id)} style={{ height: 37, padding: '0 10px', borderRadius: 4, display: 'flex', alignItems: 'center', cursor: 'pointer', fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238' }}>
+                <Highlight text={g.name} q={q.trim()} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="pm-table-scroll" style={{ flex: height ? 1 : undefined, minHeight: 0, maxHeight: height ? undefined : 40 * 5 + 8, overflowY: 'auto', padding: '4px 0' }}>
+        {ordered.length === 0 && (
+          <div style={{ padding: '10px 12px', fontFamily: ff, fontSize: 14, color: '#9197A1', letterSpacing: ls }}>검색해서 업무그룹을 추가해 주세요.</div>
+        )}
+        {ordered.map(id => {
+          const isMain = withMain && id === effectiveMain;
+          // 대표 업무그룹만 뺄 수 없음(항상 하나 남음) — 대표를 빼려면 먼저 다른 그룹을 대표로 지정. 기본그룹도 대표가 아니면 뺄 수 있음
+          const removable = !isMain;
+          return (
+            <div key={id} style={{ height: 40, padding: '0 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {withMain && (
+                <button type="button" aria-label={isMain ? '대표 업무그룹' : `${groupName(id)} 대표 업무그룹으로 지정`} title={isMain ? '대표 업무그룹' : '대표 업무그룹으로 지정'} onClick={() => onMainChange?.(id)} style={{ border: 'none', background: 'none', padding: 0, cursor: isMain ? 'default' : 'pointer', display: 'flex' }}>
+                  <StarIcon on={isMain} />
+                </button>
+              )}
+              <span style={{ minWidth: 0, fontFamily: ff, fontSize: 15, lineHeight: '22px', letterSpacing: ls, color: '#2E3238', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{groupName(id)}</span>
+              {isMain && <RepresentativeBadge short />}
+              <span style={{ flex: 1 }} />
+              {removable && (
+                <button type="button" aria-label={`${groupName(id)} 선택 해제`} onClick={() => remove(id)} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
+                  <RemoveIcon />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// 피그마 개편 2 (1086:145698) — 왼쪽: 사업자 정보·기본 정보 / 오른쪽: 거래처 관계 설정과 업무그룹 지정
 function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void; onRegister: (p: TradePartner) => void }) {
   const [ourGroups] = useState<WorkGroup[]>(() => getGroups());
   const defaultGroupId = ourGroups.find(g => g.isDefault)?.id ?? '';
@@ -1078,7 +1040,10 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
   const [contact, setContact] = useState('');
   const [fax, setFax] = useState('');
   const [alias, setAlias] = useState('');
-  const [memo, setMemo] = useState('');
+  // 우리 회사 → 거래처 (운송사일 때만): 업무그룹 공유 여부, 이 거래처에 배차할 수 있는 업무그룹
+  const [shareGroups, setShareGroups] = useState<'Y' | 'N'>('N');
+  const [dispatchGroupIds, setDispatchGroupIds] = useState<string[]>(defaultGroupId ? [defaultGroupId] : []);
+  // 거래처 → 우리 회사: 이 거래처의 오더를 담당하는 업무그룹(대표 1개)
   const [mainGroupId, setMainGroupId] = useState(defaultGroupId);
   const [assignedGroupIds, setAssignedGroupIds] = useState<string[]>(defaultGroupId ? [defaultGroupId] : []);
   const [suggest, setSuggest] = useState<'name' | 'number' | null>(null);
@@ -1086,10 +1051,12 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
   const [toast, showToast, hideToast] = useToast();
   const overlayRef = useRef<HTMLDivElement>(null);
   const overlayHeight = useScaledViewportHeight(overlayRef);
+  const carrier = partnerType === '협력사';
 
   const registeredNumbers = new Set(getPartners().map(p => p.bizNumber));
-  const dirty = [bizName, bizNumber, bizType, bizItem, address, addressDetail, taxEmail, ceoName, contact, fax, alias, memo].some(v => v.trim() !== '')
-    || partnerType !== '화주사' || assignedGroupIds.length !== (defaultGroupId ? 1 : 0);
+  const dirty = [bizName, bizNumber, bizType, bizItem, address, addressDetail, taxEmail, ceoName, contact, fax, alias].some(v => v.trim() !== '')
+    || partnerType !== '화주사' || shareGroups !== 'N'
+    || assignedGroupIds.length !== (defaultGroupId ? 1 : 0) || dispatchGroupIds.length !== (defaultGroupId ? 1 : 0);
   // 닫기/취소/ESC — 입력한 내용이 있으면 그만둘지 먼저 묻는다
   const requestClose = () => { if (dirty) setConfirmClose(true); else onClose(); };
   useEscapeKey(confirmClose ? () => setConfirmClose(false) : requestClose);
@@ -1111,9 +1078,15 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
       showToast('필수 항목을 모두 입력해 주셔야 거래처등록이 가능해요', 'error');
       return;
     }
+    const id = Date.now();
     const main = assignedGroupIds.includes(mainGroupId) ? mainGroupId : assignedGroupIds[0] ?? '';
+    // 운송사면 공유 설정과 배차 가능 업무그룹(업무그룹의 이용 가능한 운송사)을 회사 설정에 반영
+    if (carrier) {
+      if (shareGroups === 'Y') setSharedPartnerIds([...getSharedPartnerIds(), id]);
+      ourGroups.filter(g => dispatchGroupIds.includes(g.id)).forEach(g => updateGroup(g.id, { carrierIds: [...g.carrierIds, id] }));
+    }
     onRegister({
-      id: Date.now(),
+      id,
       status: '정상',
       partnerType,
       alias: alias.trim() || bizName.trim(),
@@ -1127,11 +1100,11 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
       contact,
       fax,
       taxEmail: taxEmail.trim(),
-      memo: memo.trim(),
+      memo: '',
       registeredAt: nowStamp(),
       tTrucker: false,
       sharedGroups: [],
-      settleSchedules: [{ ...makeSchedule('기본스케줄', Date.now() % 1000), groupId: main }],
+      settleSchedules: [{ ...makeSchedule('기본스케줄', id % 1000), groupId: main }],
       contacts: [],
       mainGroupId: main,
       assignedGroupIds,
@@ -1141,12 +1114,13 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
 
   return (
     <ModalOverlay overlayRef={overlayRef} height={overlayHeight} onClose={requestClose} name="partner-register-modal">
-      <div role="dialog" aria-label="거래처 등록" style={{ width: 704, height: 880, maxHeight: overlayHeight ? overlayHeight - 32 : 'calc(100vh - 32px)', flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 12, boxShadow: modalBoxShadow, overflow: 'hidden', boxSizing: 'border-box', position: 'relative' }}>
-        <style>{REGISTER_CSS + DETAIL_CSS}</style>
+      <div role="dialog" aria-label="거래처 등록" style={{ width: 1393, height: 1281, maxHeight: overlayHeight ? overlayHeight - 32 : 'calc(100vh - 32px)', flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 12, boxShadow: modalBoxShadow, overflow: 'hidden', boxSizing: 'border-box', position: 'relative' }}>
+        <style>{REGISTER_CSS + DETAIL_CSS + LIST_CSS}</style>
         <ModalHeader title="거래처 등록" onClose={requestClose} />
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '12px 24px 16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 40, width: '100%', minWidth: 0 }}>
-            <FormSection title="기본 정보">
+        <div className="pm-table-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '12px 24px 20px', display: 'flex', alignItems: 'stretch', gap: 32 }}>
+          {/* 왼쪽 — 사업자 정보 / 기본 정보 */}
+          <div style={{ width: 640, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 40 }}>
+            <FormSection title="사업자 정보">
               <FormRow>
                 <FormField label="사업자명" required>
                   <div style={{ position: 'relative' }}>
@@ -1161,8 +1135,6 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
                   </div>
                 </FormField>
               </FormRow>
-              {/* 거래처 유형은 운송사 계정에서만 노출 (화주사 계정은 미노출) */}
-              <FormField label="거래처 유형"><SegmentField<PartnerType> label="거래처 유형" value={partnerType} options={PARTNER_TYPE_SEGMENTS} onChange={setPartnerType} /></FormField>
               <FormRow>
                 <FormField label="업태"><TextField value={bizType} onChange={setBizType} placeholder="업태 입력" /></FormField>
                 <FormField label="종목"><TextField value={bizItem} onChange={setBizItem} placeholder="종목 입력" /></FormField>
@@ -1172,6 +1144,16 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
                 <FormField label="상세 주소" hideLabel><TextField value={addressDetail} onChange={setAddressDetail} placeholder="상세 주소 입력" /></FormField>
               </FormRow>
               <FormRow>
+                <FormField label="대표자명"><TextField value={ceoName} onChange={setCeoName} placeholder="대표자명 입력" /></FormField>
+                <FormField label="대표자 연락처"><TextField value={contact} onChange={v => setContact(formatPhone(v))} placeholder="대표자 연락처 입력" inputMode="tel" /></FormField>
+              </FormRow>
+            </FormSection>
+
+            <Divider />
+
+            <FormSection title="기본 정보">
+              <FormField label="거래처 별칭"><TextField value={alias} onChange={setAlias} placeholder="거래처 별칭 입력" /></FormField>
+              <FormRow>
                 <FormField label="세금계산서 이메일">
                   <TextField value={taxEmail} onChange={setTaxEmail} placeholder="세금계산서 이메일 입력" inputMode="email" />
                   <FieldError>{taxEmail.trim() !== '' && !isValidEmail(taxEmail.trim()) ? '올바른 이메일 양식으로 입력해 주세요.' : ''}</FieldError>
@@ -1179,28 +1161,60 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
                 <FormField label="팩스번호"><TextField value={fax} onChange={v => setFax(formatPhone(v))} placeholder="팩스번호 입력" inputMode="tel" /></FormField>
               </FormRow>
             </FormSection>
+          </div>
 
-            <Divider />
+          <div style={{ width: 1, background: BORDER, flexShrink: 0 }} />
 
-            <FormSection title="대표자 정보">
-              <FormRow>
-                <FormField label="이름"><TextField value={ceoName} onChange={setCeoName} placeholder="대표자명 입력" /></FormField>
-                <FormField label="연락처"><TextField value={contact} onChange={v => setContact(formatPhone(v))} placeholder="대표자 연락처 입력" inputMode="tel" /></FormField>
-              </FormRow>
+          {/* 오른쪽 — 거래처 관계 설정 */}
+          <div style={{ width: 640, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 28 }}>
+            <FormSection title="거래처 관계 설정">
+              <div role="radiogroup" aria-label="거래처 관계" style={{ display: 'flex', gap: 8, marginTop: -4 }}>
+                {RELATION_OPTIONS.map(o => {
+                  const on = partnerType === o.v;
+                  return (
+                    <button
+                      key={o.v}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setPartnerType(o.v)}
+                      style={{ flex: '1 0 0', minWidth: 0, height: 66, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, boxSizing: 'border-box', border: `1px solid ${on ? '#669FFF' : BORDER}`, borderRadius: 4, background: '#FFFFFF', cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      <RadioDot on={on} />
+                      <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                        <span style={{ fontFamily: ffSemiBold, fontWeight: 600, fontSize: 14, lineHeight: '20px', letterSpacing: ls, color: '#2E3238' }}>{o.l}</span>
+                        <span style={{ fontFamily: ff, fontSize: 14, lineHeight: '20px', letterSpacing: ls, color: '#2E3238', whiteSpace: 'nowrap' }}>{o.desc}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </FormSection>
 
-            <Divider />
+            {carrier && (
+              <div data-name="our-to-partner" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <DirectionTag>우리 회사 → 거래처</DirectionTag>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
+                  <QuestionTitle title="이 운송사에 내 업무그룹을 공유할까요?" desc={'업무그룹을 공유하면 거래처가 우리 회사 업무그룹에 맞춰 정산 조건을\n설정 할 수 있어요.'} />
+                  <div style={{ width: 168, flexShrink: 0 }}>
+                    <SegmentField<'Y' | 'N'> label="업무그룹 공유 여부" value={shareGroups} options={[{ v: 'Y', l: '네' }, { v: 'N', l: '아니오' }]} onChange={setShareGroups} />
+                  </div>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <QuestionTitle title="이 거래처에 배차할 수 있는 업무그룹을 선택해 주세요." desc="선택한 업무그룹에서만 이 거래처에 배차할 수 있어요." />
+                </div>
+                <GroupSelectBox groups={ourGroups} value={dispatchGroupIds} onChange={setDispatchGroupIds} />
+              </div>
+            )}
 
-            <FormSection title="부가 정보">
-              <FormField label="거래처 별칭"><TextField value={alias} onChange={setAlias} placeholder="거래처 별칭 입력" /></FormField>
-              <WorkGroupPicker groups={ourGroups} value={assignedGroupIds} mainId={mainGroupId} onChange={setAssignedGroupIds} onMainChange={setMainGroupId} />
-              <FormField label="거래처 운영 메모">
-                <TextArea value={memo} onChange={setMemo} placeholder="거래 시 참고할 사항을 입력해 주세요. (내부 직원에게만 공개)" />
-              </FormField>
-            </FormSection>
+            <div data-name="partner-to-our" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <DirectionTag>거래처 → 우리 회사</DirectionTag>
+              <QuestionTitle title="이 거래처의 오더를 담당하는 업무그룹을 선택해 주세요." desc="선택한 업무그룹만 오더를 조회할 수 있어요." />
+              <GroupSelectBox groups={ourGroups} value={assignedGroupIds} onChange={setAssignedGroupIds} withMain mainId={mainGroupId} onMainChange={setMainGroupId} height={360} />
+            </div>
           </div>
         </div>
-        <div style={{ height: 88, padding: '20px 24px 24px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
+        <div style={{ height: 88, padding: '20px 24px 16px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 0, borderTop: `1px solid ${BORDER}` }}>
           <ModalButton ghost h={52} size={18} px={20} onClick={requestClose}>취소</ModalButton>
           <ModalButton primary h={52} size={18} px={20} disabled={!canClick} onClick={handleRegister}>등록</ModalButton>
         </div>
@@ -1221,7 +1235,7 @@ function GeoraecheoRegisterModal({ onClose, onRegister }: { onClose: () => void;
 
 // ─── 거래처 상세 모달 — 정보 테이블 컴포넌트 ─────────────────────────────────
 
-const DETAIL_CSS = ".pmd-in{height:30px;border:1px solid #E3E5E9;border-radius:4px;padding:0 8px;box-sizing:border-box;font-family:'Pretendard GOV:Regular';font-size:15px;letter-spacing:-0.02em;color:#2E3238;background:#FFFFFF;outline:none;min-width:0}.pmd-in:focus{border-color:#005FFF}.pmd-in::placeholder{color:#9197A1}.pmd-acc:hover{background:#EEF0F2!important}.pmd-sel{appearance:none;border:none;background:transparent;cursor:pointer;outline:none}.pmd-add:hover{background:#F6F7F8!important}";
+const DETAIL_CSS = ".pm-contact-row:hover>div{background:#F9FAFB}.pmd-in{height:30px;border:1px solid #E3E5E9;border-radius:4px;padding:0 8px;box-sizing:border-box;font-family:'Pretendard GOV:Regular';font-size:15px;letter-spacing:-0.02em;color:#2E3238;background:#FFFFFF;outline:none;min-width:0}.pmd-in:focus{border-color:#005FFF}.pmd-in::placeholder{color:#9197A1}.pmd-acc:hover{background:#EEF0F2!important}.pmd-sel{appearance:none;border:none;background:transparent;cursor:pointer;outline:none}.pmd-add:hover{background:#F6F7F8!important}";
 
 // 정산스케줄 항목 라벨 옆 (i) 아이콘 툴팁 문구
 const FIELD_INFO: Record<string, string> = {
@@ -1275,7 +1289,7 @@ function InfoRow({ children }: { children: React.ReactNode }) {
 
 function InfoLabel({ label, info }: { label: string; info?: boolean }) {
   return (
-    <div style={{ width: 160, flexShrink: 0, background: '#F6F7F8', padding: '0 4px 0 8px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 2 }}>
+    <div style={{ width: 130, flexShrink: 0, background: '#F6F7F8', padding: '0 4px 0 8px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 2 }}>
       <span style={{ flex: 1, minWidth: 0, fontFamily: ff, fontSize: 15, lineHeight: '22px', letterSpacing: ls, color: '#5C6370', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       {info && (
         <span title={FIELD_INFO[label] || label} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'help' }}>
@@ -1301,39 +1315,13 @@ function Ellipsis({ children }: { children: React.ReactNode }) {
   return <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{children}</span>;
 }
 
-function InlineSelect({ value, options, onChange }: { value: string; options: (string | FilterOption)[]; onChange: (v: string) => void }) {
-  return (
-    <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
-      <select className="pmd-sel" value={value} onChange={e => onChange(e.target.value)} style={{ flex: 1, minWidth: 0, height: 22, paddingRight: 24, fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238' }}>
-        {options.map(o => typeof o === 'string'
-          ? <option key={o} value={o}>{o}</option>
-          : <option key={o.v} value={o.v}>{o.l}</option>)}
-      </select>
-      <span style={{ position: 'absolute', right: 0, pointerEvents: 'none', display: 'flex' }}>
-        <Chevron size={16} color="#5C6370" />
-      </span>
-    </div>
-  );
-}
-
 const DAY_OPTIONS: FilterOption[] = Array.from({ length: 31 }, (_, i) => ({ v: String(i + 1), l: `${i + 1}일` }));
-const BANK_OPTIONS = ['KB국민은행', '신한은행', '우리은행', '하나은행', 'NH농협은행', 'IBK기업은행', 'SC제일은행', '카카오뱅크', '토스뱅크', '케이뱅크', '부산은행', '대구은행'];
 const RECEIPT_SEGMENTS: { v: string; l: string }[] = [{ v: '원본/사진 필수', l: '원본/사진 필수' }, { v: '사진 필수', l: '사진 필수' }, { v: '필요 없음', l: '필요 없음' }];
-
-// 시작일 > 종료일이면 익월에 걸치는 기간 (예: 26일~익월 25일)
-function formatSettlePeriod(start: number, end: number) {
-  return start > end ? `${start}일~익월 ${end}일` : `${start}일~${end}일`;
-}
-
-// 공유그룹별 정산 설정의 '조건' 요약 — 결제방법·결제수단·정산기간·수금기한
-function scheduleSummary(s: SettleSchedule) {
-  return `${s.payMeans || '현금'} · ${formatSettlePeriod(s.settlePeriodStart ?? 1, s.settlePeriodEnd ?? 31)} · 정산 종료 ${s.collectDays ?? 30}일 후 수금`;
-}
 
 // ─── 상세 > 수정 팝업 공용 틀 ────────────────────────────────────────────────
 
 // 수정된 내용이 있고 유효성 검사를 모두 통과했을 때만 CTA 활성
-function EditModal({ title, width = 400, canSubmit, submitLabel = '수정', onClose, onSubmit, toast, onToastClose, children }: {
+function EditModal({ title, width = 400, canSubmit, submitLabel = '수정', onClose, onSubmit, toast, onToastClose, leftAction, children }: {
   title: string;
   width?: number;
   canSubmit: boolean;
@@ -1342,6 +1330,7 @@ function EditModal({ title, width = 400, canSubmit, submitLabel = '수정', onCl
   onSubmit: () => void;
   toast?: ToastState;
   onToastClose?: () => void;
+  leftAction?: React.ReactNode; // 하단 왼쪽 버튼 (예: 삭제)
   children: React.ReactNode;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -1356,6 +1345,8 @@ function EditModal({ title, width = 400, canSubmit, submitLabel = '수정', onCl
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>{children}</div>
         </div>
         <div style={{ height: 88, padding: '20px 24px 24px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
+          {leftAction}
+          {leftAction && <span style={{ flex: 1 }} />}
           <ModalButton ghost h={48} size={16} px={16} onClick={onClose}>닫기</ModalButton>
           <ModalButton primary h={48} size={16} px={16} disabled={!canSubmit} onClick={onSubmit}>{submitLabel}</ModalButton>
         </div>
@@ -1367,257 +1358,286 @@ function EditModal({ title, width = 400, canSubmit, submitLabel = '수정', onCl
 
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-// 기본 정보(회사 정보) 수정
-function CompanyEditModal({ partner, onClose, onSubmit }: { partner: TradePartner; onClose: () => void; onSubmit: (patch: Partial<TradePartner>) => void }) {
+// ─── 상세 > 수정 팝업 (피그마 개편 2) ───────────────────────────────────────
+
+// 사업자 정보 수정 — 사업자명·사업자등록번호·업태·종목·사업장 주소·대표자
+function BizInfoEditModal({ partner, onClose, onSubmit }: { partner: TradePartner; onClose: () => void; onSubmit: (patch: Partial<TradePartner>) => void }) {
   const initial = {
     bizName: partner.bizName || '', bizNumber: partner.bizNumber || '', bizType: partner.bizType || '', bizItem: partner.bizItem || '',
-    address: partner.address || '', addressDetail: partner.addressDetail || '', partnerType: partner.partnerType || '화주사' as PartnerType,
-    status: partner.status, statusReason: partner.statusReason || '', taxEmail: partner.taxEmail || '', fax: partner.fax || '', bizLicenseFiles: partner.bizLicenseFiles || [],
+    address: partner.address || '', addressDetail: partner.addressDetail || '', ceoName: partner.ceoName || '', contact: partner.contact || '',
   };
   const [d, setD] = useState(initial);
-  const [toast, showToast, hideToast] = useToast();
-  const set = <K extends keyof typeof initial>(k: K) => (v: typeof initial[K]) => setD(prev => ({ ...prev, [k]: v }));
+  const set = (k: keyof typeof initial) => (v: string) => setD(prev => ({ ...prev, [k]: v }));
   const nameError = d.bizName.trim() === '' ? '사업자명을 입력해 주세요.' : '';
-  const numberError = !isValidBizNumber(d.bizNumber) ? '사업자번호를 입력해 주세요.' : '';
-  const emailError = d.taxEmail.trim() !== '' && !isValidEmail(d.taxEmail.trim()) ? '올바른 이메일 양식으로 입력해 주세요.' : '';
-  const canSubmit = !sameJson(d, initial) && !nameError && !numberError && !emailError;
+  const numberError = !isValidBizNumber(d.bizNumber) ? '사업자등록번호를 입력해 주세요.' : '';
+  const canSubmit = !sameJson(d, initial) && !nameError && !numberError;
   return (
-    <EditModal title="기본 정보 수정" canSubmit={canSubmit} onClose={onClose} toast={toast} onToastClose={hideToast} onSubmit={() => onSubmit({ ...d, bizName: d.bizName.trim(), taxEmail: d.taxEmail.trim(), statusReason: d.status === '거래중지' ? d.statusReason.trim() : '' })}>
-      <FormField label="사업자명" required>
-        <TextField value={d.bizName} onChange={set('bizName')} placeholder="사업자명 입력" required />
-        <FieldError>{nameError}</FieldError>
-      </FormField>
-      <FormField label="사업자번호" required>
-        <TextField value={d.bizNumber} onChange={v => set('bizNumber')(formatBizNumber(v))} placeholder="사업자번호 입력" required inputMode="numeric" />
-        <FieldError>{numberError}</FieldError>
-      </FormField>
-      <FormField label="업태"><TextField value={d.bizType} onChange={set('bizType')} placeholder="업태 입력" /></FormField>
-      <FormField label="종목"><TextField value={d.bizItem} onChange={set('bizItem')} placeholder="종목 입력" /></FormField>
-      <FormField label="주소">
+    <EditModal title="사업자 정보 수정" width={560} canSubmit={canSubmit} onClose={onClose} onSubmit={() => onSubmit({ ...d, bizName: d.bizName.trim(), ceoName: d.ceoName.trim() })}>
+      <FormRow>
+        <FormField label="사업자명" required>
+          <TextField value={d.bizName} onChange={set('bizName')} placeholder="사업자명 입력" required />
+          <FieldError>{nameError}</FieldError>
+        </FormField>
+        <FormField label="사업자등록번호" required>
+          <TextField value={d.bizNumber} onChange={v => set('bizNumber')(formatBizNumber(v))} placeholder="사업자등록번호 입력" required inputMode="numeric" />
+          <FieldError>{numberError}</FieldError>
+        </FormField>
+      </FormRow>
+      <FormRow>
+        <FormField label="업태"><TextField value={d.bizType} onChange={set('bizType')} placeholder="업태 입력" /></FormField>
+        <FormField label="종목"><TextField value={d.bizItem} onChange={set('bizItem')} placeholder="종목 입력" /></FormField>
+      </FormRow>
+      <FormField label="사업장 주소">
         <AddressField value={d.address} onChange={set('address')} />
         <TextField value={d.addressDetail} onChange={set('addressDetail')} placeholder="상세 주소 입력" />
       </FormField>
-      <FormField label="거래처 유형"><SegmentField label="거래처 유형" value={d.partnerType} options={PARTNER_TYPE_SEGMENTS} onChange={set('partnerType')} /></FormField>
-      <FormField label="거래 상태">
-        <SegmentField label="거래 상태" value={d.status} options={STATUS_SEGMENTS} onChange={set('status')} />
+      <FormRow>
+        <FormField label="대표자명"><TextField value={d.ceoName} onChange={set('ceoName')} placeholder="대표자명 입력" /></FormField>
+        <FormField label="대표자 연락처"><TextField value={d.contact} onChange={v => set('contact')(formatPhone(v))} placeholder="대표자 연락처 입력" inputMode="tel" /></FormField>
+      </FormRow>
+    </EditModal>
+  );
+}
+
+// 기본 정보 수정 — 거래처 별칭·거래상태·세금계산서 이메일·팩스번호·운영 메모·정산 메모
+function BasicInfoEditModal({ partner, onClose, onSubmit }: { partner: TradePartner; onClose: () => void; onSubmit: (patch: Partial<TradePartner>) => void }) {
+  const initial = {
+    alias: partner.alias || '', status: partner.status, statusReason: partner.statusReason || '', taxEmail: partner.taxEmail || '', fax: partner.fax || '',
+    memo: partner.memo || '', settleMemo: partner.settleMemo || '',
+  };
+  const [d, setD] = useState(initial);
+  const set = <K extends keyof typeof initial>(k: K) => (v: typeof initial[K]) => setD(prev => ({ ...prev, [k]: v }));
+  const emailError = d.taxEmail.trim() !== '' && !isValidEmail(d.taxEmail.trim()) ? '올바른 이메일 양식으로 입력해 주세요.' : '';
+  const canSubmit = !sameJson(d, initial) && !emailError;
+  return (
+    <EditModal title="기본 정보 수정" width={560} canSubmit={canSubmit} onClose={onClose} onSubmit={() => onSubmit({
+      alias: d.alias.trim() || partner.bizName, status: d.status, statusReason: d.status === '거래중지' ? d.statusReason.trim() : '',
+      taxEmail: d.taxEmail.trim(), fax: d.fax, memo: d.memo.trim(), settleMemo: d.settleMemo.trim(),
+    })}>
+      <FormField label="거래처 별칭"><TextField value={d.alias} onChange={set('alias')} placeholder="거래처 별칭 입력" /></FormField>
+      <FormField label="거래상태">
+        <SegmentField label="거래상태" value={d.status} options={STATUS_SEGMENTS} onChange={set('status')} />
         {d.status === '거래중지' && <TextField value={d.statusReason} onChange={set('statusReason')} placeholder="사유를 입력해 주세요" />}
       </FormField>
-      <FormField label="세금계산서 이메일">
-        <TextField value={d.taxEmail} onChange={set('taxEmail')} placeholder="세금계산서 이메일 입력" inputMode="email" />
+      <FormRow>
+        <FormField label="세금계산서 이메일">
+          <TextField value={d.taxEmail} onChange={set('taxEmail')} placeholder="세금계산서 이메일 입력" inputMode="email" />
+          <FieldError>{emailError}</FieldError>
+        </FormField>
+        <FormField label="팩스번호"><TextField value={d.fax} onChange={v => set('fax')(formatPhone(v))} placeholder="팩스번호 입력" inputMode="tel" /></FormField>
+      </FormRow>
+      <FormField label="운영 메모"><TextArea value={d.memo} onChange={set('memo')} placeholder="거래 시 참고할 사항을 입력해 주세요. (내부 직원에게만 공개)" /></FormField>
+      <FormField label="정산 메모"><TextArea value={d.settleMemo} onChange={set('settleMemo')} placeholder="정산 시 참고할 사항을 입력해 주세요. (내부 직원에게만 공개)" /></FormField>
+    </EditModal>
+  );
+}
+
+// 거래처 담당자 추가/수정 (피그마 504:292070) — 한 명씩 입력. 표의 행을 누르면 같은 폼이 수정 모드로 열림
+function ContactFormModal({ contact, schedules, defaultScheduleId, onClose, onSubmit, onDelete }: {
+  contact: PartnerContact | null; // null이면 추가
+  schedules: SettleSchedule[];
+  defaultScheduleId: string;
+  onClose: () => void;
+  onSubmit: (c: PartnerContact) => void;
+  onDelete?: () => void;
+}) {
+  const initial = {
+    name: contact?.name ?? '', phone: contact?.phone ?? '', title: contact?.title ?? '', email: contact?.email ?? '',
+    fax: contact?.fax ?? '', memo: contact?.memo ?? '',
+    scheduleId: contact?.scheduleId && schedules.some(x => x.id === contact.scheduleId) ? contact.scheduleId : defaultScheduleId,
+  };
+  const [d, setD] = useState(initial);
+  const set = (k: keyof typeof initial) => (v: string) => setD(prev => ({ ...prev, [k]: v }));
+  // 이메일은 새로 입력하거나 바꾼 값만 형식 검사
+  const emailError = d.email.trim() !== '' && d.email !== initial.email && !isValidEmail(d.email.trim()) ? '올바른 이메일 양식으로 입력해 주세요.' : '';
+  const valid = d.name.trim() !== '' && d.phone.trim() !== '' && !emailError;
+  const canSubmit = valid && (contact === null || !sameJson(d, initial));
+  const submit = () => onSubmit({
+    id: contact?.id ?? genId('ct'), department: contact?.department ?? '', note: contact?.note,
+    ...d, name: d.name.trim(), title: d.title.trim(), email: d.email.trim(), memo: d.memo.trim(),
+  });
+  return (
+    <EditModal
+      title={contact ? '거래처 담당자 수정' : '거래처 담당자 추가'}
+      width={416}
+      canSubmit={canSubmit}
+      submitLabel={contact ? '수정' : '추가'}
+      onClose={onClose}
+      onSubmit={submit}
+      leftAction={contact && onDelete ? <ModalButton h={48} size={16} px={16} onClick={onDelete}>삭제</ModalButton> : undefined}
+    >
+      <FormField label="직원명" required><TextField value={d.name} onChange={v => set('name')(v.slice(0, 20))} placeholder="이름 입력" required /></FormField>
+      <FormField label="휴대전화번호" required><TextField value={d.phone} onChange={v => set('phone')(formatPhone(v))} placeholder="연락처 입력" required inputMode="tel" /></FormField>
+      <FormField label="직함/직책"><TextField value={d.title} onChange={set('title')} placeholder="직함/직책 입력" /></FormField>
+      <FormField label="이메일">
+        <TextField value={d.email} onChange={set('email')} placeholder="이메일 입력" inputMode="email" />
         <FieldError>{emailError}</FieldError>
       </FormField>
       <FormField label="팩스번호"><TextField value={d.fax} onChange={v => set('fax')(formatPhone(v))} placeholder="팩스번호 입력" inputMode="tel" /></FormField>
-      <FormField label="사업자등록증 (최대 5개 첨부 가능)">
-        <FileAttachField files={d.bizLicenseFiles} onChange={set('bizLicenseFiles')} onToast={showToast} />
-      </FormField>
+      <FormField label="담당 업무"><TextField value={d.memo} onChange={set('memo')} placeholder="담당 업무 입력" /></FormField>
+      <FormField label="청구 기준"><SelectField value={d.scheduleId} options={schedules.map(x => ({ v: x.id, l: x.name }))} onChange={set('scheduleId')} /></FormField>
     </EditModal>
   );
 }
 
-function CeoEditModal({ partner, onClose, onSubmit }: { partner: TradePartner; onClose: () => void; onSubmit: (patch: Partial<TradePartner>) => void }) {
-  const initial = { ceoName: partner.ceoName || '', contact: partner.contact || '' };
-  const [d, setD] = useState(initial);
-  const set = (k: keyof typeof initial) => (v: string) => setD(prev => ({ ...prev, [k]: v }));
-  const canSubmit = !sameJson(d, initial);
+// ─── 청구 기준 카드 (아코디언) ───────────────────────────────────────────────
+
+// 요약: 결제수단 · 정산기간 · 담당자 N명
+function periodLabel(start: number, end: number) {
+  if (start === 1 && end === 31) return '매월 1일~말일';
+  return start > end ? `매월 ${start}일~익월 ${end}일` : `매월 ${start}일~${end}일`;
+}
+
+const SCHEDULE_CONTACT_COLS = '50px 180px 160px 160px 160px 180px 160px minmax(120px, 1fr)';
+
+function ContactNameCell({ c }: { c: PartnerContact }) {
   return (
-    <EditModal title="대표자 정보 수정" canSubmit={canSubmit} onClose={onClose} onSubmit={() => onSubmit({ ceoName: d.ceoName.trim(), contact: d.contact })}>
-      <FormField label="이름"><TextField value={d.ceoName} onChange={set('ceoName')} placeholder="이름 입력" /></FormField>
-      <FormField label="연락처"><TextField value={d.contact} onChange={v => set('contact')(formatPhone(v))} placeholder="연락처 입력" inputMode="tel" /></FormField>
-    </EditModal>
+    <>
+      <span style={{ fontFamily: ffSemiBold, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{c.name}</span>
+      {c.department && <span style={{ fontSize: 12, color: '#767D8A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{c.department}</span>}
+    </>
   );
 }
 
-function ExtraEditModal({ partner, groups, onClose, onSubmit }: { partner: TradePartner; groups: WorkGroup[]; onClose: () => void; onSubmit: (patch: Partial<TradePartner>) => void }) {
-  const defaultId = groups.find(g => g.isDefault)?.id;
-  const initialIds = partner.assignedGroupIds?.length ? partner.assignedGroupIds : defaultId ? [defaultId] : [];
-  const initial = { alias: partner.alias || '', memo: partner.memo || '', settleMemo: partner.settleMemo || '', assignedGroupIds: initialIds, mainGroupId: initialIds.includes(partner.mainGroupId) ? partner.mainGroupId : initialIds[0] ?? '' };
-  const [d, setD] = useState(initial);
-  const canSubmit = !sameJson(d, initial) && d.assignedGroupIds.length > 0;
-  return (
-    <EditModal title="부가 정보" width={480} canSubmit={canSubmit} onClose={onClose} onSubmit={() => onSubmit({ alias: d.alias.trim() || partner.bizName, memo: d.memo.trim(), settleMemo: d.settleMemo.trim(), assignedGroupIds: d.assignedGroupIds, mainGroupId: d.mainGroupId })}>
-      <FormField label="거래처 별칭"><TextField value={d.alias} onChange={v => setD(p => ({ ...p, alias: v }))} placeholder="거래처 별칭 입력" /></FormField>
-      <WorkGroupPicker
-        groups={groups}
-        value={d.assignedGroupIds}
-        mainId={d.mainGroupId}
-        onChange={ids => setD(p => ({ ...p, assignedGroupIds: ids }))}
-        onMainChange={id => setD(p => ({ ...p, mainGroupId: id }))}
-      />
-      <FormField label="거래처 운영 메모">
-        <TextArea value={d.memo} onChange={v => setD(p => ({ ...p, memo: v }))} placeholder="거래 시 참고할 사항을 입력해 주세요. (내부 직원에게만 공개)" />
-      </FormField>
-      <FormField label="거래처 정산 메모">
-        <TextArea value={d.settleMemo} onChange={v => setD(p => ({ ...p, settleMemo: v }))} placeholder="정산 시 참고할 사항을 입력해 주세요. (내부 직원에게만 공개)" />
-      </FormField>
-    </EditModal>
-  );
-}
-
-// 정산스케줄 추가/수정 — 스케줄명·정산기간 필수
-function ScheduleEditModal({ schedule, partner, groups, onClose, onSubmit }: {
-  schedule: SettleSchedule | null;
-  partner: TradePartner;
-  groups: WorkGroup[];
-  onClose: () => void;
-  onSubmit: (s: SettleSchedule) => void;
+function ScheduleCard({ schedule, open, onToggle, contacts, onPatch, onRename, onRemove, canRemove, onChangeContacts, autoEdit }: {
+  schedule: SettleSchedule;
+  open: boolean;
+  onToggle: () => void;
+  contacts: PartnerContact[];
+  onPatch: (patch: Partial<SettleSchedule>) => void;
+  onRename: (name: string) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+  onChangeContacts: () => void;
+  autoEdit?: boolean; // 방금 추가한 청구 기준이면 이름 입력부터 시작
 }) {
-  const defaultGroupId = groups.find(g => g.isDefault)?.id ?? '';
-  const base: SettleSchedule = schedule ?? { ...makeSchedule('', Date.now() % 1000), receiptDefault: '원본/사진 필수' };
-  const initial = {
-    name: base.name, groupId: base.groupId || defaultGroupId, payMeans: base.payMeans || '현금', subBizNumber: base.subBizNumber || '',
-    settlePeriodStart: base.settlePeriodStart ?? 1, settlePeriodEnd: base.settlePeriodEnd ?? 31, receiptDefault: base.receiptDefault || '원본/사진 필수',
-    taxEmail: base.taxEmail || '', invoiceDays: String(base.invoiceDays ?? 1), collectDays: String(base.collectDays ?? 30),
-    bank: base.bank || '', accountNumber: base.accountNumber || '', accountHolder: base.accountHolder || '', bankbookFiles: base.bankbookFile ? [base.bankbookFile] : [] as string[],
-    settleMemo: base.settleMemo || '',
+  const [menu, setMenu] = useState(false);
+  // 이름은 제목 옆 연필(또는 ⋮ > 이름 변경)로 바로 수정 — Enter/바깥 클릭 저장, Esc 취소
+  const [editingName, setEditingName] = useState(!!autoEdit);
+  const [nameDraft, setNameDraft] = useState(schedule.name);
+  const startEdit = () => { setNameDraft(schedule.name); setEditingName(true); };
+  const finishEdit = (save: boolean) => {
+    const v = nameDraft.trim();
+    if (save && v !== '' && v !== schedule.name) onRename(v);
+    setEditingName(false);
   };
-  const [d, setD] = useState(initial);
-  const [toast, showToast, hideToast] = useToast();
-  const set = <K extends keyof typeof initial>(k: K) => (v: typeof initial[K]) => setD(prev => ({ ...prev, [k]: v }));
-  const groupOptions: FilterOption[] = groups.filter(g => g.isDefault || (partner.assignedGroupIds || []).includes(g.id)).map(g => ({ v: g.id, l: g.name }));
-  const nameError = d.name.trim() === '' ? '스케줄명을 입력해 주세요.' : '';
-  const emailError = d.taxEmail.trim() !== '' && !isValidEmail(d.taxEmail.trim()) ? '올바른 이메일 양식으로 입력해 주세요.' : '';
-  const canSubmit = (schedule === null || !sameJson(d, initial)) && !nameError && !emailError;
-  const dayInput = (value: string, onChange: (v: string) => void, max: number) => (
-    <div className="pmr-field" style={{ ...fieldBoxStyle(false), gap: 8 }}>
-      <span style={{ ...fieldTextStyle, color: '#454B55', flex: 1 }}>정산종료일</span>
-      <input className="pmr-input" value={value} inputMode="numeric" onChange={e => { const n = e.target.value.replace(/\D/g, '').slice(0, 3); onChange(n === '' ? '' : String(Math.min(Number(n), max))); }} style={{ ...fieldTextStyle, width: 40, textAlign: 'right', border: 'none', outline: 'none', background: 'transparent', padding: 0 }} />
-      <span style={{ ...fieldTextStyle, flexShrink: 0 }}>일 후</span>
-    </div>
-  );
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const h = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenu(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [menu]);
+  const start = schedule.settlePeriodStart ?? 1;
+  const end = schedule.settlePeriodEnd ?? 31;
+  const emailError = (schedule.taxEmail || '').trim() !== '' && !isValidEmail((schedule.taxEmail || '').trim());
   const periodSelect = (value: number, onChange: (n: number) => void, prefix: string) => (
-    <div className="pmr-field" style={{ ...fieldBoxStyle(false), position: 'relative', padding: '0 12px', gap: 8 }}>
+    <div className="pmr-field" style={{ ...fieldBoxStyle(true), position: 'relative', padding: '0 12px', gap: 8 }}>
       <span style={{ ...fieldTextStyle, color: '#454B55', flexShrink: 0 }}>{prefix}</span>
       <select className="pmd-sel" value={String(value)} onChange={e => onChange(Number(e.target.value))} style={{ ...fieldTextStyle, flex: 1, minWidth: 0, textAlign: 'right', direction: 'rtl', height: '100%' }}>
         {DAY_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
       </select>
     </div>
   );
-  const submit = () => onSubmit({
-    ...base,
-    name: d.name.trim(), groupId: d.groupId, payMeans: d.payMeans, subBizNumber: d.subBizNumber,
-    settlePeriodStart: d.settlePeriodStart, settlePeriodEnd: d.settlePeriodEnd, receiptDefault: d.receiptDefault, taxEmail: d.taxEmail.trim(),
-    invoiceDays: Number(d.invoiceDays) || 0, collectDays: Number(d.collectDays) || 0,
-    bank: d.bank, accountNumber: d.accountNumber, accountHolder: d.accountHolder.trim(), bankbookFile: d.bankbookFiles[0] || '', settleMemo: d.settleMemo.trim(),
-  });
-  return (
-    <EditModal title={schedule ? `${schedule.name} 수정` : '정산스케줄 추가'} width={704} canSubmit={canSubmit} submitLabel="저장" onClose={onClose} onSubmit={submit} toast={toast} onToastClose={hideToast}>
-      <FormSection title="기본 정보">
-        <FormField label="스케줄명" required>
-          <TextField value={d.name} onChange={v => set('name')(v.slice(0, 20))} placeholder="스케줄명 입력" required />
-          <FieldError>{nameError && d.name !== initial.name ? nameError : ''}</FieldError>
-        </FormField>
-        <FormRow>
-          <FormField label="담당 업무그룹"><SelectField value={d.groupId} options={groupOptions} onChange={set('groupId')} /></FormField>
-          <FormField label="종사업자번호"><TextField value={d.subBizNumber} onChange={v => set('subBizNumber')(v.replace(/\D/g, '').slice(0, 4))} placeholder="4자리 입력" inputMode="numeric" /></FormField>
-        </FormRow>
-        <FormRow>
-          <FormField label="결제수단"><SelectField value={d.payMeans} options={PAY_MEANS_OPTIONS} onChange={set('payMeans')} /></FormField>
-          <FormField label="정산기간" required>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {periodSelect(d.settlePeriodStart, set('settlePeriodStart'), '시작')}
-              {periodSelect(d.settlePeriodEnd, set('settlePeriodEnd'), d.settlePeriodStart > d.settlePeriodEnd ? '익월 종료' : '종료')}
-            </div>
-          </FormField>
-        </FormRow>
-        <FormRow>
-          <FormField label="인수증 기본설정"><SegmentField label="인수증 기본설정" value={d.receiptDefault} options={RECEIPT_SEGMENTS} onChange={set('receiptDefault')} /></FormField>
-          <FormField label="세금계산서 이메일">
-            <TextField value={d.taxEmail} onChange={set('taxEmail')} placeholder="세금계산서 이메일 입력" inputMode="email" />
-            <FieldError>{emailError}</FieldError>
-          </FormField>
-        </FormRow>
-        <FormRow>
-          <FormField label="거래명세서 작성일">{dayInput(d.invoiceDays, set('invoiceDays'), 99)}</FormField>
-          <FormField label="수금기한">{dayInput(d.collectDays, set('collectDays'), 180)}</FormField>
-        </FormRow>
-      </FormSection>
-      <Divider />
-      <FormSection title="계좌 정보">
-        <FormRow>
-          <FormField label="은행"><SelectField value={d.bank} options={BANK_OPTIONS} onChange={set('bank')} placeholder="은행 선택" /></FormField>
-          <FormField label="예금주"><TextField value={d.accountHolder} onChange={v => set('accountHolder')(v.slice(0, 20))} placeholder="이름 입력" /></FormField>
-        </FormRow>
-        <FormField label="계좌번호"><TextField value={d.accountNumber} onChange={v => set('accountNumber')(v.replace(/\D/g, '').slice(0, 15))} placeholder="숫자만 입력" inputMode="numeric" /></FormField>
-        <FormField label="통장사본"><FileAttachField files={d.bankbookFiles} onChange={set('bankbookFiles')} onToast={showToast} max={1} /></FormField>
-        <FormField label="정산 메모"><TextArea value={d.settleMemo} onChange={set('settleMemo')} placeholder="정산 메모를 입력해 주세요. (내부 직원에게만 공개)" /></FormField>
-      </FormSection>
-    </EditModal>
-  );
-}
-
-// ─── 정산스케줄 아코디언 ─────────────────────────────────────────────────────
-
-function ScheduleAccordion({ schedule, open, onToggle, partner, groups, pendingGroupId, onGroupChange, onEdit, onRemove, canRemove }: {
-  schedule: SettleSchedule;
-  open: boolean;
-  onToggle: () => void;
-  partner: TradePartner;
-  groups: WorkGroup[];
-  pendingGroupId?: string;
-  onGroupChange: (groupId: string) => void;
-  onEdit: () => void;
-  onRemove: () => void;
-  canRemove: boolean;
-}) {
-  const taxEmail = schedule.taxEmail || partner.taxEmail;
-  const defaultGroupId = groups.find(g => g.isDefault)?.id ?? '';
-  const groupOptions: FilterOption[] = groups.filter(g => g.isDefault || (partner.assignedGroupIds || []).includes(g.id)).map(g => ({ v: g.id, l: g.name }));
-  const account = [schedule.bank, schedule.accountNumber, schedule.accountHolder].filter(Boolean).join(' ');
+  const menuItem: React.CSSProperties = { display: 'block', width: '100%', textAlign: 'left', height: 36, padding: '0 10px', border: 'none', borderRadius: 4, background: 'transparent', cursor: 'pointer', fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238' };
 
   return (
-    <div>
+    <div data-name="schedule-card" style={{ border: `1px solid ${BORDER}`, borderRadius: 4, background: '#FFFFFF' }}>
       <div
         className="pmd-acc"
         role="button"
         aria-expanded={open}
         onClick={onToggle}
-        style={{ height: 40, background: '#F6F7F8', borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, padding: 8, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+        style={{ height: 54, background: '#F6F7F8', borderRadius: open ? '4px 4px 0 0' : 4, borderBottom: open ? `1px solid ${BORDER}` : 'none', padding: '0 12px 0 16px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
       >
-        <span style={{ display: 'flex', transform: open ? 'rotate(180deg)' : 'none' }}>
-          <Chevron size={16} color="#5C6370" />
-        </span>
-        <span style={{ flex: 1, minWidth: 0, fontFamily: ffSemiBold, fontWeight: 600, fontSize: 15, lineHeight: '22px', letterSpacing: ls, color: '#5C6370', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{schedule.name}</span>
-        <SmallButton onClick={e => { e.stopPropagation(); onEdit(); }}>수정</SmallButton>
-        {/* 기본 스케줄(초기 기본값)은 삭제 버튼 미노출 */}
-        {canRemove && <SmallButton onClick={e => { e.stopPropagation(); onRemove(); }}>삭제</SmallButton>}
+        <span style={{ display: 'flex', transform: open ? 'rotate(180deg)' : 'none' }}><Chevron size={16} color="#5C6370" /></span>
+        {editingName ? (
+          <div style={{ flex: 1, minWidth: 0, display: 'flex' }} onClick={e => e.stopPropagation()}>
+            <input
+              className="pmd-in"
+              aria-label="청구 기준 이름"
+              autoFocus
+              onFocus={e => e.target.select()}
+              value={nameDraft}
+              maxLength={20}
+              placeholder="청구 기준 이름 입력"
+              onChange={e => setNameDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') finishEdit(true); if (e.key === 'Escape') { e.stopPropagation(); finishEdit(false); } }}
+              onBlur={() => finishEdit(true)}
+              style={{ width: 320, height: 34, fontFamily: ffSemiBold, fontWeight: 600, fontSize: 16 }}
+            />
+          </div>
+        ) : (
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span data-name="schedule-name" style={{ minWidth: 0, fontFamily: ffSemiBold, fontWeight: 600, fontSize: 16, lineHeight: '24px', letterSpacing: ls, color: '#2E3238', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{schedule.name}</span>
+            <button type="button" aria-label={`${schedule.name} 이름 수정`} title="이름 수정" onClick={e => { e.stopPropagation(); startEdit(); }} style={{ width: 26, height: 26, flexShrink: 0, border: 'none', background: 'none', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width={16} height={16} viewBox="0 0 16 16" fill="none"><path d="M10.6 2.9l2.5 2.5-7.6 7.6-3.1.6.6-3.1 7.6-7.6z" stroke="#767D8A" strokeWidth="1.2" strokeLinejoin="round" /></svg>
+            </button>
+          </div>
+        )}
+        <span style={{ fontFamily: ff, fontSize: 13, lineHeight: '19px', letterSpacing: ls, color: '#767D8A', whiteSpace: 'nowrap' }}>{`${schedule.payMeans || '현금'} · ${periodLabel(start, end)} · 담당자 ${contacts.length}명`}</span>
+        <div ref={menuRef} style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+          <button type="button" aria-label={`${schedule.name} 메뉴`} onClick={() => setMenu(m => !m)} style={{ width: 28, height: 28, border: 'none', background: 'none', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 16 }}>
+            <svg width={16} height={16} viewBox="0 0 16 16" fill="none">{[3.5, 8, 12.5].map(cy => <circle key={cy} cx="8" cy={cy} r="1.1" fill="#767D8A" />)}</svg>
+          </button>
+          {menu && (
+            <div style={{ position: 'absolute', right: 0, top: 32, zIndex: 20, minWidth: 120, padding: 4, background: '#FFFFFF', border: `1px solid ${BORDER}`, borderRadius: 6, boxShadow: '0 6px 20px rgba(0,0,0,.12)' }}>
+              <button type="button" className="pm-opt" style={menuItem} onClick={() => { setMenu(false); startEdit(); }}>이름 변경</button>
+              {/* 첫 번째(기본) 청구 기준은 삭제할 수 없음 */}
+              {canRemove && <button type="button" className="pm-opt" style={{ ...menuItem, color: '#DD2222' }} onClick={() => { setMenu(false); onRemove(); }}>삭제</button>}
+            </div>
+          )}
+        </div>
       </div>
       {open && (
-        <div>
-          <InfoRow>
-            <InfoLabel label="담당업무그룹" />
-            <InfoValue>
-              <InlineSelect value={pendingGroupId ?? (schedule.groupId || defaultGroupId)} options={groupOptions} onChange={onGroupChange} />
-            </InfoValue>
-            <InfoLabel label="종사업자번호" />
-            <InfoValue>{schedule.subBizNumber}</InfoValue>
-          </InfoRow>
-          <InfoRow>
-            <InfoLabel label="결제수단" />
-            <InfoValue><Ellipsis>{schedule.payMeans || '현금'}</Ellipsis></InfoValue>
-            <InfoLabel label="정산기간" />
-            <InfoValue><Ellipsis>{formatSettlePeriod(schedule.settlePeriodStart ?? 1, schedule.settlePeriodEnd ?? 31)}</Ellipsis></InfoValue>
-          </InfoRow>
-          <InfoRow>
-            <InfoLabel label="인수증 기본설정" />
-            <InfoValue><Ellipsis>{schedule.receiptDefault || '원본/사진 필수'}</Ellipsis></InfoValue>
-            <InfoLabel label="세금계산서 이메일" />
-            {/* 스케줄별 이메일 미지정 시 기본 정보의 세금계산서 이메일 */}
-            <InfoValue>{taxEmail && <Ellipsis>{taxEmail}</Ellipsis>}</InfoValue>
-          </InfoRow>
-          <InfoRow>
-            <InfoLabel label="거래명세서 작성일" />
-            <InfoValue><Ellipsis>{`정산 종료일 ${schedule.invoiceDays ?? 1}일 후`}</Ellipsis></InfoValue>
-            <InfoLabel label="수금기한" />
-            <InfoValue><Ellipsis>{`정산 종료일 ${schedule.collectDays ?? 30}일 후`}</Ellipsis></InfoValue>
-          </InfoRow>
-          <InfoRow>
-            <InfoLabel label="계좌정보" />
-            <InfoValue>{account && <Ellipsis>{account}</Ellipsis>}</InfoValue>
-          </InfoRow>
-          <InfoRow>
-            <InfoLabel label="정산메모" />
-            <InfoValue wrap>{schedule.settleMemo}</InfoValue>
-          </InfoRow>
+        <div style={{ padding: '24px 16px 16px', display: 'flex', flexDirection: 'column', gap: 32 }}>
+          <FormSection title="기본 정보">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px 16px' }}>
+              <FormField label="정산기간" required>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {periodSelect(start, n => onPatch({ settlePeriodStart: n }), '시작')}
+                  {periodSelect(end, n => onPatch({ settlePeriodEnd: n }), start > end ? '익월 종료' : '종료')}
+                </div>
+              </FormField>
+              <FormField label="세금계산서 이메일">
+                <TextField value={schedule.taxEmail || ''} onChange={v => onPatch({ taxEmail: v })} placeholder="세금계산서 이메일 입력" inputMode="email" />
+                <FieldError>{emailError ? '올바른 이메일 양식으로 입력해 주세요.' : ''}</FieldError>
+              </FormField>
+              <FormField label="수금예정일">
+                <div className="pmr-field" style={{ ...fieldBoxStyle(false), gap: 8 }}>
+                  <span style={{ ...fieldTextStyle, color: '#454B55', flex: 1 }}>수금예정일</span>
+                  <input className="pmr-input" aria-label="수금예정일" value={String(schedule.collectDays ?? 30)} inputMode="numeric" onChange={e => onPatch({ collectDays: Math.min(Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0, 180) })} style={{ ...fieldTextStyle, width: 40, textAlign: 'right', border: 'none', outline: 'none', background: 'transparent', padding: 0 }} />
+                  <span style={{ ...fieldTextStyle, flexShrink: 0 }}>일 후</span>
+                </div>
+              </FormField>
+              <FormField label="인수증 기본설정"><SegmentField label="인수증 기본설정" value={schedule.receiptDefault || '원본/사진 필수'} options={RECEIPT_SEGMENTS} onChange={v => onPatch({ receiptDefault: v })} /></FormField>
+              <FormField label="결제수단"><SelectField value={schedule.payMeans || '현금'} options={PAY_MEANS_OPTIONS} onChange={v => onPatch({ payMeans: v })} /></FormField>
+              <FormField label="종사업자번호"><TextField value={schedule.subBizNumber || ''} onChange={v => onPatch({ subBizNumber: v.replace(/\D/g, '').slice(0, 4) })} placeholder="4자리 입력" inputMode="numeric" /></FormField>
+            </div>
+            <FormField label="정산메모"><TextField value={schedule.settleMemo || ''} onChange={v => onPatch({ settleMemo: v })} placeholder="정산메모" /></FormField>
+          </FormSection>
+          <Divider />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <DetailSectionTitle actions={<SmallButton onClick={onChangeContacts}>변경</SmallButton>}>담당자 정보</DetailSectionTitle>
+            <div role="table" style={{ display: 'grid', gridTemplateColumns: SCHEDULE_CONTACT_COLS, borderTop: `1px solid ${BORDER}` }}>
+              {['번호', '직원명', '직급/직책', '휴대전화번호', '팩스', '이메일', '담당 업무', '메모'].map((h, i) => (
+                <div key={h} role="columnheader" style={{ ...contactTh, borderRight: i === 7 ? 'none' : contactTh.borderRight, justifyContent: i === 0 ? 'center' : 'flex-start' }}>{h}</div>
+              ))}
+              {contacts.map((c, idx) => (
+                <div key={c.id} role="row" style={{ display: 'contents' }}>
+                  <div style={{ ...contactTd, justifyContent: 'center' }}>{idx + 1}</div>
+                  <div style={{ ...contactTd, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}><ContactNameCell c={c} /></div>
+                  <div style={contactTd}><Ellipsis>{c.title || '-'}</Ellipsis></div>
+                  <div style={contactTd}><Ellipsis>{c.phone || '-'}</Ellipsis></div>
+                  <div style={contactTd}><Ellipsis>{c.fax || '-'}</Ellipsis></div>
+                  <div style={contactTd} title={c.email}><Ellipsis>{c.email || '-'}</Ellipsis></div>
+                  <div style={contactTd} title={c.memo}><Ellipsis>{c.memo || '-'}</Ellipsis></div>
+                  <div style={{ ...contactTd, borderRight: 'none' }} title={c.note}><Ellipsis>{c.note || '-'}</Ellipsis></div>
+                </div>
+              ))}
+            </div>
+            {contacts.length === 0 && <div style={{ height: 64, marginTop: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ff, fontSize: 14, color: '#9197A1', borderBottom: `1px solid ${BORDER}` }}>이 청구 기준을 쓰는 담당자가 없습니다.</div>}
+          </div>
         </div>
       )}
     </div>
@@ -1627,161 +1647,220 @@ function ScheduleAccordion({ schedule, open, onToggle, partner, groups, pendingG
 // ─── 서류정보 탭 ─────────────────────────────────────────────────────────────
 
 type DocKey = 'bizLicense' | PartnerDocKey;
-const DOC_ITEMS: { key: DocKey; label: string; max: number }[] = [
+const DOC_ITEMS: { key: DocKey; label: string; max: number; hint?: string }[] = [
   { key: 'bizLicense', label: '사업자등록증', max: 1 },
   { key: 'bankbook', label: '통장사본', max: 1 },
   { key: 'brokerLicense', label: '주선면허증', max: 1 },
   { key: 'transportLicense', label: '운송면허증', max: 1 },
   { key: 'contract', label: '계약서', max: 150 },
-  { key: 'etc', label: '기타', max: 10 },
+  { key: 'etc', label: '기타', max: 10, hint: '기타 서류는 최대 10개까지 첨부할 수 있어요. 파일을 이 영역으로 끌어다 놓아도 돼요.' },
 ];
 const partnerDocs = (p: TradePartner, key: DocKey) => (key === 'bizLicense' ? p.bizLicenseFiles : p.documents?.[key]) || [];
 
-// [파일 첨부] 또는 영역에 끌어다 놓기로 첨부
-function DocDropField({ label, files, max, onChange, onToast }: { label: string; files: string[]; max: number; onChange: (files: string[]) => void; onToast: (msg: string, tone?: ToastTone) => void }) {
+// [파일 첨부하기] 또는 영역에 끌어다 놓기로 첨부. 모든 서류가 같은 모양이고, 첨부한 파일은 영역 안에 칩(확장자·파일명·✕)으로 나열
+// 여러 개 첨부하는 서류(기타)는 라벨 옆에 개수(N/최대)와 아래 안내 문구를 보여줌 (피그마 1070:133313 UX)
+function DocDropField({ label, files, max, hint, onChange, onToast }: { label: string; files: string[]; max: number; hint?: string; onChange: (files: string[]) => void; onToast: (msg: string, tone?: ToastTone) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
+  const full = files.length >= max;
   const open = () => {
-    if (files.length >= max) { onToast(`총 ${max}개까지만 첨부할 수 있습니다.`, 'error'); return; }
+    if (full) { onToast(`${label}는 최대 ${max}개까지 첨부할 수 있어요.`, 'error'); return; }
     fileRef.current?.click();
   };
   const remove = (idx: number) => {
     onChange(files.filter((_, i) => i !== idx));
     onToast('첨부된 파일이 삭제되었습니다.', 'error');
   };
+  const ext = (name: string) => (name.split('.').pop() || '').toUpperCase();
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontFamily: ffSemiBold, fontWeight: 600, fontSize: 14, lineHeight: '20px', letterSpacing: ls, color: '#2E3238' }}>{`${label} (${files.length}/${max})`}</span>
-        <SmallButton onClick={open} style={{ height: 22, padding: '0 6px', fontSize: 12 }}>파일 첨부</SmallButton>
+    <div data-name="doc-field" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <span style={{ fontFamily: ffSemiBold, fontWeight: 600, fontSize: 14, lineHeight: '20px', letterSpacing: ls, color: '#2E3238' }}>{label}</span>
+        {hint && <span style={{ fontFamily: ff, fontSize: 13, lineHeight: '20px', letterSpacing: ls, color: full ? '#DD2222' : '#767D8A' }}>{`${files.length}/${max}`}</span>}
+      </div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+        <div
+          onDragOver={e => { e.preventDefault(); setOver(true); }}
+          onDragLeave={() => setOver(false)}
+          onDrop={e => { e.preventDefault(); setOver(false); acceptFiles(e.dataTransfer.files, files, max, onChange, onToast); }}
+          style={{ flex: 1, minWidth: 0, minHeight: 44, padding: files.length ? 5 : 0, borderRadius: 4, border: `1px solid ${over ? '#669FFF' : BORDER}`, background: over ? '#F5F9FF' : '#F6F7F8', boxSizing: 'border-box', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}
+        >
+          {files.length === 0 ? (
+            <span style={{ padding: '0 12px', fontFamily: ff, fontSize: 16, lineHeight: '24px', letterSpacing: ls, color: '#767D8A' }}>파일을 이 곳으로 끌어오세요.</span>
+          ) : files.map((name, i) => (
+            <span key={name + i} data-name="file-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 32, maxWidth: 320, padding: '0 10px 0 12px', boxSizing: 'border-box', border: `1px solid ${BORDER}`, borderRadius: 4, background: '#FFFFFF' }}>
+              <span style={{ fontFamily: ffSemiBold, fontWeight: 600, fontSize: 11, letterSpacing: '0.02em', color: '#767D8A', flexShrink: 0 }}>{ext(name)}</span>
+              <span title={name} style={{ minWidth: 0, fontFamily: ff, fontSize: 14, lineHeight: '16px', letterSpacing: ls, color: '#2E3238', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+              <button type="button" aria-label={`${name} 삭제`} onClick={() => remove(i)} style={{ width: 16, height: 16, flexShrink: 0, border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width={10} height={10} viewBox="0 0 10 10" fill="none"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="#767D8A" strokeWidth="1.2" strokeLinecap="round" /></svg>
+              </button>
+            </span>
+          ))}
+        </div>
+        <ModalButton h={44} size={16} px={12} onClick={open} style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, opacity: full ? 0.5 : 1, cursor: full ? 'default' : 'pointer' }}><ClipIcon />파일 첨부하기</ModalButton>
         <input ref={fileRef} type="file" multiple={max > 1} accept=".pdf,.doc,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={e => { acceptFiles(e.target.files, files, max, onChange, onToast); e.target.value = ''; }} />
       </div>
-      <div
-        onDragOver={e => { e.preventDefault(); setOver(true); }}
-        onDragLeave={() => setOver(false)}
-        onDrop={e => { e.preventDefault(); setOver(false); acceptFiles(e.dataTransfer.files, files, max, onChange, onToast); }}
-        style={{ minHeight: 60, borderRadius: 4, border: `1px solid ${over ? '#669FFF' : BORDER}`, background: over ? '#F5F9FF' : '#F6F7F8', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-      >
-        {files.length === 0 ? (
-          <span style={{ textAlign: 'center', fontFamily: ff, fontSize: 13, lineHeight: '19px', letterSpacing: ls, color: '#767D8A' }}>파일을 이 곳으로 끌어오세요.</span>
-        ) : files.map((name, i) => (
-          <div key={name + i} style={{ height: 40, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', borderTop: i ? `1px solid ${BORDER}` : 'none' }}>
-            <ClipIcon />
-            <span title={name} style={{ flex: 1, minWidth: 0, fontFamily: ff, fontSize: 14, color: '#2E3238', letterSpacing: ls, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
-            <button type="button" aria-label={`${name} 삭제`} onClick={() => remove(i)} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}><RemoveIcon /></button>
-          </div>
-        ))}
-      </div>
+      {hint && <span style={{ fontFamily: ff, fontSize: 12, lineHeight: '18px', letterSpacing: ls, color: '#9197A1' }}>{hint}</span>}
     </div>
   );
 }
 
 // ─── 거래처 상세 모달 ────────────────────────────────────────────────────────
 
-type DetailTab = 'basic' | 'schedule' | 'contacts' | 'shared' | 'docs' | 'main';
-
-// 주력 노선 출발/도착 지역 선택지
-const HUB_OPTIONS = ['분당HUB', '부산HUB', '이천HUB', '인천HUB', '평택HUB', '대전HUB', '대구HUB', '광주HUB', '동탄HUB'];
+type DetailTab = 'basic' | 'schedule' | 'contacts' | 'docs';
 
 // 각 탭 상단 안내 문구
-const tabDescStyle: React.CSSProperties = { margin: 0, fontFamily: ff, fontSize: 13, lineHeight: '19px', letterSpacing: ls, color: '#767D8A' };
+const tabDescStyle: React.CSSProperties = { margin: 0, fontFamily: ff, fontSize: 14, lineHeight: '22px', letterSpacing: ls, color: '#5C6370' };
 
-// 하단 [수정]으로 한꺼번에 반영하는 변경분 — 정산스케줄 담당업무그룹, 공유그룹별 스케줄, 서류
-type DetailPending = { scheduleGroup: Record<string, string>; sharedSchedule: Record<number, string>; docs: Partial<Record<DocKey, string[]>>; vehicles?: MainVehicle[]; routes?: MainRoute[] };
-const EMPTY_PENDING: DetailPending = { scheduleGroup: {}, sharedSchedule: {}, docs: {} };
-const isPendingEmpty = (p: DetailPending) => Object.keys(p.scheduleGroup).length + Object.keys(p.sharedSchedule).length + Object.keys(p.docs).length === 0 && !p.vehicles && !p.routes;
+// 하단 [수정]으로 한꺼번에 반영하는 변경분 — 거래처 관계 설정, 청구 기준 입력값, 서류
+type DetailPending = { partnerType?: PartnerType; share?: 'Y' | 'N'; dispatch?: string[]; schedules: Record<string, SettleSchedule>; docs: Partial<Record<DocKey, string[]>> };
+const EMPTY_PENDING: DetailPending = { schedules: {}, docs: {} };
+const isPendingEmpty = (p: DetailPending) => p.partnerType === undefined && p.share === undefined && p.dispatch === undefined && Object.keys(p.schedules).length + Object.keys(p.docs).length === 0;
 
-// 주력정보 표 안의 셀렉트/입력
-function CellSelect({ value, options, onChange, placeholder }: { value: string; options: string[]; onChange: (v: string) => void; placeholder?: string }) {
-  return (
-    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
-      <select className="pmd-sel" value={value} onChange={e => onChange(e.target.value)} style={{ width: '100%', height: 30, paddingRight: 22, fontFamily: ff, fontSize: 15, letterSpacing: ls, color: value ? '#2E3238' : '#9197A1' }}>
-        {placeholder && <option value="" disabled>{placeholder}</option>}
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-      <span style={{ position: 'absolute', right: 0, pointerEvents: 'none', display: 'flex' }}><Chevron size={16} color="#5C6370" /></span>
-    </div>
-  );
-}
-type EditTarget = 'company' | 'ceo' | 'extra' | null;
+type EditTarget = 'biz' | 'basic' | null;
 
 function TabCount({ n }: { n: number }) {
   return <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, padding: '0 4px', borderRadius: 2, background: '#EBEDEF', fontFamily: ff, fontSize: 12, color: '#5C6370' }}>{n}</span>;
 }
 
-// 표 헤더/셀 (직원정보, 공유그룹 탭)
+// 표 헤더/셀
 const gridTh: React.CSSProperties = { height: 40, padding: '0 8px', display: 'flex', alignItems: 'center', background: '#F6F7F8', borderBottom: `1px solid ${BORDER}`, fontFamily: ffSemiBold, fontWeight: 600, fontSize: 14, color: '#5C6370', letterSpacing: ls, whiteSpace: 'nowrap', boxSizing: 'border-box' };
 const gridTd: React.CSSProperties = { minHeight: 44, padding: '6px 8px', display: 'flex', alignItems: 'center', borderBottom: `1px solid ${BORDER}`, fontFamily: ff, fontSize: 15, color: '#2E3238', letterSpacing: ls, boxSizing: 'border-box', minWidth: 0, overflow: 'hidden' };
 
-// 직원정보 탭 — 검색 기준과 열 너비(번호·직원명·직책/직함·휴대전화번호·팩스·이메일·담당 업무·정산스케줄·수정/삭제)
 type ContactSearchType = '직원명' | '휴대전화번호' | '이메일';
 const CONTACT_SEARCH_TYPES: ContactSearchType[] = ['직원명', '휴대전화번호', '이메일'];
 const contactField = (c: PartnerContact, t: ContactSearchType) => t === '직원명' ? c.name : t === '휴대전화번호' ? c.phone : c.email;
-const CONTACT_COLS = '50px 100px 130px 130px 130px 158px minmax(120px, 1fr) 140px 108px';
+// 거래처 직원 정보 탭 열: 번호·직원명·청구 기준·직급/직책·휴대전화번호·팩스·이메일·담당 업무
+const CONTACT_COLS = '50px 186px 186px 170px 170px 170px 200px minmax(120px, 1fr)';
 const contactTh: React.CSSProperties = { ...gridTh, borderRight: `1px solid ${BORDER}`, fontSize: 15 };
 const contactTd: React.CSSProperties = { ...gridTd, minHeight: 48, borderRight: `1px solid ${BORDER}` };
 
-// 배차관리 > 단건등록에서도 거래처명 옆 [▶]로 연다
+// 검색 바 (직원명/휴대전화번호/이메일 + 검색어 + [검색] + 총 N건)
+function ContactSearchBar({ type, setType, keyword, setKeyword, onSearch, total }: { type: ContactSearchType; setType: (t: ContactSearchType) => void; keyword: string; setKeyword: (v: string) => void; onSearch: () => void; total: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex' }}>
+        <select
+          value={type}
+          onChange={e => setType(e.target.value as ContactSearchType)}
+          style={{ height: 36, minWidth: 79, padding: '0 30px 0 10px', border: `1px solid ${BORDER}`, borderRadius: '4px 0 0 4px', marginRight: -1, boxSizing: 'border-box', cursor: 'pointer', appearance: 'none', background: `${selArrow} no-repeat right 10px center, #FFFFFF`, fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238', outline: 'none' }}
+        >
+          {CONTACT_SEARCH_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <input
+          value={keyword}
+          onChange={e => setKeyword(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') onSearch(); }}
+          placeholder="검색어를 입력해 주세요"
+          className="pm-search-input"
+          style={{ width: 198, height: 36, padding: '0 10px', border: `1px solid ${BORDER}`, borderRadius: '0 4px 4px 0', boxSizing: 'border-box', fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238', outline: 'none' }}
+        />
+      </div>
+      <ModalButton h={36} size={15} px={12} onClick={onSearch}>검색</ModalButton>
+      <span style={{ marginLeft: 8, fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238', whiteSpace: 'nowrap' }}>{`총 ${total.toLocaleString()}건`}</span>
+    </div>
+  );
+}
+
+// 배차관리 > 단건등록, 통합장부에서도 연다
 export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave }: { partner: TradePartner; onClose: () => void; onSave: (p: TradePartner) => void }) {
   const [partner, setPartner] = useState<TradePartner>(initialPartner);
   const [ourGroups, setOurGroups] = useState<WorkGroup[]>(() => getGroups());
   useEffect(() => subscribeCompany(() => setOurGroups(getGroups())), []);
   const [tab, setTab] = useState<DetailTab>('basic');
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
-  const [scheduleEdit, setScheduleEdit] = useState<{ schedule: SettleSchedule | null } | null>(null);
+  const [justAddedScheduleId, setJustAddedScheduleId] = useState<string | null>(null);
+  // 탭을 옮겼다 돌아오면 방금 추가한 청구 기준도 이름 입력 상태로 다시 열지 않음
+  useEffect(() => setJustAddedScheduleId(null), [tab]);
   const [scheduleDelete, setScheduleDelete] = useState<SettleSchedule | null>(null);
-  // 직원정보 — 한 행씩 수정 (isNew: [담당자 추가]로 만든 행)
-  const [contactEdit, setContactEdit] = useState<{ row: PartnerContact; isNew: boolean } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  // 담당자 폼 — contact가 null이면 추가, 있으면 수정
+  const [contactForm, setContactForm] = useState<{ contact: PartnerContact | null } | null>(null);
   const [contactDelete, setContactDelete] = useState<PartnerContact | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [pending, setPending] = useState<DetailPending>(EMPTY_PENDING);
+  const [openScheduleIds, setOpenScheduleIds] = useState<Set<string>>(() => new Set(initialPartner.settleSchedules?.[0] ? [initialPartner.settleSchedules[0].id] : []));
+  // 청구 기준 탭 검색 / 직원 탭 검색
+  const [schSearchType, setSchSearchType] = useState<ContactSearchType>('직원명');
+  const [schKeyword, setSchKeyword] = useState('');
+  const [schQuery, setSchQuery] = useState<{ type: ContactSearchType; keyword: string }>({ type: '직원명', keyword: '' });
   const [contactSearchType, setContactSearchType] = useState<ContactSearchType>('직원명');
   const [contactKeyword, setContactKeyword] = useState('');
   const [contactQuery, setContactQuery] = useState<{ type: ContactSearchType; keyword: string }>({ type: '직원명', keyword: '' });
-  const [pending, setPending] = useState<DetailPending>(EMPTY_PENDING);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const [openScheduleIds, setOpenScheduleIds] = useState<Set<string>>(() => new Set(initialPartner.settleSchedules?.[0] ? [initialPartner.settleSchedules[0].id] : []));
+  // 거래처가 공유한 업무그룹별 청구 기준 — 행마다 [저장]으로 바로 반영
+  const [sharedDraft, setSharedDraft] = useState<Record<number, string>>({});
+  // 이번에 [청구 기준 그룹 추가]로 만든 청구 기준 — 목록 맨 위에 최근 것부터 보여줌 (저장 순서와 기본 청구 기준은 그대로)
+  const [addedScheduleIds, setAddedScheduleIds] = useState<string[]>([]);
   const [toast, showToast, hideToast] = useToast();
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const overlayHeight = useScaledViewportHeight(overlayRef);
+  const scheduleListTopRef = useRef<HTMLParagraphElement>(null);
 
   const commit = (next: TradePartner) => {
     setPartner(next);
     onSave(next);
   };
   const patchPartner = (patch: Partial<TradePartner>) => commit({ ...partner, ...patch });
-  const groupName = (id: string) => ourGroups.find(g => g.id === id)?.name ?? '';
 
-  // 새로 공유된 그룹 안내는 이번 진입에서만 보여주고, 닫을 때 '확인함'으로 처리 → 재진입 시 배너/dot 사라짐
+  // 새로 공유된 그룹 표시는 이번 진입에서만 보여주고, 닫을 때 '확인함'으로 처리
   const closeNow = () => {
     if ((partner.sharedGroups || []).some(g => g.isNew)) onSave({ ...partner, sharedGroups: partner.sharedGroups.map(({ isNew, ...g }) => g) });
     onClose();
   };
   // 하단 [수정]을 누르지 않은 변경분이 있으면 그만둘지 먼저 묻는다
   const handleClose = () => { if (isPendingEmpty(pending)) closeNow(); else setConfirmDiscard(true); };
-  const anyChildOpen = editTarget !== null || scheduleEdit !== null || scheduleDelete !== null || contactDelete !== null || confirmDiscard;
+  const anyChildOpen = editTarget !== null || contactForm !== null || contactDelete !== null || scheduleDelete !== null || confirmDelete || confirmDiscard;
   useEscapeKey(anyChildOpen ? () => {} : handleClose);
 
-  // ── 정산스케줄
-  const schedules = partner.settleSchedules || [];
-  const firstScheduleId = schedules[0]?.id ?? '';
-  const submitSchedule = (s: SettleSchedule) => {
-    const exists = schedules.some(x => x.id === s.id);
-    commit({ ...partner, settleSchedules: exists ? schedules.map(x => x.id === s.id ? s : x) : [...schedules, s] });
-    if (!exists) setOpenScheduleIds(prev => new Set([...prev, s.id]));
-    setScheduleEdit(null);
-    showToast(exists ? `${s.name} 정산스케줄을 수정했습니다.` : '스케줄 정보를 등록했습니다.');
+  // ── 거래처 관계 설정 (하단 [수정]으로 반영)
+  const initialShare: 'Y' | 'N' = getSharedPartnerIds().includes(partner.id) ? 'Y' : 'N';
+  const initialDispatch = ourGroups.filter(g => g.carrierIds.includes(partner.id)).map(g => g.id);
+  const partnerType = pending.partnerType ?? partner.partnerType;
+  const share = pending.share ?? initialShare;
+  const dispatch = pending.dispatch ?? initialDispatch;
+  const setPartnerTypeDraft = (v: PartnerType) => setPending(p => ({ ...p, partnerType: v === partner.partnerType ? undefined : v }));
+  const setShareDraft = (v: 'Y' | 'N') => setPending(p => ({ ...p, share: v === initialShare ? undefined : v }));
+  const setDispatchDraft = (ids: string[]) => setPending(p => ({ ...p, dispatch: sameJson([...ids].sort(), [...initialDispatch].sort()) ? undefined : ids }));
+
+  // ── 청구 기준
+  const savedSchedules = partner.settleSchedules || [];
+  const schedules = savedSchedules.map(s => pending.schedules[s.id] ?? s);
+  const firstScheduleId = savedSchedules[0]?.id ?? '';
+  const patchScheduleDraft = (id: string, patch: Partial<SettleSchedule>) => setPending(p => {
+    const orig = savedSchedules.find(s => s.id === id)!;
+    const next = { ...(p.schedules[id] ?? orig), ...patch };
+    const map = { ...p.schedules };
+    if (sameJson(next, orig)) delete map[id]; else map[id] = next;
+    return { ...p, schedules: map };
+  });
+  const addSchedule = () => {
+    const s: SettleSchedule = { ...makeSchedule(`청구 기준 ${savedSchedules.length + 1}`, Date.now() % 1000), receiptDefault: '원본/사진 필수' };
+    commit({ ...partner, settleSchedules: [...savedSchedules, s] });
+    setOpenScheduleIds(prev => new Set([...prev, s.id]));
+    setAddedScheduleIds(ids => [s.id, ...ids]);
+    setJustAddedScheduleId(s.id);
+    scheduleListTopRef.current?.scrollIntoView({ block: 'nearest' });
+    showToast('청구 기준을 추가했습니다.');
   };
-  // 삭제한 스케줄을 쓰던 공유그룹/직원은 기본 스케줄로 돌린다
+  // 삭제한 청구 기준을 쓰던 공유그룹/직원은 첫 번째 청구 기준으로 돌린다
   const removeSchedule = (id: string) => {
-    const rest = schedules.filter(s => s.id !== id);
+    const rest = savedSchedules.filter(s => s.id !== id);
     commit({
       ...partner,
       settleSchedules: rest,
       sharedGroups: (partner.sharedGroups || []).map(g => g.scheduleId === id ? { ...g, scheduleId: rest[0].id } : g),
       contacts: (partner.contacts || []).map(c => c.scheduleId === id ? { ...c, scheduleId: rest[0].id } : c),
     });
+    setPending(p => { const map = { ...p.schedules }; delete map[id]; return { ...p, schedules: map }; });
     setScheduleDelete(null);
-    showToast('스케줄 정보를 삭제했습니다.', 'error');
+    showToast('청구 기준을 삭제했습니다.', 'error');
+  };
+  // 이름은 바로 저장 (하단 [수정]과 별개)
+  const renameSchedule = (id: string, name: string) => {
+    commit({ ...partner, settleSchedules: savedSchedules.map(s => s.id === id ? { ...s, name } : s) });
+    setPending(p => p.schedules[id] ? { ...p, schedules: { ...p.schedules, [id]: { ...p.schedules[id], name } } } : p);
+    showToast('청구 기준 이름을 변경했습니다.');
   };
   const toggleSchedule = (id: string) => setOpenScheduleIds(prev => {
     const next = new Set(prev);
@@ -1789,77 +1868,82 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
     return next;
   });
 
-  // ── 공유그룹별 정산 설정 — 미가입 거래처는 '기본그룹' 1개만
+  // ── 직원
+  const contacts = partner.contacts || [];
+  const scheduleOf = (c: PartnerContact) => savedSchedules.some(s => s.id === c.scheduleId) ? c.scheduleId! : firstScheduleId;
+  const contactsOf = (scheduleId: string) => contacts.filter(c => scheduleOf(c) === scheduleId);
+  const matches = (c: PartnerContact, q: { type: ContactSearchType; keyword: string }) => contactField(c, q.type).includes(q.keyword.trim());
+  const orderedSchedules = [
+    ...addedScheduleIds.map(id => schedules.find(s => s.id === id)).filter((s): s is SettleSchedule => !!s),
+    ...schedules.filter(s => !addedScheduleIds.includes(s.id)),
+  ];
+  const shownSchedules = schQuery.keyword.trim() ? orderedSchedules.filter(s => contactsOf(s.id).some(c => matches(c, schQuery))) : orderedSchedules;
+  const shownContacts = contactQuery.keyword.trim() ? contacts.filter(c => matches(c, contactQuery)) : contacts;
+
+  // ── 거래처가 공유한 업무그룹 — 미가입 거래처는 '기본그룹' 1개만
   const groupMappings: SharedGroupMapping[] = (partner.tTrucker && partner.sharedGroups?.length ? partner.sharedGroups : [{ groupName: '기본그룹', scheduleId: firstScheduleId }])
-    .map(g => ({ ...g, scheduleId: schedules.some(s => s.id === g.scheduleId) ? g.scheduleId : firstScheduleId }));
-  const newShared = groupMappings.filter(g => g.isNew);
-  const setPendingPart = <K extends keyof DetailPending>(k: K, key: string | number, v: string | string[], original: string | string[]) => setPending(p => {
-    const part = { ...p[k] } as Record<string | number, string | string[]>;
-    if (JSON.stringify(v) === JSON.stringify(original)) delete part[key]; else part[key] = v;
-    return { ...p, [k]: part };
+    .map(g => ({ ...g, scheduleId: savedSchedules.some(s => s.id === g.scheduleId) ? g.scheduleId : firstScheduleId }));
+  const saveSharedRow = (idx: number) => {
+    const v = sharedDraft[idx];
+    if (v === undefined) return;
+    commit({ ...partner, sharedGroups: groupMappings.map((g, i) => i === idx ? { ...g, scheduleId: v } : g) });
+    setSharedDraft(d => { const n = { ...d }; delete n[idx]; return n; });
+    showToast(`${groupMappings[idx].groupName}의 청구 기준을 저장했습니다.`);
+  };
+
+  // ── 서류
+  const docFiles = (key: DocKey) => pending.docs[key] ?? partnerDocs(partner, key);
+  const setDocDraft = (key: DocKey, files: string[]) => setPending(p => {
+    const docs = { ...p.docs };
+    if (sameJson(files, partnerDocs(partner, key))) delete docs[key]; else docs[key] = files;
+    return { ...p, docs };
   });
+
   const savePending = () => {
+    const bad = Object.values(pending.schedules).find(s => (s.taxEmail || '').trim() !== '' && !isValidEmail((s.taxEmail || '').trim()));
+    if (bad) { setTab('schedule'); showToast(`${bad.name}의 세금계산서 이메일을 확인해 주세요.`, 'error'); return; }
     const docs = pending.docs;
     commit({
       ...partner,
-      settleSchedules: schedules.map(x => pending.scheduleGroup[x.id] !== undefined ? { ...x, groupId: pending.scheduleGroup[x.id] } : x),
-      sharedGroups: Object.keys(pending.sharedSchedule).length ? groupMappings.map((g, i) => pending.sharedSchedule[i] !== undefined ? { ...g, scheduleId: pending.sharedSchedule[i] } : g) : partner.sharedGroups,
+      partnerType,
+      settleSchedules: schedules.map(s => ({ ...s, taxEmail: (s.taxEmail || '').trim(), settleMemo: (s.settleMemo || '').trim() })),
       bizLicenseFiles: docs.bizLicense ?? partner.bizLicenseFiles,
       documents: { ...partner.documents, ...Object.fromEntries(Object.entries(docs).filter(([k]) => k !== 'bizLicense')) },
-      mainVehicles: pending.vehicles ? pending.vehicles.filter(v => v.ton && v.carType) : partner.mainVehicles,
-      mainRoutes: pending.routes ? pending.routes.filter(r => r.from && r.to) : partner.mainRoutes,
     });
+    // 업무그룹 공유 여부 → 회사 > 업무그룹 관리의 거래처 공유 설정, 배차 가능 업무그룹 → 업무그룹의 이용 가능한 운송사
+    if (pending.share !== undefined) {
+      const ids = getSharedPartnerIds().filter(x => x !== partner.id);
+      setSharedPartnerIds(pending.share === 'Y' ? [...ids, partner.id] : ids);
+    }
+    if (pending.dispatch !== undefined) {
+      ourGroups.forEach(g => {
+        const has = pending.dispatch!.includes(g.id);
+        if (has !== g.carrierIds.includes(partner.id)) updateGroup(g.id, { carrierIds: has ? [...g.carrierIds, partner.id] : g.carrierIds.filter(x => x !== partner.id) });
+      });
+    }
     setPending(EMPTY_PENDING);
     showToast('거래처 정보를 수정했습니다.');
   };
 
-  // ── 직원정보
-  const contacts = partner.contacts || [];
-  const contactQ = contactQuery.keyword.trim();
-  const shownContacts = contactQ ? contacts.filter(c => contactField(c, contactQuery.type).includes(contactQ)) : contacts;
-  const contactRows = contactEdit?.isNew ? [...shownContacts, contactEdit.row] : shownContacts;
-  const contactNameError = contactEdit && contactEdit.row.name.trim() === '';
-  const contactEmailError = contactEdit && contactEdit.row.email.trim() !== '' && !isValidEmail(contactEdit.row.email.trim());
-  const saveContact = () => {
-    if (!contactEdit) return;
-    if (contactNameError || contactEmailError) { showToast(contactNameError ? '직원명을 입력해 주세요.' : '올바른 이메일 양식으로 입력해 주세요.', 'error'); return; }
-    const row = { ...contactEdit.row, name: contactEdit.row.name.trim(), email: contactEdit.row.email.trim() };
-    commit({ ...partner, contacts: contactEdit.isNew ? [...contacts, row] : contacts.map(c => c.id === row.id ? row : c) });
-    showToast(contactEdit.isNew ? '담당자를 추가했습니다.' : '직원 정보를 수정했습니다.');
-    setContactEdit(null);
-  };
-  const setContactField = (key: keyof PartnerContact, v: string) => setContactEdit(e => e && { ...e, row: { ...e.row, [key]: v } });
-  const addContact = () => {
-    if (contactEdit) { showToast('수정 중인 직원 정보를 먼저 저장해 주세요.', 'error'); return; }
-    setContactEdit({ row: { id: genId('ct'), name: '', department: '', title: '', phone: '', fax: '', email: '', memo: '', scheduleId: firstScheduleId }, isNew: true });
+  const deletePartner = () => {
+    removePartner(partner.id);
+    setSharedPartnerIds(getSharedPartnerIds().filter(x => x !== partner.id));
+    ourGroups.filter(g => g.carrierIds.includes(partner.id)).forEach(g => updateGroup(g.id, { carrierIds: g.carrierIds.filter(x => x !== partner.id) }));
+    setConfirmDelete(false);
+    onClose();
   };
 
-  const assignedIds = partner.assignedGroupIds || [];
-  const mainId = assignedIds.includes(partner.mainGroupId) ? partner.mainGroupId : assignedIds[0];
-  const assignedNames = [mainId, ...assignedIds.filter(id => id !== mainId)].filter(Boolean).map(groupName).filter(Boolean);
-  const licenseFiles = partner.bizLicenseFiles || [];
-  const docFiles = (key: DocKey) => pending.docs[key] ?? partnerDocs(partner, key);
-  // 주력정보 — 원래 값과 같아지면 변경분에서 뺀다
-  const vehicles = pending.vehicles ?? partner.mainVehicles ?? [];
-  const routes = pending.routes ?? partner.mainRoutes ?? [];
-  const setVehicles = (next: MainVehicle[]) => setPending(p => ({ ...p, vehicles: sameJson(next, partner.mainVehicles ?? []) ? undefined : next }));
-  const setRoutes = (next: MainRoute[]) => setPending(p => ({ ...p, routes: sameJson(next, partner.mainRoutes ?? []) ? undefined : next }));
-  const patchVehicle = (id: string, patch: Partial<MainVehicle>) => setVehicles(vehicles.map(v => v.id === id ? { ...v, ...patch } : v));
-  const patchRoute = (id: string, patch: Partial<MainRoute>) => setRoutes(routes.map(r => r.id === id ? { ...r, ...patch } : r));
-
-  const tabs: { key: DetailTab; label: string; count?: number; dot?: boolean }[] = [
+  const tabs: { key: DetailTab; label: string; count?: number }[] = [
     { key: 'basic', label: '기본정보' },
-    { key: 'schedule', label: '정산스케줄', count: schedules.length },
-    { key: 'contacts', label: '직원정보', count: contacts.length },
-    { key: 'shared', label: '거래처가 공유한 업무그룹', count: groupMappings.length, dot: newShared.length > 0 },
+    { key: 'schedule', label: '청구 기준', count: savedSchedules.length },
+    { key: 'contacts', label: '거래처 직원 정보' },
     { key: 'docs', label: '서류정보' },
-    { key: 'main', label: '주력정보' },
   ];
 
   const scheduleSelect = (value: string, onChange: (v: string) => void) => (
     <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
       <select className="pmd-sel" value={value} onChange={e => onChange(e.target.value)} style={{ width: '100%', height: 30, paddingRight: 22, fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238', textOverflow: 'ellipsis' }}>
-        {schedules.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        {savedSchedules.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
       </select>
       <span style={{ position: 'absolute', right: 0, pointerEvents: 'none', display: 'flex' }}><Chevron size={16} color="#5C6370" /></span>
     </div>
@@ -1867,9 +1951,9 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
 
   return (
     <ModalOverlay overlayRef={overlayRef} height={overlayHeight} onClose={anyChildOpen ? () => {} : handleClose} name="partner-detail-modal">
-      <div role="dialog" aria-label="거래처 상세" style={{ width: 1122, height: 820, maxHeight: overlayHeight ? overlayHeight - 32 : 'calc(100vh - 32px)', flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 12, boxShadow: modalBoxShadow, overflow: 'hidden', position: 'relative' }}>
-        <style>{REGISTER_CSS + GROUP_PICKER_CSS + DETAIL_CSS}</style>
-        <div style={{ height: 72, padding: '24px 24px 16px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      <div role="dialog" aria-label="거래처 상세" style={{ width: 1393, height: 1181, maxHeight: overlayHeight ? overlayHeight - 32 : 'calc(100vh - 32px)', flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 12, boxShadow: modalBoxShadow, overflow: 'hidden', position: 'relative' }}>
+        <style>{REGISTER_CSS + DETAIL_CSS + LIST_CSS}</style>
+        <div style={{ height: 72, padding: '24px 24px 16px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, borderBottom: `1px solid ${BORDER}` }}>
           <p style={{ margin: 0, fontFamily: ffBold, fontWeight: 700, fontSize: 22, lineHeight: '32px', letterSpacing: ls, color: '#2E3238' }}>거래처 상세</p>
           <StatusBadge status={partner.status} small />
           <JoinBadge joined={partner.tTrucker} />
@@ -1878,7 +1962,7 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
             <ModalCloseIcon />
           </button>
         </div>
-        <div role="tablist" style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: `1px solid ${BORDER}`, margin: '0 24px', paddingLeft: 0, flexShrink: 0 }}>
+        <div role="tablist" style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${BORDER}`, margin: '12px 24px 0', flexShrink: 0 }}>
           {tabs.map(t => {
             const on = tab === t.key;
             return (
@@ -1888,297 +1972,239 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
                 aria-selected={on}
                 type="button"
                 onClick={() => setTab(t.key)}
-                style={{ position: 'relative', height: 44, padding: '0 12px', border: 'none', borderBottom: `2px solid ${on ? '#2E3238' : 'transparent'}`, marginBottom: -1, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: on ? ffSemiBold : ff, fontWeight: on ? 600 : 400, fontSize: 16, letterSpacing: ls, color: on ? '#2E3238' : '#5C6370', whiteSpace: 'nowrap' }}
+                style={{ position: 'relative', height: 48, padding: '0 12px', border: 'none', borderBottom: `2px solid ${on ? '#2E3238' : 'transparent'}`, marginBottom: -1, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: on ? ffSemiBold : ff, fontWeight: on ? 600 : 400, fontSize: 16, letterSpacing: ls, color: on ? '#2E3238' : '#5C6370', whiteSpace: 'nowrap' }}
               >
                 {t.label}
                 {t.count !== undefined && <TabCount n={t.count} />}
-                {t.dot && <span aria-label="새로 공유됨" style={{ position: 'absolute', top: 8, right: 2, width: 6, height: 6, borderRadius: 3, background: '#DD2222' }} />}
               </button>
             );
           })}
         </div>
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '20px 24px' }}>
+        <div className="pm-table-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '24px 24px' }}>
           {tab === 'basic' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <DetailSectionTitle actions={<SmallButton onClick={() => setEditTarget('company')}>수정</SmallButton>}>회사 정보</DetailSectionTitle>
-                <InfoTable>
-                  <InfoRow>
-                    <InfoLabel label="사업자명" /><InfoValue><Ellipsis>{partner.bizName}</Ellipsis></InfoValue>
-                    <InfoLabel label="사업자등록번호" /><InfoValue><Ellipsis>{partner.bizNumber}</Ellipsis></InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel label="업태" /><InfoValue>{partner.bizType && <Ellipsis>{partner.bizType}</Ellipsis>}</InfoValue>
-                    <InfoLabel label="종목" /><InfoValue>{partner.bizItem && <Ellipsis>{partner.bizItem}</Ellipsis>}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel label="사업장 주소" /><InfoValue wrap>{[partner.address, partner.addressDetail].filter(Boolean).join(', ')}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel label="거래처 유형" /><InfoValue><Ellipsis>{partner.partnerType}</Ellipsis></InfoValue>
-                    <InfoLabel label="거래상태" />
-                    <InfoValue>
-                      <Ellipsis>{STATUS_BADGE[partner.status].label}</Ellipsis>
-                      {partner.status === '거래중지' && partner.statusReason && <span style={{ color: '#767D8A', overflow: 'hidden', textOverflow: 'ellipsis' }}>{`(${partner.statusReason})`}</span>}
-                    </InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel label="세금계산서 이메일" /><InfoValue>{partner.taxEmail && <Ellipsis>{partner.taxEmail}</Ellipsis>}</InfoValue>
-                    <InfoLabel label="팩스번호" /><InfoValue>{partner.fax && <Ellipsis>{partner.fax}</Ellipsis>}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel label="사업자등록증" />
-                    <InfoValue>{licenseFiles.length > 0 && <span title={licenseFiles.join('\n')} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{licenseFiles.length > 1 ? `${licenseFiles[0]} 외 ${licenseFiles.length - 1}개` : licenseFiles[0]}</span>}</InfoValue>
-                  </InfoRow>
-                </InfoTable>
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 32 }}>
+              {/* 왼쪽 — 사업자 정보 / 기본 정보 */}
+              <div style={{ width: 640, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <DetailSectionTitle actions={<SmallButton onClick={() => setEditTarget('biz')}>수정</SmallButton>}>사업자 정보</DetailSectionTitle>
+                  <InfoTable>
+                    <InfoRow>
+                      <InfoLabel label="사업자명" /><InfoValue><Ellipsis>{partner.bizName}</Ellipsis></InfoValue>
+                      <InfoLabel label="사업자등록번호" /><InfoValue><Ellipsis>{partner.bizNumber}</Ellipsis></InfoValue>
+                    </InfoRow>
+                    <InfoRow>
+                      <InfoLabel label="업태" /><InfoValue>{partner.bizType && <Ellipsis>{partner.bizType}</Ellipsis>}</InfoValue>
+                      <InfoLabel label="종목" /><InfoValue>{partner.bizItem && <Ellipsis>{partner.bizItem}</Ellipsis>}</InfoValue>
+                    </InfoRow>
+                    <InfoRow>
+                      <InfoLabel label="사업장 주소" /><InfoValue wrap>{[partner.address, partner.addressDetail].filter(Boolean).join(', ')}</InfoValue>
+                    </InfoRow>
+                    <InfoRow>
+                      <InfoLabel label="대표자명" /><InfoValue>{partner.ceoName && <Ellipsis>{partner.ceoName}</Ellipsis>}</InfoValue>
+                      <InfoLabel label="대표자 연락처" /><InfoValue>{partner.contact && <Ellipsis>{partner.contact}</Ellipsis>}</InfoValue>
+                    </InfoRow>
+                  </InfoTable>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <DetailSectionTitle actions={<SmallButton onClick={() => setEditTarget('basic')}>수정</SmallButton>}>기본 정보</DetailSectionTitle>
+                  <InfoTable>
+                    <InfoRow>
+                      <InfoLabel label="거래처 별칭" /><InfoValue>{partner.alias && <Ellipsis>{partner.alias}</Ellipsis>}</InfoValue>
+                      <InfoLabel label="거래상태" />
+                      <InfoValue>
+                        <Ellipsis>{STATUS_BADGE[partner.status].label}</Ellipsis>
+                        {partner.status === '거래중지' && partner.statusReason && <span style={{ color: '#767D8A', overflow: 'hidden', textOverflow: 'ellipsis' }}>{`(${partner.statusReason})`}</span>}
+                      </InfoValue>
+                    </InfoRow>
+                    <InfoRow>
+                      <InfoLabel label="세금계산서 이메일" /><InfoValue>{partner.taxEmail && <Ellipsis>{partner.taxEmail}</Ellipsis>}</InfoValue>
+                      <InfoLabel label="팩스번호" /><InfoValue>{partner.fax && <Ellipsis>{partner.fax}</Ellipsis>}</InfoValue>
+                    </InfoRow>
+                    <InfoRow>
+                      <InfoLabel label="운영 메모" /><InfoValue wrap>{partner.memo}</InfoValue>
+                    </InfoRow>
+                    <InfoRow>
+                      <InfoLabel label="정산 메모" /><InfoValue wrap>{partner.settleMemo}</InfoValue>
+                    </InfoRow>
+                  </InfoTable>
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <DetailSectionTitle actions={<SmallButton onClick={() => setEditTarget('ceo')}>수정</SmallButton>}>대표자 정보</DetailSectionTitle>
-                <InfoTable>
-                  <InfoRow>
-                    <InfoLabel label="이름" /><InfoValue>{partner.ceoName && <Ellipsis>{partner.ceoName}</Ellipsis>}</InfoValue>
-                    <InfoLabel label="연락처" /><InfoValue>{partner.contact && <Ellipsis>{partner.contact}</Ellipsis>}</InfoValue>
-                  </InfoRow>
-                </InfoTable>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <DetailSectionTitle actions={<SmallButton onClick={() => setEditTarget('extra')}>수정</SmallButton>}>부가 정보</DetailSectionTitle>
-                <InfoTable>
-                  <InfoRow>
-                    <InfoLabel label="거래처 별칭" /><InfoValue>{partner.alias && partner.alias !== partner.bizName ? <Ellipsis>{partner.alias}</Ellipsis> : null}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel label="담당 업무그룹" />
-                    {/* 대표 업무그룹은 뱃지와 함께 맨 앞에 노출 */}
-                    <InfoValue>{assignedNames.length > 0 && <><RepresentativeBadge /><Ellipsis>{assignedNames.join(', ')}</Ellipsis></>}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel label="거래처 운영 메모" /><InfoValue wrap>{partner.memo}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel label="거래처 정산 메모" /><InfoValue wrap>{partner.settleMemo}</InfoValue>
-                  </InfoRow>
-                </InfoTable>
+
+              <div style={{ width: 1, background: BORDER, flexShrink: 0 }} />
+
+              {/* 오른쪽 — 거래처 관계 설정 */}
+              <div style={{ width: 640, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 28 }}>
+                <FormSection title="거래처 관계 설정">
+                  <div role="radiogroup" aria-label="거래처 관계" style={{ display: 'flex', gap: 8, marginTop: -4 }}>
+                    {RELATION_OPTIONS.map(o => {
+                      const on = partnerType === o.v;
+                      return (
+                        <button
+                          key={o.v}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => setPartnerTypeDraft(o.v)}
+                          style={{ flex: '1 0 0', minWidth: 0, height: 66, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, boxSizing: 'border-box', border: `1px solid ${on ? '#669FFF' : BORDER}`, borderRadius: 4, background: '#FFFFFF', cursor: 'pointer', textAlign: 'left' }}
+                        >
+                          <RadioDot on={on} />
+                          <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <span style={{ fontFamily: ffSemiBold, fontWeight: 600, fontSize: 14, lineHeight: '20px', letterSpacing: ls, color: '#2E3238' }}>{o.l}</span>
+                            <span style={{ fontFamily: ff, fontSize: 14, lineHeight: '20px', letterSpacing: ls, color: '#2E3238', whiteSpace: 'nowrap' }}>{o.desc}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </FormSection>
+
+                <div data-name="our-to-partner" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <DirectionTag>우리 회사 → 거래처</DirectionTag>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
+                    <QuestionTitle title="이 운송사에 내 업무그룹을 공유할까요?" desc={'업무그룹을 공유하면 거래처가 우리 회사 업무그룹에 맞춰 정산 조건을\n설정 할 수 있어요.'} />
+                    <div style={{ width: 168, flexShrink: 0 }}>
+                      <SegmentField<'Y' | 'N'> label="업무그룹 공유 여부" value={share} options={[{ v: 'Y', l: '네' }, { v: 'N', l: '아니오' }]} onChange={setShareDraft} />
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <QuestionTitle title="이 거래처에 배차할 수 있는 업무그룹을 선택해 주세요." desc="선택한 업무그룹에서만 이 거래처에 배차할 수 있어요." />
+                  </div>
+                  <GroupSelectBox groups={ourGroups} value={dispatch} onChange={setDispatchDraft} />
+                </div>
+
+                <div data-name="partner-to-our" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <DirectionTag>거래처 → 우리 회사</DirectionTag>
+                  <QuestionTitle title="거래처가 공유한 업무그룹별 청구 기준" desc={'이 거래처가 공유한 업무그룹으로 오더를 받으면, 여기서 정한 청구 기준이 배차 관리에 자동으로 채워져요.\n거래처가 공유한 업무그룹이 없으면 기본 청구 기준이 적용돼요.'} />
+                  <div role="table" style={{ display: 'grid', gridTemplateColumns: '284px 1fr 70px', borderTop: `1px solid ${BORDER}` }}>
+                    {['거래처의 업무그룹', '청구 기준 기본 설정', ''].map((h, i) => <div key={h + i} role="columnheader" style={{ ...gridTh, fontSize: 15, borderRight: i < 2 ? `1px solid ${BORDER}` : 'none' }}>{h}</div>)}
+                    {groupMappings.map((g, idx) => {
+                      const value = sharedDraft[idx] ?? g.scheduleId;
+                      const changed = sharedDraft[idx] !== undefined;
+                      const rowBg = g.isNew ? '#FFFBE6' : undefined;
+                      return (
+                        <div key={g.groupName + idx} role="row" style={{ display: 'contents' }}>
+                          <div style={{ ...gridTd, background: rowBg, gap: 4, borderRight: `1px solid ${BORDER}` }}>
+                            {g.isNew && <span aria-label="새로 공유됨" title="새로 공유된 업무그룹" style={{ color: '#DD2222', flexShrink: 0 }}>*</span>}
+                            <Ellipsis>{g.groupName}</Ellipsis>
+                          </div>
+                          <div style={{ ...gridTd, background: rowBg, borderRight: `1px solid ${BORDER}` }}>{scheduleSelect(value, v => setSharedDraft(d => { const n = { ...d }; if (v === g.scheduleId) delete n[idx]; else n[idx] = v; return n; }))}</div>
+                          <div style={{ ...gridTd, background: rowBg, justifyContent: 'center' }}>
+                            <SmallButton primary={changed} onClick={() => saveSharedRow(idx)} style={{ opacity: changed ? 1 : 0.6, cursor: changed ? 'pointer' : 'default' }}>저장</SmallButton>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {tab === 'schedule' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <p style={tabDescStyle}>정산스케줄을 이용하시면 거래처별 결제방식이나 정산주기 등 정산 규칙을 미리 지정할 수 있어요.</p>
-              <div><ModalButton h={32} size={14} px={10} onClick={() => setScheduleEdit({ schedule: null })}>정산스케줄 추가</ModalButton></div>
+              <p ref={scheduleListTopRef} style={tabDescStyle}>청구 기준을 이용하시면 거래처별 정산 규칙을 미리 지정할 수 있어요.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <ModalButton primary h={36} size={15} px={12} onClick={addSchedule}>청구 기준 그룹 추가</ModalButton>
+                <ContactSearchBar type={schSearchType} setType={setSchSearchType} keyword={schKeyword} setKeyword={setSchKeyword} onSearch={() => setSchQuery({ type: schSearchType, keyword: schKeyword })} total={shownSchedules.length} />
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {schedules.map((s, i) => (
-                  <ScheduleAccordion
+                {shownSchedules.map(s => (
+                  <ScheduleCard
                     key={s.id}
                     schedule={s}
                     open={openScheduleIds.has(s.id)}
                     onToggle={() => toggleSchedule(s.id)}
-                    partner={partner}
-                    groups={ourGroups}
-                    pendingGroupId={pending.scheduleGroup[s.id]}
-                    onGroupChange={v => setPendingPart('scheduleGroup', s.id, v, s.groupId || ourGroups.find(g => g.isDefault)?.id || '')}
-                    onEdit={() => setScheduleEdit({ schedule: s })}
+                    contacts={contactsOf(s.id)}
+                    onPatch={patch => patchScheduleDraft(s.id, patch)}
+                    onRename={name => renameSchedule(s.id, name)}
+                    autoEdit={s.id === justAddedScheduleId}
                     onRemove={() => setScheduleDelete(s)}
-                    canRemove={i > 0}
+                    canRemove={s.id !== firstScheduleId}
+                    onChangeContacts={() => setTab('contacts')}
                   />
                 ))}
+                {shownSchedules.length === 0 && <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ff, fontSize: 15, color: '#9197A1' }}>검색 결과가 없습니다.</div>}
               </div>
             </div>
           )}
 
           {tab === 'contacts' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <p style={tabDescStyle}>정산 담당 직원의 이메일로 거래명세서와 세금계산서 발행 내역을 보내요.</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <ModalButton h={36} size={15} px={12} onClick={addContact}>담당자 추가</ModalButton>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ display: 'flex' }}>
-                      <select
-                        value={contactSearchType}
-                        onChange={e => setContactSearchType(e.target.value as ContactSearchType)}
-                        style={{ height: 36, minWidth: 79, padding: '0 30px 0 10px', border: `1px solid ${BORDER}`, borderRadius: '4px 0 0 4px', marginRight: -1, boxSizing: 'border-box', cursor: 'pointer', appearance: 'none', background: `${selArrow} no-repeat right 10px center, #FFFFFF`, fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238', outline: 'none' }}
-                      >
-                        {CONTACT_SEARCH_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                      <input
-                        value={contactKeyword}
-                        onChange={e => setContactKeyword(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') setContactQuery({ type: contactSearchType, keyword: contactKeyword }); }}
-                        placeholder="검색어를 입력하세요."
-                        className="pm-search-input"
-                        style={{ width: 198, height: 36, padding: '0 10px', border: `1px solid ${BORDER}`, borderRadius: '0 4px 4px 0', boxSizing: 'border-box', fontFamily: ff, fontSize: 15, letterSpacing: ls, color: '#2E3238', outline: 'none' }}
-                      />
-                    </div>
-                    <ModalButton h={36} size={15} px={12} onClick={() => setContactQuery({ type: contactSearchType, keyword: contactKeyword })}>검색</ModalButton>
-                  </div>
-                </div>
-                <div role="table" style={{ display: 'grid', gridTemplateColumns: CONTACT_COLS, borderTop: `1px solid ${BORDER}`, borderLeft: `1px solid ${BORDER}` }}>
-                  {['번호', '직원명', '직책/직함', '휴대전화번호', '팩스', '이메일', '담당 업무', '정산스케줄', ''].map((h, i) => (
-                    <div key={h + i} role="columnheader" style={{ ...contactTh, justifyContent: i === 0 ? 'center' : 'flex-start' }}>{h}</div>
-                  ))}
-                  {contactRows.map((c, idx) => {
-                    const editing = contactEdit?.row.id === c.id;
-                    const row = editing ? contactEdit!.row : c;
-                    const scheduleId = schedules.some(s => s.id === row.scheduleId) ? row.scheduleId! : firstScheduleId;
-                    return editing ? (
-                      <div key={c.id} role="row" style={{ display: 'contents' }}>
-                        <div style={{ ...contactTd, justifyContent: 'center' }}>{idx + 1}</div>
-                        <div style={{ ...contactTd, flexDirection: 'column', alignItems: 'stretch', gap: 2 }}>
-                          <input className="pmd-in" value={row.name} placeholder="이름" autoFocus onChange={e => setContactField('name', e.target.value)} />
-                          <input className="pmd-in" value={row.department} placeholder="소속" onChange={e => setContactField('department', e.target.value)} />
-                        </div>
-                        <div style={contactTd}><input className="pmd-in" style={{ width: '100%' }} value={row.title ?? ''} placeholder="직책/직함" onChange={e => setContactField('title', e.target.value)} /></div>
-                        <div style={contactTd}><input className="pmd-in" style={{ width: '100%' }} value={row.phone} placeholder="010-0000-0000" inputMode="tel" onChange={e => setContactField('phone', formatPhone(e.target.value))} /></div>
-                        <div style={contactTd}><input className="pmd-in" style={{ width: '100%' }} value={row.fax} placeholder="팩스" inputMode="tel" onChange={e => setContactField('fax', formatPhone(e.target.value))} /></div>
-                        <div style={contactTd}><input className="pmd-in" style={{ width: '100%' }} value={row.email} placeholder="이메일" inputMode="email" onChange={e => setContactField('email', e.target.value)} /></div>
-                        <div style={contactTd}><input className="pmd-in" style={{ width: '100%' }} value={row.memo} placeholder="담당 업무" onChange={e => setContactField('memo', e.target.value)} /></div>
-                        <div style={contactTd}>{scheduleSelect(scheduleId, v => setContactField('scheduleId', v))}</div>
-                        <div style={{ ...contactTd, gap: 6, justifyContent: 'center' }}>
-                          <SmallButton primary onClick={saveContact}>저장</SmallButton>
-                          <SmallButton onClick={() => setContactEdit(null)}>취소</SmallButton>
-                        </div>
-                      </div>
-                    ) : (
-                      <div key={c.id} role="row" style={{ display: 'contents' }}>
-                        <div style={{ ...contactTd, justifyContent: 'center' }}>{idx + 1}</div>
-                        <div style={{ ...contactTd, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0 }}>
-                          <span style={{ fontFamily: ffSemiBold, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{c.name}</span>
-                          {c.department && <span style={{ fontSize: 12, color: '#767D8A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{c.department}</span>}
-                        </div>
-                        <div style={contactTd}><Ellipsis>{c.title || '-'}</Ellipsis></div>
-                        <div style={contactTd}><Ellipsis>{c.phone || '-'}</Ellipsis></div>
-                        <div style={contactTd}><Ellipsis>{c.fax || '-'}</Ellipsis></div>
-                        <div style={contactTd} title={c.email}><Ellipsis>{c.email || '-'}</Ellipsis></div>
-                        <div style={contactTd} title={c.memo}><Ellipsis>{c.memo || '-'}</Ellipsis></div>
-                        <div style={contactTd}>{scheduleSelect(scheduleId, v => commit({ ...partner, contacts: contacts.map(x => x.id === c.id ? { ...x, scheduleId: v } : x) }))}</div>
-                        <div style={{ ...contactTd, gap: 6, justifyContent: 'center' }}>
-                          <SmallButton onClick={() => { if (contactEdit) { showToast('수정 중인 직원 정보를 먼저 저장해 주세요.', 'error'); return; } setContactEdit({ row: { ...c }, isNew: false }); }}>수정</SmallButton>
-                          <SmallButton onClick={() => setContactDelete(c)}>삭제</SmallButton>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {contactRows.length === 0 && (
-                  <div style={{ height: 120, marginTop: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ff, fontSize: 15, color: '#9197A1', border: `1px solid ${BORDER}`, borderTop: 'none' }}>{contactQ ? '검색 결과가 없습니다.' : '등록된 직원이 없습니다.'}</div>
-                )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p style={tabDescStyle}>직원마다 기본 청구 기준이 먼저 적용되고, 필요하면 다른 청구 기준으로 바꿀 수 있어요.<br />선택한 청구 기준의 거래명세서와 세금계산서 발행 내역은 해당 직원 이메일로 보내요.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <ModalButton h={36} size={15} px={12} onClick={() => setContactForm({ contact: null })}>담당자 추가/변경</ModalButton>
+                <ContactSearchBar type={contactSearchType} setType={setContactSearchType} keyword={contactKeyword} setKeyword={setContactKeyword} onSearch={() => setContactQuery({ type: contactSearchType, keyword: contactKeyword })} total={shownContacts.length} />
               </div>
+              <div role="table" style={{ display: 'grid', gridTemplateColumns: CONTACT_COLS, borderTop: `1px solid ${BORDER}` }}>
+                {['번호', '직원명', '청구 기준', '직급/직책', '휴대전화번호', '팩스', '이메일', '담당 업무'].map((h, i) => (
+                  <div key={h} role="columnheader" style={{ ...contactTh, borderRight: i === 7 ? 'none' : contactTh.borderRight, justifyContent: i === 0 ? 'center' : 'flex-start' }}>{h}</div>
+                ))}
+                {shownContacts.map((c, idx) => (
+                  <div key={c.id} role="row" data-name="contact-row" className="pm-contact-row" title="클릭하면 담당자 정보를 수정할 수 있어요" onClick={() => setContactForm({ contact: c })} style={{ display: 'contents', cursor: 'pointer' }}>
+                    <div style={{ ...contactTd, justifyContent: 'center', cursor: 'pointer' }}>{idx + 1}</div>
+                    <div style={{ ...contactTd, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', cursor: 'pointer' }}><ContactNameCell c={c} /></div>
+                    {/* 청구 기준은 바로 저장 (행 클릭과 분리) */}
+                    <div style={contactTd} onClick={e => e.stopPropagation()}>{scheduleSelect(scheduleOf(c), v => { commit({ ...partner, contacts: contacts.map(x => x.id === c.id ? { ...x, scheduleId: v } : x) }); showToast(`${c.name}의 청구 기준을 변경했습니다.`); })}</div>
+                    <div style={{ ...contactTd, cursor: 'pointer' }}><Ellipsis>{c.title || '-'}</Ellipsis></div>
+                    <div style={{ ...contactTd, cursor: 'pointer' }}><Ellipsis>{c.phone || '-'}</Ellipsis></div>
+                    <div style={{ ...contactTd, cursor: 'pointer' }}><Ellipsis>{c.fax || '-'}</Ellipsis></div>
+                    <div style={{ ...contactTd, cursor: 'pointer' }} title={c.email}><Ellipsis>{c.email || '-'}</Ellipsis></div>
+                    <div style={{ ...contactTd, borderRight: 'none', cursor: 'pointer' }} title={c.memo}><Ellipsis>{c.memo || '-'}</Ellipsis></div>
+                  </div>
+                ))}
+              </div>
+              {shownContacts.length === 0 && (
+                <div style={{ height: 120, marginTop: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ff, fontSize: 15, color: '#9197A1', borderBottom: `1px solid ${BORDER}` }}>{contactQuery.keyword.trim() ? '검색 결과가 없습니다.' : '등록된 직원이 없습니다.'}</div>
+              )}
             </div>
           )}
 
           {tab === 'docs' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <p style={tabDescStyle}>첨부 서류를 관리하세요.</p>
+              <p style={tabDescStyle}>거래처 관련 서류를 첨부하고 관리할 수 있어요.</p>
               {DOC_ITEMS.map(item => (
                 <DocDropField
                   key={item.key}
                   label={item.label}
                   files={docFiles(item.key)}
                   max={item.max}
-                  onChange={files => setPendingPart('docs', item.key, files, partnerDocs(partner, item.key))}
+                  hint={item.hint}
+                  onChange={files => setDocDraft(item.key, files)}
                   onToast={showToast}
                 />
               ))}
             </div>
           )}
-
-          {tab === 'main' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <p style={tabDescStyle}>이 거래처와 자주 운행하는 차량과 노선을 등록해 두면 배차할 때 참고할 수 있어요.</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <DetailSectionTitle actions={<SmallButton onClick={() => setVehicles([...vehicles, { id: genId('mv'), ton: '', carType: '', count: 1 }])}>차량 추가</SmallButton>}>주력 차량</DetailSectionTitle>
-                <div role="table" style={{ display: 'grid', gridTemplateColumns: '52px 1fr 1fr 1fr 108px', borderTop: `1px solid ${BORDER}` }}>
-                  {['번호', '톤수', '차량', '대수', ''].map((h, i) => <div key={h + i} role="columnheader" style={{ ...gridTh, justifyContent: i === 0 ? 'center' : 'flex-start' }}>{h}</div>)}
-                  {vehicles.map((v, idx) => (
-                    <div key={v.id} role="row" style={{ display: 'contents' }}>
-                      <div style={{ ...gridTd, justifyContent: 'center' }}>{idx + 1}</div>
-                      <div style={{ ...gridTd, borderLeft: `1px solid ${BORDER}` }}><CellSelect value={v.ton} options={TON_OPTIONS} placeholder="톤수 선택" onChange={ton => patchVehicle(v.id, { ton })} /></div>
-                      <div style={{ ...gridTd, borderLeft: `1px solid ${BORDER}` }}><CellSelect value={v.carType} options={CAR_TYPE_OPTIONS} placeholder="차량 선택" onChange={carType => patchVehicle(v.id, { carType })} /></div>
-                      <div style={{ ...gridTd, borderLeft: `1px solid ${BORDER}`, gap: 2 }}>
-                        <input className="pmd-in" aria-label="대수" value={String(v.count)} inputMode="numeric" onChange={e => patchVehicle(v.id, { count: Math.min(Number(e.target.value.replace(/\D/g, '').slice(0, 3)) || 0, 999) })} style={{ border: 'none', padding: 0, width: `${Math.max(String(v.count).length, 1) + 0.5}ch`, height: 22 }} />
-                        <span>대</span>
-                      </div>
-                      <div style={{ ...gridTd, borderLeft: `1px solid ${BORDER}`, justifyContent: 'center' }}><SmallButton onClick={() => setVehicles(vehicles.filter(x => x.id !== v.id))}>삭제</SmallButton></div>
-                    </div>
-                  ))}
-                </div>
-                {vehicles.length === 0 && <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ff, fontSize: 14, color: '#9197A1', borderBottom: `1px solid ${BORDER}` }}>등록된 주력 차량이 없습니다.</div>}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <DetailSectionTitle actions={<SmallButton onClick={() => setRoutes([...routes, { id: genId('mr'), from: '', to: '', memo: '' }])}>노선추가</SmallButton>}>주력 노선</DetailSectionTitle>
-                <div role="table" style={{ display: 'grid', gridTemplateColumns: '52px 1fr 1fr 1fr 108px', borderTop: `1px solid ${BORDER}` }}>
-                  {['번호', '출발 지역', '도착 지역', '메모', ''].map((h, i) => <div key={h + i} role="columnheader" style={{ ...gridTh, justifyContent: i === 0 ? 'center' : 'flex-start' }}>{h}</div>)}
-                  {routes.map((r, idx) => (
-                    <div key={r.id} role="row" style={{ display: 'contents' }}>
-                      <div style={{ ...gridTd, justifyContent: 'center' }}>{idx + 1}</div>
-                      <div style={{ ...gridTd, borderLeft: `1px solid ${BORDER}` }}><CellSelect value={r.from} options={HUB_OPTIONS} placeholder="출발 지역 선택" onChange={from => patchRoute(r.id, { from })} /></div>
-                      <div style={{ ...gridTd, borderLeft: `1px solid ${BORDER}` }}><CellSelect value={r.to} options={HUB_OPTIONS} placeholder="도착 지역 선택" onChange={to => patchRoute(r.id, { to })} /></div>
-                      <div style={{ ...gridTd, borderLeft: `1px solid ${BORDER}` }}><input className="pmd-in" aria-label="메모" value={r.memo} placeholder="메모 입력" onChange={e => patchRoute(r.id, { memo: e.target.value.slice(0, 50) })} style={{ border: 'none', padding: 0, width: '100%', height: 22 }} /></div>
-                      <div style={{ ...gridTd, borderLeft: `1px solid ${BORDER}`, justifyContent: 'center' }}><SmallButton onClick={() => setRoutes(routes.filter(x => x.id !== r.id))}>삭제</SmallButton></div>
-                    </div>
-                  ))}
-                </div>
-                {routes.length === 0 && <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ff, fontSize: 14, color: '#9197A1', borderBottom: `1px solid ${BORDER}` }}>등록된 주력 노선이 없습니다.</div>}
-              </div>
-            </div>
-          )}
-
-          {tab === 'shared' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {newShared.length > 0 && (
-                <div style={{ background: '#F5F9FF', borderRadius: 6, padding: '14px 16px' }}>
-                  <p style={{ margin: 0, fontFamily: ffSemiBold, fontWeight: 600, fontSize: 15, lineHeight: '22px', letterSpacing: ls, color: '#2E3238' }}>{`${partner.alias}가 공유그룹 ${newShared.length}개를 새로 공유했어요`}</p>
-                  <p style={{ margin: '2px 0 0', fontFamily: ff, fontSize: 13, lineHeight: '19px', letterSpacing: ls, color: '#5C6370' }}>오더를 등록할 수 있도록 기본스케줄을 임시로 연결했어요. 각 업무그룹에 맞는 정산스케줄을 확인하고 변경해 주세요.</p>
-                </div>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div>
-                  <DetailSectionTitle>거래처 공유그룹별 설정</DetailSectionTitle>
-                  <p style={{ ...tabDescStyle, marginTop: 2 }}>거래처가 공유한 업무그룹별로 정산스케줄을 선택해 주세요.</p>
-                </div>
-                <div role="table" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', borderTop: `1px solid ${BORDER}` }}>
-                  {['공유그룹', '정산스케줄', '조건'].map(h => <div key={h} role="columnheader" style={gridTh}>{h}</div>)}
-                  {groupMappings.map((g, idx) => {
-                    const scheduleId = pending.sharedSchedule[idx] ?? g.scheduleId;
-                    const s = schedules.find(x => x.id === scheduleId);
-                    const rowBg = g.isNew ? '#FFFBE6' : undefined;
-                    return (
-                      <div key={g.groupName + idx} role="row" style={{ display: 'contents' }}>
-                        <div style={{ ...gridTd, background: rowBg, gap: 4 }}>
-                          {g.isNew && <span aria-label="새로 공유됨" style={{ color: '#DD2222', flexShrink: 0 }}>*</span>}
-                          <Ellipsis>{g.groupName}</Ellipsis>
-                        </div>
-                        <div style={{ ...gridTd, background: rowBg, borderLeft: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}` }}>{scheduleSelect(scheduleId, v => setPendingPart('sharedSchedule', idx, v, g.scheduleId))}</div>
-                        <div style={{ ...gridTd, background: rowBg }}><Ellipsis>{s ? scheduleSummary(s) : '-'}</Ellipsis></div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-        <div style={{ height: 88, padding: '20px 24px 24px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, borderTop: `1px solid ${BORDER}`, flexShrink: 0 }}>
-          <ModalButton ghost h={48} size={18} px={20} onClick={handleClose}>닫기</ModalButton>
-          {/* 직원정보는 행 단위로 바로 저장되어 이 탭의 변경분은 없지만, 피그마대로 [수정]은 그대로 노출 */}
-          <ModalButton primary h={48} size={18} px={20} disabled={isPendingEmpty(pending)} onClick={savePending}>수정</ModalButton>
+        <div style={{ height: 104, padding: '24px 24px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 8, borderTop: `1px solid ${BORDER}`, flexShrink: 0 }}>
+          <ModalButton h={52} size={18} px={20} onClick={() => setConfirmDelete(true)}>거래처 삭제</ModalButton>
+          <span style={{ flex: 1 }} />
+          <ModalButton ghost h={52} size={18} px={20} onClick={handleClose}>닫기</ModalButton>
+          <ModalButton primary h={52} size={18} px={20} disabled={isPendingEmpty(pending)} onClick={savePending}>수정</ModalButton>
         </div>
         {toast && <Toast message={toast.message} tone={toast.tone} onClose={hideToast} />}
       </div>
 
-      {editTarget === 'company' && (
-        <CompanyEditModal partner={partner} onClose={() => setEditTarget(null)} onSubmit={patch => { patchPartner(patch); setEditTarget(null); showToast('기본 정보를 수정했습니다.'); }} />
+      {editTarget === 'biz' && (
+        <BizInfoEditModal partner={partner} onClose={() => setEditTarget(null)} onSubmit={patch => { patchPartner(patch); setEditTarget(null); showToast('사업자 정보를 수정했습니다.'); }} />
       )}
-      {editTarget === 'ceo' && (
-        <CeoEditModal partner={partner} onClose={() => setEditTarget(null)} onSubmit={patch => { patchPartner(patch); setEditTarget(null); showToast('대표자 정보를 수정했습니다.'); }} />
+      {editTarget === 'basic' && (
+        <BasicInfoEditModal partner={partner} onClose={() => setEditTarget(null)} onSubmit={patch => { patchPartner(patch); setEditTarget(null); showToast('기본 정보를 수정했습니다.'); }} />
       )}
-      {editTarget === 'extra' && (
-        <ExtraEditModal partner={partner} groups={ourGroups} onClose={() => setEditTarget(null)} onSubmit={patch => { patchPartner(patch); setEditTarget(null); showToast('부가 정보를 수정했습니다.'); }} />
-      )}
-      {scheduleEdit && (
-        <ScheduleEditModal schedule={scheduleEdit.schedule} partner={partner} groups={ourGroups} onClose={() => setScheduleEdit(null)} onSubmit={submitSchedule} />
+      {contactForm && (
+        <ContactFormModal
+          contact={contactForm.contact}
+          schedules={savedSchedules}
+          defaultScheduleId={firstScheduleId}
+          onClose={() => setContactForm(null)}
+          onDelete={contactForm.contact ? () => setContactDelete(contactForm.contact) : undefined}
+          onSubmit={c => {
+            const exists = contacts.some(x => x.id === c.id);
+            patchPartner({ contacts: exists ? contacts.map(x => x.id === c.id ? c : x) : [...contacts, c] });
+            setContactForm(null);
+            showToast(exists ? '담당자 정보를 수정했습니다.' : '담당자를 추가했습니다.');
+          }}
+        />
       )}
       {contactDelete && (
         <ConfirmDialog
@@ -2186,7 +2212,7 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
           description="삭제한 담당자에게는 거래명세서와 세금계산서 발행 내역이 더 이상 발송되지 않습니다."
           confirmLabel="삭제"
           onCancel={() => setContactDelete(null)}
-          onConfirm={() => { commit({ ...partner, contacts: contacts.filter(c => c.id !== contactDelete.id) }); setContactDelete(null); showToast('담당자를 삭제했습니다.', 'error'); }}
+          onConfirm={() => { patchPartner({ contacts: contacts.filter(c => c.id !== contactDelete.id) }); setContactDelete(null); setContactForm(null); showToast('담당자를 삭제했습니다.', 'error'); }}
         />
       )}
       {confirmDiscard && (
@@ -2201,10 +2227,19 @@ export function GeoraecheoDetailModal({ partner: initialPartner, onClose, onSave
       {scheduleDelete && (
         <ConfirmDialog
           title={`${scheduleDelete.name}을 삭제하시겠어요?`}
-          description="삭제한 정산스케줄은 되돌릴 수 없어요. 이 스케줄을 쓰던 공유그룹과 직원은 기본 스케줄로 바뀝니다."
+          description="삭제한 청구 기준은 되돌릴 수 없어요. 이 청구 기준을 쓰던 공유그룹과 직원은 기본 청구 기준으로 바뀝니다."
           confirmLabel="삭제"
           onCancel={() => setScheduleDelete(null)}
           onConfirm={() => removeSchedule(scheduleDelete.id)}
+        />
+      )}
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`${partner.alias} 거래처를 삭제하시겠어요?`}
+          description="삭제한 거래처는 되돌릴 수 없어요. 업무그룹 공유와 배차 가능 업무그룹 설정에서도 함께 빠집니다."
+          confirmLabel="삭제"
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={deletePartner}
         />
       )}
     </ModalOverlay>
@@ -2223,7 +2258,8 @@ export default function GeoraecheoManagement() {
   const [showRegister, setShowRegister] = useState(false);
   const [detailTarget, setDetailTarget] = useState<TradePartner | null>(null);
   // 필터는 다중 선택 — 한 필터 안에서는 or, 필터끼리는 and
-  const [typeTab, setTypeTab] = useState<TypeTab>('전체');
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);   // '화주사' | '협력사'
+  const [shareFilter, setShareFilter] = useState<string[]>([]); // shareLabel 값
   const [statusFilter, setStatusFilter] = useState<string[]>([]); // '정상' | '거래중지'
   const [joinFilter, setJoinFilter] = useState<string[]>([]);     // 'Y' | 'N'
   const [page, setPage] = useState(1);
@@ -2247,9 +2283,10 @@ export default function GeoraecheoManagement() {
       const targets = appliedType === '거래처별칭' ? [p.alias] : appliedType === '사업자명' ? [p.bizName] : (p.contacts || []).map(c => c.name);
       if (!targets.some(t => (t || '').toLowerCase().includes(kw))) return false;
     }
-    if (typeTab !== '전체' && p.partnerType !== typeTab) return false;
+    if (typeFilter.length && !typeFilter.includes(p.partnerType)) return false;
     if (statusFilter.length && !statusFilter.includes(p.status)) return false;
     if (joinFilter.length && !joinFilter.includes(p.tTrucker ? 'Y' : 'N')) return false;
+    if (shareFilter.length && !shareFilter.includes(shareLabel(p))) return false;
     return true;
   });
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -2262,18 +2299,16 @@ export default function GeoraecheoManagement() {
       <SharedLnb activeTabIndex={6} />
       <div data-name="partner-management" style={{ position: 'absolute', left: 208, right: 0, top: 0, bottom: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '0 24px 0 32px' }}>
-          <Header onRegisterClick={() => setShowRegister(true)} />
-          <TypeTabs
-            value={typeTab}
-            onChange={t => { setTypeTab(t); setPage(1); }}
-            counts={{ 전체: partners.length, 화주사: partners.filter(p => p.partnerType === '화주사').length, 협력사: partners.filter(p => p.partnerType === '협력사').length }}
-          />
+          <Header />
           <SearchBar
+            onRegisterClick={() => setShowRegister(true)}
             searchType={searchType} setSearchType={setSearchType}
             keyword={keyword} setKeyword={setKeyword}
             onSearch={handleSearch}
             status={statusFilter} setStatus={v => { setStatusFilter(v); setPage(1); }}
+            type={typeFilter} setType={v => { setTypeFilter(v); setPage(1); }}
             join={joinFilter} setJoin={v => { setJoinFilter(v); setPage(1); }}
+            share={shareFilter} setShare={v => { setShareFilter(v); setPage(1); }}
           />
           <PartnerTable
             rows={rows}

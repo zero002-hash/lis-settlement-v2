@@ -245,7 +245,7 @@ function genRows(page: number, count = 20) {
 // ── Tab Module ──
 const TABS_LIST = ['기본','쿠팡 CLS','세라젬','대상청정원','한샘','일반화주','(설정한 이름)'];
 
-function TabModule({ activeTab, setActiveTab }: { activeTab: number; setActiveTab: (i: number) => void }) {
+function TabModule({ activeTab, setActiveTab, detailOpen, onToggleDetail }: { activeTab: number; setActiveTab: (i: number) => void; detailOpen: boolean; onToggleDetail: () => void }) {
   const EditIcon = () => (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0 }}>
       <path d="M10.5 3L13 5.5L5.5 13H3V10.5L10.5 3Z" stroke="#9197A1" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -307,12 +307,13 @@ function TabModule({ activeTab, setActiveTab }: { activeTab: number; setActiveTa
           <FilterIcon/>
           <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>필터 닫기</span>
         </button>
-        <button style={{ display:'flex', flexDirection:'row', justifyContent:'center', alignItems:'center', padding:'0 12px', gap:4, width:99, height:36, borderRadius:4, border:'none', background:'transparent', cursor:'pointer', flexShrink:0 }}>
+        {/* 상세 보기/닫기 — 선택한 오더의 등록·수정 폼(위쪽)을 열고 닫음 */}
+        <button type="button" data-name="detail-toggle" aria-pressed={detailOpen} onClick={onToggleDetail} style={{ display:'flex', flexDirection:'row', justifyContent:'center', alignItems:'center', padding:'0 12px', gap:4, width:99, height:36, borderRadius:4, border:'none', background:'transparent', cursor:'pointer', flexShrink:0 }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0 }}>
             <rect x="1" y="2" width="14" height="12" rx="2" stroke="#9197A1" strokeWidth="1"/>
             <rect x="3" y="4" width="10" height="4" rx="1" fill="#9197A1" stroke="#9197A1" strokeWidth="1"/>
           </svg>
-          <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>상세 보기</span>
+          <span style={{ fontFamily:"'Pretendard GOV:SemiBold'", fontWeight:600, fontSize:15, lineHeight:'22px', letterSpacing:'-0.02em', color:'#2E3238', whiteSpace:'nowrap' }}>{detailOpen ? '상세 닫기' : '상세 보기'}</span>
         </button>
       </div>
     </div>
@@ -857,10 +858,11 @@ const COL_WIDTHS = {
   settleType:90, settleMeans:90, bill:110, dispatch:110, profit:110,
 };
 
-function OrderTable({ page, selectedIdx, onSelectRow, checkedIdxs, onToggleCheck, cancelledOrders, assignments, onDragRows }: {
+function OrderTable({ page, selectedIdx, onSelectRow, onOpenDetail, checkedIdxs, onToggleCheck, cancelledOrders, assignments, onDragRows }: {
   page: number;
   selectedIdx: number;
   onSelectRow: (idx: number) => void;
+  onOpenDetail: (idx: number) => void; // 행 앞 ▸ — 그 오더를 선택하고 상세 폼을 엶
   checkedIdxs: Set<number>;
   onToggleCheck: (idx: number) => void;
   cancelledOrders: Set<number>;
@@ -987,7 +989,7 @@ function OrderTable({ page, selectedIdx, onSelectRow, checkedIdxs, onToggleCheck
                 {/* 펼침 — 오더 상세 열기 */}
                 <button
                   aria-label="오더 상세 보기"
-                  onClick={e => { e.stopPropagation(); onSelectRow(row.idx); }}
+                  onClick={e => { e.stopPropagation(); onOpenDetail(row.idx); }}
                   style={{ width:16, height:16, padding:0, border:'none', background:'none', cursor:'pointer', display:'flex', flexShrink:0 }}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8L6 12.5" stroke={isChecked ? '#FFFFFF' : '#9197A1'} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1217,10 +1219,10 @@ export default function BaechaManagement() {
         </>}
         {/* ── Table section ── */}
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', padding:'0 32px', boxSizing:'border-box' }}>
-          <TabModule activeTab={activeTab} setActiveTab={setActiveTab} />
+          <TabModule activeTab={activeTab} setActiveTab={setActiveTab} detailOpen={orderFormOpen} onToggleDetail={() => setOrderFormOpen(o => !o)} />
           <FilterSorterModule />
           <TableControlModule onCancelOrder={() => setShowCancelModal(true)} checkedCount={checkedIdxs.size} />
-          <OrderTable page={currentPage} selectedIdx={isNewOrder ? -1 : selectedIdx} onSelectRow={handleSelectRow} checkedIdxs={checkedIdxs} onToggleCheck={handleToggleCheck} cancelledOrders={cancelledOrders} assignments={assignments} onDragRows={handleDragRows} />
+          <OrderTable page={currentPage} selectedIdx={isNewOrder ? -1 : selectedIdx} onSelectRow={handleSelectRow} onOpenDetail={idx => { handleSelectRow(idx); setOrderFormOpen(true); }} checkedIdxs={checkedIdxs} onToggleCheck={handleToggleCheck} cancelledOrders={cancelledOrders} assignments={assignments} onDragRows={handleDragRows} />
           <Pagination currentPage={currentPage} setCurrentPage={setCurrentPage} />
         </div>
       </div>
